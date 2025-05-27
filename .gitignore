@@ -1,0 +1,6 @@
+# Fichiers à ne jamais sauvegarder
+config-secret.js
+.env
+*.log
+node_modules/
+.DS_Store
