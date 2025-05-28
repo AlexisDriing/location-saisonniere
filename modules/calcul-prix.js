@@ -29,11 +29,19 @@ class PriceCalculator {
    */
   getAllElements(baseId) {
     const elements = [];
+    // Desktop
     const desktop = document.getElementById(baseId);
-    const mobile = document.getElementById(`${baseId}-mobile`);
-    
     if (desktop) elements.push(desktop);
+    
+    // Mobile
+    const mobile = document.getElementById(`${baseId}-mobile`);
     if (mobile) elements.push(mobile);
+    
+    // Mobile-off (spécial pour certains éléments)
+    if (baseId === "text-pourcentage" || baseId === "prix-direct") {
+      const mobileOff = document.getElementById(`${baseId}-mobile-off`);
+      if (mobileOff) elements.push(mobileOff);
+    }
     
     return elements;
   }
@@ -458,6 +466,15 @@ class PriceCalculator {
     
     // Réafficher les prix de base
     this.displayBasePrices();
+  }
+  /**
+   * Méthode publique pour recalculer les prix
+   * Utilisée par le module de gestion des voyageurs
+   */
+  calculateAndDisplayPrices() {
+    if (this.startDate && this.endDate) {
+      this.calculatePrices(this.startDate, this.endDate);
+    }
   }
 }
 
