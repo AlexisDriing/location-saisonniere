@@ -22,9 +22,7 @@ class PriceCalculator {
   }
 
   init() {
-    console.log('🔧 PriceCalculator init() appelé');
     this.loadPricingData();
-    console.log('📊 Pricing data:', this.pricingData);
     this.loadLogementType();
     
     // Masquer les blocs de prix initialement
@@ -295,8 +293,10 @@ class PriceCalculator {
       }
       
       // Taxe de séjour
-      const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
-      const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+      const adultsElement = Utils.getElementByIdWithFallback("chiffres-adultes");
+      const childrenElement = Utils.getElementByIdWithFallback("chiffres-enfants");
+      const adultsCount = parseInt(adultsElement?.textContent || "1");
+      const childrenCount = parseInt(childrenElement?.textContent || "0");
       const totalGuests = adultsCount + childrenCount;
       
       if (this.logementType === "Maison d'hôte") {
