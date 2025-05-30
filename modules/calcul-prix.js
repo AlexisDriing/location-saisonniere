@@ -22,7 +22,9 @@ class PriceCalculator {
   }
 
   init() {
+    console.log('🔧 PriceCalculator init() appelé');
     this.loadPricingData();
+    console.log('📊 Pricing data:', this.pricingData);
     this.loadLogementType();
     
     // Masquer les blocs de prix initialement
