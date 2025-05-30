@@ -533,11 +533,22 @@ class PriceCalculator {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.priceCalculator = new PriceCalculator();
-  console.log('✅ Price Calculator initialisé');
-});
+// Initialisation automatique (compatible avec chargement tardif)
+function initializePriceCalculator() {
+  if (!window.priceCalculator && window.PriceCalculator) {
+    window.priceCalculator = new PriceCalculator();
+    console.log('✅ Price Calculator initialisé');
+    return true;
+  }
+  return false;
+}
+
+// Essayer immédiatement
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializePriceCalculator);
+} else {
+  initializePriceCalculator();
+}
 
 // Export global
 window.PriceCalculator = PriceCalculator;
