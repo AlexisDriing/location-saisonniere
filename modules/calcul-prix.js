@@ -1,6 +1,7 @@
 // Calculateur de prix principal
 class PriceCalculator {
   constructor() {
+    console.log('🔧 PriceCalculator constructor appelé');
     this.elements = {
       calcNuit: Utils.getAllElementsById("calcul-nuit"),
       prixNuit: Utils.getAllElementsById("prix-nuit"),
@@ -43,6 +44,7 @@ class PriceCalculator {
     
     // Export global pour autres modules
     window.priceCalculator = this;
+    console.log('✅ PriceCalculator initialisé et assigné à window.priceCalculator');
   }
 
   loadPricingData() {
@@ -533,22 +535,13 @@ class PriceCalculator {
   }
 }
 
-// Initialisation automatique (compatible avec chargement tardif)
-function initializePriceCalculator() {
-  if (!window.priceCalculator && window.PriceCalculator) {
+// Initialisation automatique
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
     window.priceCalculator = new PriceCalculator();
     console.log('✅ Price Calculator initialisé');
-    return true;
-  }
-  return false;
-}
-
-// Essayer immédiatement
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializePriceCalculator);
-} else {
-  initializePriceCalculator();
-}
+  }, 100);
+});
 
 // Export global
 window.PriceCalculator = PriceCalculator;
