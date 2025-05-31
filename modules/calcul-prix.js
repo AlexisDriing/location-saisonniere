@@ -59,10 +59,14 @@ class PriceCalculator {
     if (element) {
       try {
         const jsonData = element.getAttribute(attribute);
+        console.log('📊 JSON tarifs trouvé:', jsonData);
         this.pricingData = JSON.parse(jsonData);
+        console.log('✅ Données tarifaires chargées:', this.pricingData);
       } catch (error) {
         console.error("❌ Erreur lors du chargement des données tarifaires:", error);
       }
+    } else {
+      console.warn("⚠️ Aucun élément avec data-json-tarifs-line ou data-json-tarifs trouvé");
     }
   }
 
@@ -73,6 +77,7 @@ class PriceCalculator {
     } else {
       this.logementType = "standard";
     }
+    console.log('🏠 Type de logement:', this.logementType);
   }
 
   listenForDateChanges() {
@@ -81,6 +86,7 @@ class PriceCalculator {
         if (picker.startDate && picker.endDate) {
           this.startDate = picker.startDate;
           this.endDate = picker.endDate;
+          console.log('📅 Dates sélectionnées:', this.startDate.format('YYYY-MM-DD'), 'à', this.endDate.format('YYYY-MM-DD'));
           this.calculateAndDisplayPrices();
         } else {
           this.resetPrices();
@@ -88,8 +94,11 @@ class PriceCalculator {
       });
       
       jQuery("#input-calendar, #input-calendar-mobile").on("cancel.daterangepicker", () => {
+        console.log('❌ Dates annulées');
         this.resetPrices();
       });
+    } else {
+      console.warn("⚠️ jQuery ou DateRangePicker non disponible");
     }
   }
 
@@ -206,15 +215,23 @@ class PriceCalculator {
   }
 
   calculateAndDisplayPrices() {
+    console.log('💰 Calcul des prix démarré');
     if (!this.pricingData || !this.startDate || !this.endDate) {
+      console.warn('⚠️ Données manquantes pour le calcul:', {
+        pricingData: !!this.pricingData,
+        startDate: !!this.startDate,
+        endDate: !!this.endDate
+      });
       return;
     }
     
     const stayDetails = this.calculateStayDetails();
     if (stayDetails) {
+      console.log('✅ Détails du séjour calculés:', stayDetails);
       this.updateUI(stayDetails);
       this.hideMinNightsError();
     } else {
+      console.warn('❌ Impossible de calculer les détails du séjour');
       this.showMinNightsError();
     }
   }
