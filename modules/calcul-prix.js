@@ -414,141 +414,154 @@ calculateAndDisplayPrices() {
    return season.price;
  }
 
- updateUI(details) {
-   // Afficher les blocs de calcul
-   const blocPrix = document.getElementById("bloc-calcul-prix");
-   if (blocPrix) blocPrix.style.display = "flex";
-   
-   const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
-   if (blocPrixMobile) blocPrixMobile.style.display = "flex";
-   
-   // Activer les boutons de réservation
-   const reserverButtons = this.getReserverButtons();
-   reserverButtons.forEach(button => {
-     button.style.opacity = "1";
-     button.style.pointerEvents = "auto"; // Réactiver les clics
-   });
-   
-   const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
-   
-   // Calcul par nuit
-   if (this.elements.calcNuit.length) {
-     const avgPricePerNight = Math.round(details.originalNightsPrice / details.nights);
-     this.elements.calcNuit.forEach(element => {
-       element.textContent = `${avgPricePerNight}€ x ${details.nights} nuits`;
-     });
-   }
-   
-   // Prix des nuits
-   if (this.elements.prixNuit.length) {
-     this.elements.prixNuit.forEach(element => {
-       element.textContent = `${formatPrice(details.originalNightsPrice)}€`;
-     });
-   }
-   
-   // PROBLÈME 3: Réduction (desktop ET mobile) - CORRECTION
-   const reductionPriceElements = [
-     ...this.elements.prixReduction,
-     ...document.querySelectorAll('#prix-reduction-mobile')
-   ];
-   
-   const reductionBlockElements = [
-     ...this.elements.blocReduction,
-     ...document.querySelectorAll('#bloc-reduction-mobile')
-   ];
-   
-   console.log('🔍 Éléments réduction trouvés:', {
-     desktop: this.elements.blocReduction.length,
-     mobile: document.querySelectorAll('#bloc-reduction-mobile').length
-   });
-   
-   if (details.discountAmount > 0) {
-     reductionPriceElements.forEach(element => {
-       if (element) {
-         element.textContent = `-${formatPrice(details.discountAmount)}€`;
-         element.style.color = "#2AA551";
-         element.style.display = "block";
-       }
-     });
-     
-     reductionBlockElements.forEach(element => {
-       if (element) {
-         element.style.display = "flex";
-       }
-     });
-   } else {
-     reductionPriceElements.forEach(element => {
-       if (element) {
-         element.textContent = "";
-         element.style.display = "none";
-       }
-     });
-     
-     reductionBlockElements.forEach(element => {
-       if (element) {
-         element.style.display = "none";
-       }
-     });
-   }
-   
-   // Taxe de séjour
-   if (this.elements.prixTaxe.length) {
-     this.elements.prixTaxe.forEach(element => {
-       element.textContent = `${formatPrice(details.touristTax)}€`;
-     });
-   }
-   
-   // Frais de ménage
-   if (this.elements.prixMenage.length) {
-     this.elements.prixMenage.forEach(element => {
-       if (details.cleaningFee > 0) {
-         element.textContent = `${formatPrice(details.cleaningFee)}€`;
-       } else {
-         element.textContent = "Inclus";
-       }
-     });
-   }
-   
-   // Prix total
-   if (this.elements.totalPrix.length) {
-     this.elements.totalPrix.forEach(element => {
-       if (details.platformPrice > details.totalPrice) {
-         element.innerHTML = `<span style="text-decoration:line-through;font-weight:normal;font-family:Inter;font-size:16px;color:#778183">${formatPrice(details.platformPrice)}€</span><span style="display:inline-block;width:4px"></span><span style="font-weight:600;font-family:Inter;font-size:16px;color:#272A2B">${formatPrice(details.totalPrice)}€</span>`;
-       } else {
-         element.innerHTML = `<span style="font-weight:600;font-family:Inter;font-size:16px;color:#272A2B">${formatPrice(details.totalPrice)}€</span>`;
-       }
-     });
-   }
-   
-   // Mettre à jour prix direct et pourcentage
-   if (this.elements.prixDirect.length || this.elements.textPourcentage.length) {
-     const avgPricePerNight = Math.round(details.originalNightsPrice / details.nights);
-     
-     let totalPlatformPrice = 0;
-     for (const night of details.nightsBreakdown) {
-       totalPlatformPrice += night.platformPrice;
-     }
-     const avgPlatformPricePerNight = Math.round(totalPlatformPrice / details.nights);
-     
-     if (this.elements.prixDirect.length) {
-       this.elements.prixDirect.forEach(element => {
-         element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">${avgPricePerNight}€ / nuit</strong>`;
-       });
-     }
-     
-     if (this.elements.textPourcentage.length) {
-       if (avgPlatformPricePerNight > avgPricePerNight) {
-         this.elements.textPourcentage.forEach(element => {
-           element.textContent = `-${Math.round(100 * (avgPlatformPricePerNight - avgPricePerNight) / avgPlatformPricePerNight)}%`;
-         });
-       } else {
-         this.elements.textPourcentage.forEach(element => {
-           element.textContent = "";
-         });
-       }
-     }
-   }
- }
+ // Remplacer la méthode updateUI() dans modules/calcul-prix.js lignes 340-450
+
+updateUI(details) {
+  // Afficher les blocs de calcul
+  const blocPrix = document.getElementById("bloc-calcul-prix");
+  if (blocPrix) blocPrix.style.display = "flex";
+  
+  const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
+  if (blocPrixMobile) blocPrixMobile.style.display = "flex";
+  
+  // PROBLÈME 2: Activer les boutons de réservation CORRECTEMENT
+  const reserverButtons = this.getReserverButtons();
+  reserverButtons.forEach(button => {
+    button.style.opacity = "1";
+    button.style.pointerEvents = "auto"; // Réactiver les clics
+    button.style.cursor = "pointer"; // Curseur pointer
+  });
+  
+  const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
+  
+  // Calcul par nuit
+  if (this.elements.calcNuit.length) {
+    const avgPricePerNight = Math.round(details.originalNightsPrice / details.nights);
+    this.elements.calcNuit.forEach(element => {
+      element.textContent = `${avgPricePerNight}€ x ${details.nights} nuits`;
+    });
+  }
+  
+  // Prix des nuits
+  if (this.elements.prixNuit.length) {
+    this.elements.prixNuit.forEach(element => {
+      element.textContent = `${formatPrice(details.originalNightsPrice)}€`;
+    });
+  }
+  
+  // PROBLÈME 3: Réduction (desktop ET mobile) - CORRECTION DÉFINITIVE
+  console.log('🔧 Gestion des réductions - détails:', details.discountAmount);
+  
+  // Récupérer TOUS les éléments de réduction (desktop + mobile)
+  const reductionPriceElements = [
+    ...this.elements.prixReduction, // Desktop depuis elements
+    ...Array.from(document.querySelectorAll('#prix-reduction-mobile')) // Mobile direct
+  ].filter(el => el !== null); // Filtrer les null
+  
+  const reductionBlockElements = [
+    ...this.elements.blocReduction, // Desktop depuis elements  
+    ...Array.from(document.querySelectorAll('#bloc-reduction-mobile')) // Mobile direct
+  ].filter(el => el !== null); // Filtrer les null
+  
+  console.log('🔍 Éléments réduction trouvés:', {
+    priceElements: reductionPriceElements.length,
+    blockElements: reductionBlockElements.length,
+    discountAmount: details.discountAmount
+  });
+  
+  if (details.discountAmount > 0) {
+    // AFFICHER la réduction
+    reductionPriceElements.forEach((element, index) => {
+      if (element) {
+        element.textContent = `-${formatPrice(details.discountAmount)}€`;
+        element.style.color = "#2AA551";
+        element.style.display = "block";
+        console.log(`✅ Réduction ${index + 1} affichée:`, element.textContent);
+      }
+    });
+    
+    reductionBlockElements.forEach((element, index) => {
+      if (element) {
+        element.style.display = "flex";
+        console.log(`✅ Bloc réduction ${index + 1} affiché`);
+      }
+    });
+  } else {
+    // MASQUER la réduction
+    reductionPriceElements.forEach((element, index) => {
+      if (element) {
+        element.textContent = "";
+        element.style.display = "none";
+        console.log(`❌ Réduction ${index + 1} masquée`);
+      }
+    });
+    
+    reductionBlockElements.forEach((element, index) => {
+      if (element) {
+        element.style.display = "none";
+        console.log(`❌ Bloc réduction ${index + 1} masqué`);
+      }
+    });
+  }
+  
+  // Taxe de séjour
+  if (this.elements.prixTaxe.length) {
+    this.elements.prixTaxe.forEach(element => {
+      element.textContent = `${formatPrice(details.touristTax)}€`;
+    });
+  }
+  
+  // Frais de ménage
+  if (this.elements.prixMenage.length) {
+    this.elements.prixMenage.forEach(element => {
+      if (details.cleaningFee > 0) {
+        element.textContent = `${formatPrice(details.cleaningFee)}€`;
+      } else {
+        element.textContent = "Inclus";
+      }
+    });
+  }
+  
+  // Prix total
+  if (this.elements.totalPrix.length) {
+    this.elements.totalPrix.forEach(element => {
+      if (details.platformPrice > details.totalPrice) {
+        element.innerHTML = `<span style="text-decoration:line-through;font-weight:normal;font-family:Inter;font-size:16px;color:#778183">${formatPrice(details.platformPrice)}€</span><span style="display:inline-block;width:4px"></span><span style="font-weight:600;font-family:Inter;font-size:16px;color:#272A2B">${formatPrice(details.totalPrice)}€</span>`;
+      } else {
+        element.innerHTML = `<span style="font-weight:600;font-family:Inter;font-size:16px;color:#272A2B">${formatPrice(details.totalPrice)}€</span>`;
+      }
+    });
+  }
+  
+  // Mettre à jour prix direct et pourcentage
+  if (this.elements.prixDirect.length || this.elements.textPourcentage.length) {
+    const avgPricePerNight = Math.round(details.originalNightsPrice / details.nights);
+    
+    let totalPlatformPrice = 0;
+    for (const night of details.nightsBreakdown) {
+      totalPlatformPrice += night.platformPrice;
+    }
+    const avgPlatformPricePerNight = Math.round(totalPlatformPrice / details.nights);
+    
+    if (this.elements.prixDirect.length) {
+      this.elements.prixDirect.forEach(element => {
+        element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">${avgPricePerNight}€ / nuit</strong>`;
+      });
+    }
+    
+    if (this.elements.textPourcentage.length) {
+      if (avgPlatformPricePerNight > avgPricePerNight) {
+        this.elements.textPourcentage.forEach(element => {
+          element.textContent = `-${Math.round(100 * (avgPlatformPricePerNight - avgPricePerNight) / avgPlatformPricePerNight)}%`;
+        });
+      } else {
+        this.elements.textPourcentage.forEach(element => {
+          element.textContent = "";
+        });
+      }
+    }
+  }
+}
 
  showMinNightsError() {
    // Masquer les blocs de prix
