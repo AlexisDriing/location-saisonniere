@@ -170,11 +170,5 @@ class TravelersManager {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.travelersManager = new TravelersManager();
-  console.log('✅ Travelers Manager initialisé');
-});
-
 // Export global
 window.TravelersManager = TravelersManager;
