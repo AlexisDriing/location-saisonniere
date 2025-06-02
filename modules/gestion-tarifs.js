@@ -132,11 +132,6 @@ class TariffsDisplayManager {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.tariffsDisplayManager = new TariffsDisplayManager();
-  console.log('✅ Tariffs Display Manager initialisé');
-});
 
 // Export global
 window.TariffsDisplayManager = TariffsDisplayManager;
