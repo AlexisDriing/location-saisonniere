@@ -318,11 +318,6 @@ class ReservationDataManager {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.reservationDataManager = new ReservationDataManager();
-  console.log('✅ Reservation Data Manager initialisé');
-});
 
 // Export global
 window.ReservationDataManager = ReservationDataManager;
