@@ -602,13 +602,6 @@ updateUI(details) {
  }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
- setTimeout(() => {
-   window.priceCalculator = new PriceCalculator();
-   console.log('✅ Price Calculator initialisé');
- }, 100);
-});
 
 // Export global
 window.PriceCalculator = PriceCalculator;
