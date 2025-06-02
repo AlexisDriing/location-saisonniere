@@ -1,4 +1,4 @@
-// Calculateur de prix principal - Version avec classes CSS
+// modules/calcul-prix.js - VERSION CORRIGÉE
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -33,8 +33,9 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // ✅ ÉTAT PAR DÉFAUT : Désactiver avec les classes CSS
-    this.setReservationButtonsState('disabled'); // 'disabled' = opacité 0.3
+    // ✅ ÉTAT PAR DÉFAUT : Les styles CSS gèrent déjà l'opacité 0.3
+    // Pas besoin d'action ici, le CSS prend le relais
+    console.log('🔒 Boutons désactivés par défaut via CSS');
     
     this.resetPrices();
     this.listenForDateChanges();
@@ -103,13 +104,16 @@ class PriceCalculator {
     return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
   }
 
-  // ✅ NOUVELLE MÉTHODE avec gestion par classes CSS
+  // ✅ MÉTHODE SIMPLIFIÉE avec gestion par classes CSS uniquement
   setReservationButtonsState(state) {
     const reserverButtons = this.getReserverButtons();
     
     reserverButtons.forEach((button, index) => {
-      // Supprimer toutes les classes d'état
+      // Supprimer toutes les classes d'état pour reset
       button.classList.remove('dates-selected', 'min-nights-error');
+      
+      // ⚠️ IMPORTANT : NE PLUS TOUCHER AU STYLE DIRECTEMENT
+      // Laisser le CSS gérer via les classes
       
       switch(state) {
         case 'enabled':
@@ -126,8 +130,8 @@ class PriceCalculator {
           
         case 'disabled':
         default:
-          // DÉSACTIVÉ par défaut (opacité 0.3 via CSS)
-          console.log(`🔒 Bouton ${index + 1} désactivé (état par défaut)`);
+          // DÉSACTIVÉ par défaut (CSS gère automatiquement l'opacité 0.3)
+          console.log(`🔒 Bouton ${index + 1} désactivé (état par défaut CSS)`);
           break;
       }
     });
@@ -270,6 +274,7 @@ class PriceCalculator {
     }
   }
 
+  // [Le reste des méthodes reste identique...]
   calculateStayDetails() {
     const details = {
       nights: 0,
@@ -438,8 +443,6 @@ class PriceCalculator {
     this.setReservationButtonsState('enabled');
     
     const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
-    
-    // [Le reste du code updateUI reste identique...]
     
     // Calcul par nuit
     if (this.elements.calcNuit.length) {
