@@ -126,77 +126,123 @@ class CalendarManager {
     });
   }
 
-  enhancePickerUI() {
-    if (!this.picker) return;
+  // Remplacer la fonction enhancePickerUI() dans modules/calendrier.js lignes 120-220
 
-    const originalRenderCalendar = this.picker.renderCalendar;
-    this.picker.renderCalendar = (side) => {
-      originalRenderCalendar.call(this.picker, side);
-      this.updateCalendarUI();
-    };
+enhancePickerUI() {
+  if (!this.picker) return;
 
-    const originalUpdateView = this.picker.updateView;
-    this.picker.updateView = () => {
-      originalUpdateView.call(this.picker);
-      this.updateCalendarUI();
-    };
+  const originalRenderCalendar = this.picker.renderCalendar;
+  this.picker.renderCalendar = (side) => {
+    originalRenderCalendar.call(this.picker, side);
+    this.updateCalendarUI();
+  };
 
-    const originalShow = this.picker.show;
-    this.picker.show = () => {
-      originalShow.call(this.picker);
-      this.updateCalendarUI();
-    };
+  const originalUpdateView = this.picker.updateView;
+  this.picker.updateView = () => {
+    originalUpdateView.call(this.picker);
+    this.updateCalendarUI();
+  };
 
-    // FIX PROBLÈME 1: Correction du positionnement au scroll
-    const originalMove = this.picker.move;
-    this.picker.move = () => {
-      const $input = $('#input-calendar');
-      if ($input.length === 0) return;
-      
-      const rect = $input[0].getBoundingClientRect();
-      
-      // Positionnement fixe par rapport au viewport
-      this.picker.container.css({
-        position: 'fixed',
-        top: (rect.bottom + 5) + 'px', // 5px de marge sous l'input
-        left: rect.left + 'px',
-        'z-index': '10000'
-      });
-    };
+  const originalShow = this.picker.show;
+  this.picker.show = () => {
+    originalShow.call(this.picker);
+    this.updateCalendarUI();
+  };
 
-    // FIX PROBLÈME 1: Gestion du redimensionnement et scroll
-    $(window).on('resize scroll', () => {
-      if (this.picker.isShowing) {
-        this.picker.move();
-      }
+  // FIX PROBLÈME 1: Correction COMPLÈTE du positionnement
+  const originalMove = this.picker.move;
+  this.picker.move = () => {
+    if (!this.picker.element || !this.picker.element.length) return;
+    
+    const input = this.picker.element[0];
+    const rect = input.getBoundingClientRect();
+    const container = this.picker.container;
+    
+    // Vérifier si on est en mobile
+    if (window.innerWidth < 768) {
+      // En mobile, utiliser le comportement par défaut
+      originalMove.call(this.picker);
+      return;
+    }
+    
+    // Desktop : positionnement fixe avec gestion du scroll
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    
+    // Position absolue pour suivre le scroll
+    container.css({
+      position: 'absolute',
+      top: (rect.bottom + scrollTop + 5) + 'px',
+      left: (rect.left + scrollLeft) + 'px',
+      'z-index': '10000',
+      'max-width': '100vw',
+      'max-height': '100vh'
     });
+    
+    // Ajuster si le calendrier sort de l'écran
+    const containerWidth = container.outerWidth();
+    const containerHeight = container.outerHeight();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Ajustement horizontal
+    if (rect.left + containerWidth > viewportWidth) {
+      container.css('left', (rect.right + scrollLeft - containerWidth) + 'px');
+    }
+    
+    // Ajustement vertical (afficher au-dessus si pas de place en bas)
+    if (rect.bottom + containerHeight > viewportHeight + scrollTop) {
+      container.css('top', (rect.top + scrollTop - containerHeight - 5) + 'px');
+    }
+  };
 
-    // FIX PROBLÈME 1: Masquer dernière ligne si toutes les dates sont "off"
-    const originalBuildCalendar = this.picker.buildCalendar;
-    this.picker.buildCalendar = function(month, year, hour, minute, second) {
-      const calendar = originalBuildCalendar.call(this, month, year, hour, minute, second);
-      setTimeout(() => {
-        this.container.find('.calendar-table').each(function() {
-          const lastRow = $(this).find('tbody tr:last-child');
-          let allOff = true;
-          lastRow.find('td').each(function() {
-            if (!$(this).hasClass('off')) {
-              allOff = false;
-              return false;
-            }
-          });
-          if (allOff) lastRow.hide();
+  // FIX PROBLÈME 1: Écouter les événements de scroll et resize
+  const handleReposition = () => {
+    if (this.picker && this.picker.isShowing) {
+      // Petit délai pour éviter les appels trop fréquents
+      clearTimeout(this.repositionTimeout);
+      this.repositionTimeout = setTimeout(() => {
+        this.picker.move();
+      }, 10);
+    }
+  };
+
+  // Ajouter les écouteurs d'événements
+  $(window).on('resize.daterangepicker scroll.daterangepicker', handleReposition);
+  
+  // Nettoyer les écouteurs quand le picker est caché
+  const originalHide = this.picker.hide;
+  this.picker.hide = function() {
+    $(window).off('resize.daterangepicker scroll.daterangepicker');
+    originalHide.call(this);
+  };
+
+  // FIX PROBLÈME 1: Masquer dernière ligne si toutes les dates sont "off"
+  const originalBuildCalendar = this.picker.buildCalendar;
+  this.picker.buildCalendar = function(month, year, hour, minute, second) {
+    const calendar = originalBuildCalendar.call(this, month, year, hour, minute, second);
+    setTimeout(() => {
+      this.container.find('.calendar-table').each(function() {
+        const lastRow = $(this).find('tbody tr:last-child');
+        let allOff = true;
+        lastRow.find('td').each(function() {
+          if (!$(this).hasClass('off')) {
+            allOff = false;
+            return false;
+          }
         });
-      }, 0);
-      return calendar;
-    };
+        if (allOff) lastRow.hide();
+      });
+    }, 0);
+    return calendar;
+  };
 
-    const originalClear = this.picker.clear;
-    this.picker.clear = () => {
-      this.nextUnavailableDate = null;
-      originalClear.call(this.picker);
-    };
-  }
+  const originalClear = this.picker.clear;
+  this.picker.clear = () => {
+    this.nextUnavailableDate = null;
+    originalClear.call(this.picker);
+  };
+}
 
   updateCalendarUI() {
     if (!this.picker) return;
