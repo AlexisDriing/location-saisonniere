@@ -1,4 +1,4 @@
-// Calculateur de prix principal
+// Calculateur de prix principal - Version avec classes CSS
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -33,8 +33,8 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // ✅ ÉTAT PAR DÉFAUT RENFORCÉ : Désactiver les boutons de réservation
-    this.setReservationButtonsState(false); // false = désactivé
+    // ✅ ÉTAT PAR DÉFAUT : Désactiver avec les classes CSS
+    this.setReservationButtonsState('disabled'); // 'disabled' = opacité 0.3
     
     this.resetPrices();
     this.listenForDateChanges();
@@ -103,23 +103,32 @@ class PriceCalculator {
     return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
   }
 
-  // ✅ NOUVELLE MÉTHODE centralisée pour gérer l'état des boutons
-  setReservationButtonsState(isEnabled) {
+  // ✅ NOUVELLE MÉTHODE avec gestion par classes CSS
+  setReservationButtonsState(state) {
     const reserverButtons = this.getReserverButtons();
     
     reserverButtons.forEach((button, index) => {
-      if (isEnabled) {
-        // ACTIVER : dates valides sélectionnées
-        button.style.opacity = "1";
-        button.style.pointerEvents = "auto";
-        button.style.cursor = "pointer";
-        console.log(`✅ Bouton ${index + 1} activé`);
-      } else {
-        // DÉSACTIVER : pas de dates ou autres raisons
-        button.style.opacity = "0.5";
-        button.style.pointerEvents = "none";
-        button.style.cursor = "not-allowed";
-        console.log(`🔒 Bouton ${index + 1} désactivé`);
+      // Supprimer toutes les classes d'état
+      button.classList.remove('dates-selected', 'min-nights-error');
+      
+      switch(state) {
+        case 'enabled':
+          // ACTIVER : dates valides sélectionnées (opacité 1)
+          button.classList.add('dates-selected');
+          console.log(`✅ Bouton ${index + 1} activé (classe dates-selected)`);
+          break;
+          
+        case 'min-nights-error':
+          // ERREUR nuits minimum (opacité 0.3)
+          button.classList.add('min-nights-error');
+          console.log(`⚠️ Bouton ${index + 1} désactivé - erreur nuits minimum`);
+          break;
+          
+        case 'disabled':
+        default:
+          // DÉSACTIVÉ par défaut (opacité 0.3 via CSS)
+          console.log(`🔒 Bouton ${index + 1} désactivé (état par défaut)`);
+          break;
       }
     });
   }
@@ -135,8 +144,8 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // ✅ UTILISER la méthode centralisée pour désactiver
-    this.setReservationButtonsState(false);
+    // ✅ UTILISER la méthode avec classes CSS pour désactiver
+    this.setReservationButtonsState('disabled');
     
     // Réinitialiser les éléments de réduction (desktop ET mobile)
     const reductionElements = [
@@ -425,10 +434,12 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "flex";
     
-    // ✅ UTILISER la méthode centralisée pour activer
-    this.setReservationButtonsState(true);
+    // ✅ UTILISER la méthode avec classes CSS pour activer
+    this.setReservationButtonsState('enabled');
     
     const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
+    
+    // [Le reste du code updateUI reste identique...]
     
     // Calcul par nuit
     if (this.elements.calcNuit.length) {
@@ -554,8 +565,8 @@ class PriceCalculator {
     const prixMobileBlock = document.getElementById("bloc-calcul-prix-mobile");
     if (prixMobileBlock) prixMobileBlock.style.display = "none";
     
-    // ✅ UTILISER la méthode centralisée pour désactiver (nuits minimum)
-    this.setReservationButtonsState(false);
+    // ✅ UTILISER la méthode avec classes CSS pour l'erreur nuits minimum
+    this.setReservationButtonsState('min-nights-error');
     
     // Afficher l'erreur de nuits minimum
     const errorBlocks = document.querySelectorAll('.bloc-error-days');
