@@ -150,11 +150,5 @@ class InterfaceManager {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.interfaceManager = new InterfaceManager();
-  console.log('✅ Interface Manager initialisé');
-});
-
 // Export global
 window.InterfaceManager = InterfaceManager;
