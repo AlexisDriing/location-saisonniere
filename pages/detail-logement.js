@@ -93,44 +93,11 @@ initializeManagers() {
     this.managers.reservationData = new ReservationDataManager();
     console.log('✅ ReservationDataManager initialisé');
     
-    // 8. FORCER l'état initial des boutons EN DERNIER
-    setTimeout(() => {
-      console.log('🔧 Application finale de l\'état des boutons...');
-      this.forceButtonState();
-    }, 100);
-    
     console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
     
   } catch (error) {
     console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
   }
-}
-
-// NOUVELLE MÉTHODE pour forcer l'état des boutons
-forceButtonState() {
-  const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
-  
-  console.log(`🎯 Forçage de l'état pour ${reserverButtons.length} boutons...`);
-  
-  reserverButtons.forEach((button, index) => {
-    // Vérifier si on a des dates sélectionnées
-    const priceCalculator = window.priceCalculator;
-    const hasDates = priceCalculator && priceCalculator.startDate && priceCalculator.endDate;
-    
-    if (hasDates) {
-      // Dates sélectionnées = boutons actifs
-      button.style.opacity = "1";
-      button.style.pointerEvents = "auto";
-      button.style.cursor = "pointer";
-      console.log(`✅ Bouton ${index + 1} activé (dates sélectionnées)`);
-    } else {
-      // Pas de dates = boutons désactivés
-      button.style.opacity = "0.5";
-      button.style.pointerEvents = "none";
-      button.style.cursor = "not-allowed";
-      console.log(`🔒 Bouton ${index + 1} désactivé (pas de dates)`);
-    }
-  });
 }
 
   // Méthodes utilitaires pour débuggage
