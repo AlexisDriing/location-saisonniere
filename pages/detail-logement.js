@@ -58,36 +58,80 @@ class DetailLogementPage {
     document.head.appendChild(link);
   }
 
-  initializeManagers() {
-    try {
-      // 1. Interface (logos, popins, extras) - PREMIER
-      this.managers.interface = new InterfaceManager();
-      
-      // 2. Voyageurs (adultes, enfants, bébés) - DEUXIÈME  
-      this.managers.travelers = new TravelersManager();
-      window.travelersManager = this.managers.travelers;
-      
-      // 3. Calculateur de prix - TROISIÈME (dépend des voyageurs)
-      this.managers.priceCalculator = new PriceCalculator();
-      
-      // 4. Calendrier (dates + iCal) - QUATRIÈME (dépend du calculateur)
-      this.managers.calendar = new CalendarManager();
-      
-      // 5. Affichage des tarifs par saison - CINQUIÈME
-      this.managers.tariffs = new TariffsDisplayManager();
-      
-      // 6. Données de réservation - SIXIÈME 
-      this.managers.reservationData = new ReservationDataManager();
-      
-      // 7. Améliorations mobile - DERNIER
-      this.managers.mobileEnhancements = new MobileEnhancementsManager();
-      
-      console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
-    }
+  // Dans pages/detail-logement.js - MODIFIER l'ordre d'initialisation
+
+initializeManagers() {
+  try {
+    console.log('🚀 Début initialisation des managers...');
+    
+    // 1. Interface (logos, popins, extras) - PREMIER
+    this.managers.interface = new InterfaceManager();
+    console.log('✅ InterfaceManager initialisé');
+    
+    // 2. Voyageurs (adultes, enfants, bébés) - DEUXIÈME  
+    this.managers.travelers = new TravelersManager();
+    window.travelersManager = this.managers.travelers;
+    console.log('✅ TravelersManager initialisé');
+    
+    // 3. Calculateur de prix - TROISIÈME (dépend des voyageurs)
+    this.managers.priceCalculator = new PriceCalculator();
+    console.log('✅ PriceCalculator initialisé');
+    
+    // 4. Calendrier (dates + iCal) - QUATRIÈME (dépend du calculateur)
+    this.managers.calendar = new CalendarManager();
+    console.log('✅ CalendarManager initialisé');
+    
+    // 5. Affichage des tarifs par saison - CINQUIÈME
+    this.managers.tariffs = new TariffsDisplayManager();
+    console.log('✅ TariffsDisplayManager initialisé');
+    
+    // 6. Améliorations mobile - SIXIÈME
+    this.managers.mobileEnhancements = new MobileEnhancementsManager();
+    console.log('✅ MobileEnhancementsManager initialisé');
+    
+    // 7. Données de réservation - DERNIER (peut changer l'état des boutons)
+    this.managers.reservationData = new ReservationDataManager();
+    console.log('✅ ReservationDataManager initialisé');
+    
+    // 8. FORCER l'état initial des boutons EN DERNIER
+    setTimeout(() => {
+      console.log('🔧 Application finale de l\'état des boutons...');
+      this.forceButtonState();
+    }, 100);
+    
+    console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
   }
+}
+
+// NOUVELLE MÉTHODE pour forcer l'état des boutons
+forceButtonState() {
+  const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
+  
+  console.log(`🎯 Forçage de l'état pour ${reserverButtons.length} boutons...`);
+  
+  reserverButtons.forEach((button, index) => {
+    // Vérifier si on a des dates sélectionnées
+    const priceCalculator = window.priceCalculator;
+    const hasDates = priceCalculator && priceCalculator.startDate && priceCalculator.endDate;
+    
+    if (hasDates) {
+      // Dates sélectionnées = boutons actifs
+      button.style.opacity = "1";
+      button.style.pointerEvents = "auto";
+      button.style.cursor = "pointer";
+      console.log(`✅ Bouton ${index + 1} activé (dates sélectionnées)`);
+    } else {
+      // Pas de dates = boutons désactivés
+      button.style.opacity = "0.5";
+      button.style.pointerEvents = "none";
+      button.style.cursor = "not-allowed";
+      console.log(`🔒 Bouton ${index + 1} désactivé (pas de dates)`);
+    }
+  });
+}
 
   // Méthodes utilitaires pour débuggage
   getManager(name) {
