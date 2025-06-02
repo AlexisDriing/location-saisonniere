@@ -147,27 +147,28 @@ class CalendarManager {
       this.updateCalendarUI();
     };
 
-    // FIX PROBLÈME 1: Ajouter la fonction de positionnement manquante
+    // FIX PROBLÈME 1: Correction du positionnement au scroll
     const originalMove = this.picker.move;
     this.picker.move = () => {
-      originalMove.call(this.picker);
       const $input = $('#input-calendar');
-      const rect = $input[0].getBoundingClientRect();
-      const top = parseInt(this.picker.container.css('top'), 10);
-      const left = parseInt(this.picker.container.css('left'), 10);
-      const offset = top - (rect.bottom + window.pageYOffset);
+      if ($input.length === 0) return;
       
-      // Positionnement correct même après scroll
+      const rect = $input[0].getBoundingClientRect();
+      
+      // Positionnement fixe par rapport au viewport
       this.picker.container.css({
         position: 'fixed',
-        top: (rect.bottom + offset) + 'px',
-        left: left + 'px'
+        top: (rect.bottom + 5) + 'px', // 5px de marge sous l'input
+        left: rect.left + 'px',
+        'z-index': '10000'
       });
     };
 
-    // FIX PROBLÈME 1: Gestion du redimensionnement
-    $(window).on('resize', () => {
-      if (this.picker.isShowing) this.picker.move();
+    // FIX PROBLÈME 1: Gestion du redimensionnement et scroll
+    $(window).on('resize scroll', () => {
+      if (this.picker.isShowing) {
+        this.picker.move();
+      }
     });
 
     // FIX PROBLÈME 1: Masquer dernière ligne si toutes les dates sont "off"
