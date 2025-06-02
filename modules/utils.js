@@ -6,7 +6,7 @@ class Utils {
       "voyageurs-texte", "calcul-nuit", "prix-nuit", "prix-reduction", 
       "prix-taxe", "prix-menage", "total-prix", "adultes-moins", 
       "chiffres-adultes", "adultes-plus", "enfants-moins", "chiffres-enfants", 
-      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus"
+      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction"
     ];
     
     let element = document.getElementById(baseId);
@@ -22,7 +22,7 @@ class Utils {
       "voyageurs-texte", "calcul-nuit", "prix-nuit", "prix-reduction", 
       "prix-taxe", "prix-menage", "total-prix", "adultes-moins", 
       "chiffres-adultes", "adultes-plus", "enfants-moins", "chiffres-enfants", 
-      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus"
+      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction"
     ];
     
     const elements = [];
