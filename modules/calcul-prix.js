@@ -1,4 +1,4 @@
-// modules/calcul-prix.js - VERSION CORRIGÉE SANS AUTO-INITIALISATION
+// Calculateur de prix principal - Version avec classes CSS
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -33,15 +33,15 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // ✅ ÉTAT PAR DÉFAUT : Les styles CSS gèrent l'opacité 0.3
-    console.log('🔒 Boutons désactivés par défaut via CSS');
+    // ✅ ÉTAT PAR DÉFAUT : Désactiver avec les classes CSS
+    this.setReservationButtonsState('disabled'); // 'disabled' = opacité 0.3
     
     this.resetPrices();
     this.listenForDateChanges();
     
     // Export global pour autres modules
     window.priceCalculator = this;
-    console.log('✅ PriceCalculator initialisé');
+    console.log('✅ PriceCalculator initialisé avec boutons DÉSACTIVÉS par défaut');
   }
 
   loadPricingData() {
@@ -56,13 +56,14 @@ class PriceCalculator {
     if (element) {
       try {
         const jsonData = element.getAttribute(attribute);
+        console.log('📊 JSON tarifs trouvé:', jsonData);
         this.pricingData = JSON.parse(jsonData);
-        console.log('✅ Données tarifaires chargées');
+        console.log('✅ Données tarifaires chargées:', this.pricingData);
       } catch (error) {
         console.error("❌ Erreur lors du chargement des données tarifaires:", error);
       }
     } else {
-      console.warn("⚠️ Aucun élément avec data-json-tarifs trouvé");
+      console.warn("⚠️ Aucun élément avec data-json-tarifs-line ou data-json-tarifs trouvé");
     }
   }
 
@@ -94,7 +95,7 @@ class PriceCalculator {
         this.resetPrices();
       });
     } else {
-      console.warn("⚠️ jQuery ou DateRangePicker non disponible pour PriceCalculator");
+      console.warn("⚠️ jQuery ou DateRangePicker non disponible");
     }
   }
 
@@ -102,6 +103,7 @@ class PriceCalculator {
     return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
   }
 
+  // ✅ NOUVELLE MÉTHODE avec gestion par classes CSS
   setReservationButtonsState(state) {
     const reserverButtons = this.getReserverButtons();
     
@@ -111,18 +113,21 @@ class PriceCalculator {
       
       switch(state) {
         case 'enabled':
+          // ACTIVER : dates valides sélectionnées (opacité 1)
           button.classList.add('dates-selected');
-          console.log(`✅ Bouton ${index + 1} activé`);
+          console.log(`✅ Bouton ${index + 1} activé (classe dates-selected)`);
           break;
           
         case 'min-nights-error':
+          // ERREUR nuits minimum (opacité 0.3)
           button.classList.add('min-nights-error');
-          console.log(`⚠️ Bouton ${index + 1} erreur nuits minimum`);
+          console.log(`⚠️ Bouton ${index + 1} désactivé - erreur nuits minimum`);
           break;
           
         case 'disabled':
         default:
-          console.log(`🔒 Bouton ${index + 1} désactivé`);
+          // DÉSACTIVÉ par défaut (opacité 0.3 via CSS)
+          console.log(`🔒 Bouton ${index + 1} désactivé (état par défaut)`);
           break;
       }
     });
@@ -139,10 +144,10 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // Désactiver les boutons
+    // ✅ UTILISER la méthode avec classes CSS pour désactiver
     this.setReservationButtonsState('disabled');
     
-    // Réinitialiser les éléments de réduction
+    // Réinitialiser les éléments de réduction (desktop ET mobile)
     const reductionElements = [
       ...this.elements.prixReduction,
       ...document.querySelectorAll('#prix-reduction-mobile')
@@ -167,71 +172,100 @@ class PriceCalculator {
     });
     
     // Réinitialiser les autres éléments
-    [this.elements.calcNuit, this.elements.prixNuit, this.elements.prixTaxe, 
-     this.elements.prixMenage, this.elements.totalPrix].forEach(elementArray => {
-      elementArray.forEach(element => {
-        if (element) element.textContent = "-";
+    if (this.elements.calcNuit.length) {
+      this.elements.calcNuit.forEach(element => {
+        element.textContent = "-";
       });
-    });
+    }
+    
+    if (this.elements.prixNuit.length) {
+      this.elements.prixNuit.forEach(element => {
+        element.textContent = "-";
+      });
+    }
+    
+    if (this.elements.prixTaxe.length) {
+      this.elements.prixTaxe.forEach(element => {
+        element.textContent = "-";
+      });
+    }
+    
+    if (this.elements.prixMenage.length) {
+      this.elements.prixMenage.forEach(element => {
+        element.textContent = "-";
+      });
+    }
+    
+    if (this.elements.totalPrix.length) {
+      this.elements.totalPrix.forEach(element => {
+        element.textContent = "-";
+      });
+    }
     
     // Afficher prix "À partir de" si données disponibles
     if (this.elements.prixDirect.length || this.elements.textPourcentage.length) {
-      this.displayStartingPrice();
+      let minPrice = Infinity;
+      let platformPrice = 0;
+      let bestSeason = null;
+      
+      if (this.pricingData && this.pricingData.seasons) {
+        for (const season of this.pricingData.seasons) {
+          if (season.price < minPrice) {
+            minPrice = season.price;
+            bestSeason = season;
+            platformPrice = this.getPlatformPrice(season);
+          }
+        }
+      }
+      
+      if (isFinite(minPrice) && bestSeason) {
+        if (this.elements.prixDirect.length) {
+          this.elements.prixDirect.forEach(element => {
+            element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">${Math.round(minPrice)}€ / nuit</strong>`;
+          });
+        }
+        
+        if (this.elements.textPourcentage.length) {
+          if (platformPrice > minPrice) {
+            this.elements.textPourcentage.forEach(element => {
+              element.textContent = `-${Math.round(100 * (platformPrice - minPrice) / platformPrice)}%`;
+            });
+          } else {
+            this.elements.textPourcentage.forEach(element => {
+              element.textContent = "";
+            });
+          }
+        }
+      } else {
+        if (this.elements.prixDirect.length) {
+          this.elements.prixDirect.forEach(element => {
+            element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">- € / nuit</strong>`;
+          });
+        }
+      }
     }
     
     this.hideMinNightsError();
   }
 
-  displayStartingPrice() {
-    let minPrice = Infinity;
-    let platformPrice = 0;
-    let bestSeason = null;
-    
-    if (this.pricingData && this.pricingData.seasons) {
-      for (const season of this.pricingData.seasons) {
-        if (season.price < minPrice) {
-          minPrice = season.price;
-          bestSeason = season;
-          platformPrice = this.getPlatformPrice(season);
-        }
-      }
-    }
-    
-    if (isFinite(minPrice) && bestSeason) {
-      if (this.elements.prixDirect.length) {
-        this.elements.prixDirect.forEach(element => {
-          element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">${Math.round(minPrice)}€ / nuit</strong>`;
-        });
-      }
-      
-      if (this.elements.textPourcentage.length) {
-        if (platformPrice > minPrice) {
-          this.elements.textPourcentage.forEach(element => {
-            element.textContent = `-${Math.round(100 * (platformPrice - minPrice) / platformPrice)}%`;
-          });
-        } else {
-          this.elements.textPourcentage.forEach(element => {
-            element.textContent = "";
-          });
-        }
-      }
-    }
-  }
-
   calculateAndDisplayPrices() {
     console.log('💰 Calcul des prix démarré');
     if (!this.pricingData || !this.startDate || !this.endDate) {
-      console.warn('⚠️ Données manquantes pour le calcul');
+      console.warn('⚠️ Données manquantes pour le calcul:', {
+        pricingData: !!this.pricingData,
+        startDate: !!this.startDate,
+        endDate: !!this.endDate
+      });
       return;
     }
     
     const stayDetails = this.calculateStayDetails();
     if (stayDetails) {
-      console.log('✅ Détails du séjour calculés');
+      console.log('✅ Détails du séjour calculés:', stayDetails);
       this.updateUI(stayDetails);
       this.hideMinNightsError();
     } else {
-      console.warn('❌ Erreur nuits minimum');
+      console.warn('❌ Impossible de calculer les détails du séjour');
       this.showMinNightsError();
     }
   }
@@ -273,6 +307,7 @@ class PriceCalculator {
         
         const nightInfo = {
           date: currentDate.format("YYYY-MM-DD"),
+          formattedDate: currentDate.format("DD/MM/YYYY"),
           season: season.name,
           price: season.price,
           platformPrice: this.getPlatformPrice(season)
@@ -310,7 +345,9 @@ class PriceCalculator {
       
       // Taxe de séjour
       const adultsElement = Utils.getElementByIdWithFallback("chiffres-adultes");
+      const childrenElement = Utils.getElementByIdWithFallback("chiffres-enfants");
       const adultsCount = parseInt(adultsElement?.textContent || "1");
+      const childrenCount = parseInt(childrenElement?.textContent || "0");
       
       if (this.logementType === "Maison d'hôte") {
         details.touristTax = 0.75 * adultsCount * details.nights;
@@ -320,6 +357,8 @@ class PriceCalculator {
       }
       
       details.touristTax = Math.round(details.touristTax * 100) / 100;
+      
+      // Prix total
       details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee + details.touristTax;
       details.platformPrice += details.touristTax;
       
@@ -349,11 +388,13 @@ class PriceCalculator {
         const [endDay, endMonth] = period.end.split("-").map(Number);
         
         if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+          // Période normale dans la même année
           if ((month > startMonth || (month === startMonth && day >= startDay)) &&
               (month < endMonth || (month === endMonth && day <= endDay))) {
             return season;
           }
         } else {
+          // Période qui traverse la fin d'année
           if ((month > startMonth || (month === startMonth && day >= startDay)) ||
               (month < endMonth || (month === endMonth && day <= endDay))) {
             return season;
@@ -362,6 +403,7 @@ class PriceCalculator {
       }
     }
     
+    // Si aucune saison ne correspond, retourner la première par défaut
     return this.pricingData.seasons[0];
   }
 
@@ -392,10 +434,12 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "flex";
     
-    // Activer les boutons
+    // ✅ UTILISER la méthode avec classes CSS pour activer
     this.setReservationButtonsState('enabled');
     
     const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
+    
+    // [Le reste du code updateUI reste identique...]
     
     // Calcul par nuit
     if (this.elements.calcNuit.length) {
@@ -412,7 +456,7 @@ class PriceCalculator {
       });
     }
     
-    // Gestion des réductions
+    // Gestion des réductions (desktop ET mobile)
     const reductionPriceElements = [
       ...this.elements.prixReduction,
       ...Array.from(document.querySelectorAll('#prix-reduction-mobile'))
@@ -424,6 +468,7 @@ class PriceCalculator {
     ].filter(el => el !== null);
     
     if (details.discountAmount > 0) {
+      // AFFICHER la réduction
       reductionPriceElements.forEach(element => {
         if (element) {
           element.textContent = `-${formatPrice(details.discountAmount)}€`;
@@ -438,6 +483,7 @@ class PriceCalculator {
         }
       });
     } else {
+      // MASQUER la réduction
       reductionPriceElements.forEach(element => {
         if (element) {
           element.textContent = "";
@@ -462,7 +508,11 @@ class PriceCalculator {
     // Frais de ménage
     if (this.elements.prixMenage.length) {
       this.elements.prixMenage.forEach(element => {
-        element.textContent = details.cleaningFee > 0 ? `${formatPrice(details.cleaningFee)}€` : "Inclus";
+        if (details.cleaningFee > 0) {
+          element.textContent = `${formatPrice(details.cleaningFee)}€`;
+        } else {
+          element.textContent = "Inclus";
+        }
       });
     }
     
@@ -508,14 +558,17 @@ class PriceCalculator {
   }
 
   showMinNightsError() {
+    // Masquer les blocs de prix
     const prixBlock = document.getElementById("bloc-calcul-prix");
     if (prixBlock) prixBlock.style.display = "none";
     
     const prixMobileBlock = document.getElementById("bloc-calcul-prix-mobile");
     if (prixMobileBlock) prixMobileBlock.style.display = "none";
     
+    // ✅ UTILISER la méthode avec classes CSS pour l'erreur nuits minimum
     this.setReservationButtonsState('min-nights-error');
     
+    // Afficher l'erreur de nuits minimum
     const errorBlocks = document.querySelectorAll('.bloc-error-days');
     const minNightsTexts = [
       document.getElementById('text-days-minimum'),
@@ -535,5 +588,15 @@ class PriceCalculator {
   }
 }
 
-// Export global uniquement - PAS d'auto-initialisation
+// Export global
 window.PriceCalculator = PriceCalculator;
+
+// INITIALISATION AUTOMATIQUE (comme dans votre ancien code)
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    window.priceCalculator = new PriceCalculator();
+    console.log('✅ PriceCalculator initialisé automatiquement');
+  } catch (error) {
+    console.error('❌ Erreur PriceCalculator:', error);
+  }
+});
