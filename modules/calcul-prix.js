@@ -117,25 +117,36 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // Désactiver boutons de réservation
+    // PROBLÈME 2: Désactiver boutons de réservation avec l'opacité correcte
     const reserverButtons = this.getReserverButtons();
     reserverButtons.forEach(button => {
       button.style.opacity = "0.5";
+      button.style.pointerEvents = "none";
     });
     
-    // Réinitialiser les éléments de réduction
-    if (this.elements.prixReduction.length) {
-      this.elements.prixReduction.forEach(element => {
+    // PROBLÈME 3: Réinitialiser les éléments de réduction (desktop ET mobile)
+    const reductionElements = [
+      ...this.elements.prixReduction,
+      ...document.querySelectorAll('#prix-reduction-mobile') // Ajouter mobile explicitement
+    ];
+    
+    reductionElements.forEach(element => {
+      if (element) {
         element.textContent = "";
         element.style.display = "none";
-      });
-    }
+      }
+    });
     
-    if (this.elements.blocReduction.length) {
-      this.elements.blocReduction.forEach(element => {
+    const blocReductionElements = [
+      ...this.elements.blocReduction,
+      ...document.querySelectorAll('#bloc-reduction-mobile') // Ajouter mobile explicitement
+    ];
+    
+    blocReductionElements.forEach(element => {
+      if (element) {
         element.style.display = "none";
-      });
-    }
+      }
+    });
     
     // Réinitialiser les autres éléments
     if (this.elements.calcNuit.length) {
@@ -407,6 +418,7 @@ class PriceCalculator {
     const reserverButtons = this.getReserverButtons();
     reserverButtons.forEach(button => {
       button.style.opacity = "1";
+      button.style.pointerEvents = "auto"; // Réactiver les clics
     });
     
     const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
@@ -426,32 +438,44 @@ class PriceCalculator {
       });
     }
     
-    // Réduction
-    if (this.elements.prixReduction.length) {
-      if (details.discountAmount > 0) {
-        this.elements.prixReduction.forEach(element => {
+    // PROBLÈME 3: Réduction (desktop ET mobile)
+    const reductionPriceElements = [
+      ...this.elements.prixReduction,
+      ...document.querySelectorAll('#prix-reduction-mobile')
+    ];
+    
+    const reductionBlockElements = [
+      ...this.elements.blocReduction,
+      ...document.querySelectorAll('#bloc-reduction-mobile')
+    ];
+    
+    if (details.discountAmount > 0) {
+      reductionPriceElements.forEach(element => {
+        if (element) {
           element.textContent = `-${formatPrice(details.discountAmount)}€`;
           element.style.color = "#2AA551";
           element.style.display = "block";
-        });
-      } else {
-        this.elements.prixReduction.forEach(element => {
+        }
+      });
+      
+      reductionBlockElements.forEach(element => {
+        if (element) {
+          element.style.display = "flex";
+        }
+      });
+    } else {
+      reductionPriceElements.forEach(element => {
+        if (element) {
           element.textContent = "";
           element.style.display = "none";
-        });
-      }
-    }
-    
-    if (this.elements.blocReduction.length) {
-      if (details.discountAmount > 0) {
-        this.elements.blocReduction.forEach(element => {
-          element.style.display = "flex";
-        });
-      } else {
-        this.elements.blocReduction.forEach(element => {
+        }
+      });
+      
+      reductionBlockElements.forEach(element => {
+        if (element) {
           element.style.display = "none";
-        });
-      }
+        }
+      });
     }
     
     // Taxe de séjour
