@@ -199,11 +199,5 @@ class MobileEnhancementsManager {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.mobileEnhancementsManager = new MobileEnhancementsManager();
-  console.log('✅ Mobile Enhancements Manager initialisé');
-});
-
 // Export global
 window.MobileEnhancementsManager = MobileEnhancementsManager;
