@@ -18,7 +18,6 @@ class PriceCalculator {
     this.logementType = "";
     this.startDate = null;
     this.endDate = null;
-    
     this.init();
   }
 
