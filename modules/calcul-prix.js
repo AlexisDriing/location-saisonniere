@@ -33,15 +33,20 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // ✅ ÉTAT PAR DÉFAUT RENFORCÉ : Désactiver les boutons de réservation
-    this.setReservationButtonsState(false); // false = désactivé
+    // Désactiver les boutons de réservation par défaut (OPACITÉ FAIBLE + PAS DE CLICS)
+    const reserverButtons = this.getReserverButtons();
+    reserverButtons.forEach(button => {
+      button.style.opacity = "0.5";
+      button.style.pointerEvents = "none";
+      button.style.cursor = "not-allowed";
+    });
     
     this.resetPrices();
     this.listenForDateChanges();
     
     // Export global pour autres modules
     window.priceCalculator = this;
-    console.log('✅ PriceCalculator initialisé avec boutons DÉSACTIVÉS par défaut');
+    console.log('✅ PriceCalculator initialisé et assigné à window.priceCalculator');
   }
 
   loadPricingData() {
@@ -103,27 +108,6 @@ class PriceCalculator {
     return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
   }
 
-  // ✅ NOUVELLE MÉTHODE centralisée pour gérer l'état des boutons
-  setReservationButtonsState(isEnabled) {
-    const reserverButtons = this.getReserverButtons();
-    
-    reserverButtons.forEach((button, index) => {
-      if (isEnabled) {
-        // ACTIVER : dates valides sélectionnées
-        button.style.opacity = "1";
-        button.style.pointerEvents = "auto";
-        button.style.cursor = "pointer";
-        console.log(`✅ Bouton ${index + 1} activé`);
-      } else {
-        // DÉSACTIVER : pas de dates ou autres raisons
-        button.style.opacity = "0.5";
-        button.style.pointerEvents = "none";
-        button.style.cursor = "not-allowed";
-        console.log(`🔒 Bouton ${index + 1} désactivé`);
-      }
-    });
-  }
-
   resetPrices() {
     this.startDate = null;
     this.endDate = null;
@@ -135,8 +119,13 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "none";
     
-    // ✅ UTILISER la méthode centralisée pour désactiver
-    this.setReservationButtonsState(false);
+    // Désactiver boutons de réservation (MÊME LOGIQUE QU'À L'INIT)
+    const reserverButtons = this.getReserverButtons();
+    reserverButtons.forEach(button => {
+      button.style.opacity = "0.5";
+      button.style.pointerEvents = "none";
+      button.style.cursor = "not-allowed";
+    });
     
     // Réinitialiser les éléments de réduction (desktop ET mobile)
     const reductionElements = [
@@ -425,8 +414,13 @@ class PriceCalculator {
     const blocPrixMobile = document.getElementById("bloc-calcul-prix-mobile");
     if (blocPrixMobile) blocPrixMobile.style.display = "flex";
     
-    // ✅ UTILISER la méthode centralisée pour activer
-    this.setReservationButtonsState(true);
+    // ACTIVER les boutons de réservation (dates valides sélectionnées)
+    const reserverButtons = this.getReserverButtons();
+    reserverButtons.forEach(button => {
+      button.style.opacity = "1";
+      button.style.pointerEvents = "auto";
+      button.style.cursor = "pointer";
+    });
     
     const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
     
@@ -554,21 +548,26 @@ class PriceCalculator {
     const prixMobileBlock = document.getElementById("bloc-calcul-prix-mobile");
     if (prixMobileBlock) prixMobileBlock.style.display = "none";
     
-    // ✅ UTILISER la méthode centralisée pour désactiver (nuits minimum)
-    this.setReservationButtonsState(false);
-    
-    // Afficher l'erreur de nuits minimum
+    // Afficher l'erreur
     const errorBlocks = document.querySelectorAll('.bloc-error-days');
     const minNightsTexts = [
       document.getElementById('text-days-minimum'),
       document.getElementById('text-days-minimum-mobile')
     ];
+    const reserverButtons = this.getReserverButtons();
     
     const season = this.getSeason(this.startDate);
     const minNights = season && season.minNights ? season.minNights : 1;
     
     errorBlocks.forEach(block => block && (block.style.display = 'block'));
     minNightsTexts.forEach(text => text && (text.textContent = `${minNights} nuits minimum`));
+    
+    // Boutons désactivés pour nuits minimum non respectées
+    reserverButtons.forEach(button => {
+      button.style.opacity = '0.3';
+      button.style.pointerEvents = 'none';
+      button.style.cursor = 'not-allowed';
+    });
   }
 
   hideMinNightsError() {
