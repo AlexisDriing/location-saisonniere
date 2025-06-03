@@ -7,26 +7,17 @@ class CalendarManager {
     this.icalManager = new ICalManager();
     this.nextUnavailableDate = null;
     
-    // ✅ FIX: Délai pour s'assurer que tout est prêt
-    setTimeout(() => {
-      this.init();
-    }, 100);
+    this.init();
   }
 
   init() {
-    console.log('📅 Initialisation du CalendarManager...');
     this.initDateRangePicker();
   }
 
   initDateRangePicker() {
-    // ✅ FIX: Attendre plus longtemps et vérifier les dépendances
     setTimeout(async () => {
-      console.log('🔍 Vérification des dépendances...');
-      console.log('- jQuery disponible:', typeof jQuery !== 'undefined');
-      console.log('- DateRangePicker disponible:', typeof jQuery !== 'undefined' && typeof jQuery.fn.daterangepicker !== 'undefined');
-      
       if (typeof jQuery === 'undefined' || typeof jQuery.fn.daterangepicker === 'undefined') {
-        console.log('⏳ Chargement de DateRangePicker...');
+        // Charger DateRangePicker si nécessaire
         await this.loadDateRangePicker();
       }
       
@@ -38,24 +29,10 @@ class CalendarManager {
         .map(e => e.getAttribute('data-ical-url'))
         .filter(e => e && e.trim() !== '');
       
-      console.log('📡 URLs iCal trouvées:', icalUrls.length);
-      
-      if (!icalUrls.length) {
-        console.warn('⚠️ Aucune URL iCal trouvée');
-        return;
-      }
-      
-      // ✅ FIX: Vérifier que les éléments existent
-      const calendarInputs = $('#input-calendar, #input-calendar-mobile');
-      if (calendarInputs.length === 0) {
-        console.error('❌ Aucun élément input-calendar trouvé !');
-        return;
-      }
-      
-      console.log('🎯 Éléments calendrier trouvés:', calendarInputs.length);
+      if (!icalUrls.length) return;
       
       // Initialiser le DateRangePicker
-      calendarInputs.daterangepicker({
+      $('#input-calendar, #input-calendar-mobile').daterangepicker({
         autoApply: false,
         opens: 'left',
         autoUpdateInput: false,
@@ -84,14 +61,6 @@ class CalendarManager {
       });
 
       this.picker = $('#input-calendar').data('daterangepicker');
-      
-      if (!this.picker) {
-        console.error('❌ Impossible d\'initialiser le DateRangePicker !');
-        return;
-      }
-      
-      console.log('✅ DateRangePicker initialisé avec succès');
-      
       this.setupPickerEvents();
       this.enhancePickerUI();
       
@@ -102,24 +71,14 @@ class CalendarManager {
           this.picker.updateCalendars();
           this.updateCalendarUI();
         }
-        console.log('✅ Données iCal chargées');
       } catch (e) {
-        console.error('❌ Erreur de chargement iCal:', e);
+        console.error('Erreur de chargement iCal:', e);
       }
-    }, 1000); // ✅ FIX: Délai plus long
+    }, 500);
   }
 
   async loadDateRangePicker() {
     return new Promise((resolve) => {
-      // Vérifier si déjà chargé
-      if (typeof jQuery !== 'undefined' && typeof jQuery.fn.daterangepicker !== 'undefined') {
-        console.log('✅ DateRangePicker déjà disponible');
-        resolve();
-        return;
-      }
-      
-      console.log('📦 Chargement des assets DateRangePicker...');
-      
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css';
@@ -127,14 +86,7 @@ class CalendarManager {
 
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js';
-      script.onload = () => {
-        console.log('✅ DateRangePicker chargé');
-        resolve();
-      };
-      script.onerror = () => {
-        console.error('❌ Erreur chargement DateRangePicker');
-        resolve(); // Continue quand même
-      };
+      script.onload = resolve;
       document.head.appendChild(script);
     });
   }
@@ -143,8 +95,6 @@ class CalendarManager {
     const $ = jQuery;
     
     $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
-      console.log('📅 Dates appliquées:', picker.startDate?.format('YYYY-MM-DD'), 'à', picker.endDate?.format('YYYY-MM-DD'));
-      
       if (picker.startDate && picker.endDate) {
         $(e.target).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
         this.updateDatesText(picker.startDate, picker.endDate);
@@ -156,7 +106,6 @@ class CalendarManager {
     });
 
     $('#input-calendar, #input-calendar-mobile').on('cancel.daterangepicker', (e, picker) => {
-      console.log('❌ Dates annulées');
       this.nextUnavailableDate = null;
       this.resetDatePicker(picker);
     });
@@ -167,101 +116,133 @@ class CalendarManager {
       }
     });
 
-    $('#input-calendar, #input-calendar-mobile').on('show.daterangepicker', (e, picker) => {
-      console.log('👁️ Calendrier ouvert');
+    $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
+      if (picker.startDate && !picker.endDate) {
+        this.findNextUnavailableDate(picker.startDate);
+        picker.leftCalendar.month = moment(picker.startDate).clone();
+        picker.rightCalendar.month = moment(picker.startDate).clone().add(1, 'month');
+        picker.updateCalendars();
+      }
     });
   }
 
-  enhancePickerUI() {
-    if (!this.picker) return;
+  // Remplacer la fonction enhancePickerUI() dans modules/calendrier.js lignes 120-220
 
-    const originalRenderCalendar = this.picker.renderCalendar;
-    this.picker.renderCalendar = (side) => {
-      originalRenderCalendar.call(this.picker, side);
-      this.updateCalendarUI();
-    };
+enhancePickerUI() {
+  if (!this.picker) return;
 
-    const originalUpdateView = this.picker.updateView;
-    this.picker.updateView = () => {
-      originalUpdateView.call(this.picker);
-      this.updateCalendarUI();
-    };
+  const originalRenderCalendar = this.picker.renderCalendar;
+  this.picker.renderCalendar = (side) => {
+    originalRenderCalendar.call(this.picker, side);
+    this.updateCalendarUI();
+  };
 
-    const originalShow = this.picker.show;
-    this.picker.show = () => {
-      originalShow.call(this.picker);
-      this.updateCalendarUI();
-    };
+  const originalUpdateView = this.picker.updateView;
+  this.picker.updateView = () => {
+    originalUpdateView.call(this.picker);
+    this.updateCalendarUI();
+  };
 
-    // Correction du positionnement
-    const originalMove = this.picker.move;
-    this.picker.move = () => {
-      if (!this.picker.element || !this.picker.element.length) return;
-      
-      const input = this.picker.element[0];
-      const rect = input.getBoundingClientRect();
-      const container = this.picker.container;
-      
-      // Vérifier si on est en mobile
-      if (window.innerWidth < 768) {
-        originalMove.call(this.picker);
-        return;
-      }
-      
-      // Desktop : positionnement fixe avec gestion du scroll
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-      
-      container.css({
-        position: 'absolute',
-        top: (rect.bottom + scrollTop + 5) + 'px',
-        left: (rect.left + scrollLeft) + 'px',
-        'z-index': '10000',
-        'max-width': '100vw',
-        'max-height': '100vh'
-      });
-      
-      // Ajuster si le calendrier sort de l'écran
-      const containerWidth = container.outerWidth();
-      const containerHeight = container.outerHeight();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      // Ajustement horizontal
-      if (rect.left + containerWidth > viewportWidth) {
-        container.css('left', (rect.right + scrollLeft - containerWidth) + 'px');
-      }
-      
-      // Ajustement vertical
-      if (rect.bottom + containerHeight > viewportHeight + scrollTop) {
-        container.css('top', (rect.top + scrollTop - containerHeight - 5) + 'px');
-      }
-    };
+  const originalShow = this.picker.show;
+  this.picker.show = () => {
+    originalShow.call(this.picker);
+    this.updateCalendarUI();
+  };
 
-    // Écouter les événements de scroll et resize
-    const handleReposition = () => {
-      if (this.picker && this.picker.isShowing) {
-        clearTimeout(this.repositionTimeout);
-        this.repositionTimeout = setTimeout(() => {
-          this.picker.move();
-        }, 10);
-      }
-    };
-
-    $(window).on('resize.daterangepicker scroll.daterangepicker', handleReposition);
+  // FIX PROBLÈME 1: Correction COMPLÈTE du positionnement
+  const originalMove = this.picker.move;
+  this.picker.move = () => {
+    if (!this.picker.element || !this.picker.element.length) return;
     
-    const originalHide = this.picker.hide;
-    this.picker.hide = function() {
-      $(window).off('resize.daterangepicker scroll.daterangepicker');
-      originalHide.call(this);
-    };
+    const input = this.picker.element[0];
+    const rect = input.getBoundingClientRect();
+    const container = this.picker.container;
+    
+    // Vérifier si on est en mobile
+    if (window.innerWidth < 768) {
+      // En mobile, utiliser le comportement par défaut
+      originalMove.call(this.picker);
+      return;
+    }
+    
+    // Desktop : positionnement fixe avec gestion du scroll
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    
+    // Position absolue pour suivre le scroll
+    container.css({
+      position: 'absolute',
+      top: (rect.bottom + scrollTop + 5) + 'px',
+      left: (rect.left + scrollLeft) + 'px',
+      'z-index': '10000',
+      'max-width': '100vw',
+      'max-height': '100vh'
+    });
+    
+    // Ajuster si le calendrier sort de l'écran
+    const containerWidth = container.outerWidth();
+    const containerHeight = container.outerHeight();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Ajustement horizontal
+    if (rect.left + containerWidth > viewportWidth) {
+      container.css('left', (rect.right + scrollLeft - containerWidth) + 'px');
+    }
+    
+    // Ajustement vertical (afficher au-dessus si pas de place en bas)
+    if (rect.bottom + containerHeight > viewportHeight + scrollTop) {
+      container.css('top', (rect.top + scrollTop - containerHeight - 5) + 'px');
+    }
+  };
 
-    const originalClear = this.picker.clear;
-    this.picker.clear = () => {
-      this.nextUnavailableDate = null;
-      originalClear.call(this.picker);
-    };
-  }
+  // FIX PROBLÈME 1: Écouter les événements de scroll et resize
+  const handleReposition = () => {
+    if (this.picker && this.picker.isShowing) {
+      // Petit délai pour éviter les appels trop fréquents
+      clearTimeout(this.repositionTimeout);
+      this.repositionTimeout = setTimeout(() => {
+        this.picker.move();
+      }, 10);
+    }
+  };
+
+  // Ajouter les écouteurs d'événements
+  $(window).on('resize.daterangepicker scroll.daterangepicker', handleReposition);
+  
+  // Nettoyer les écouteurs quand le picker est caché
+  const originalHide = this.picker.hide;
+  this.picker.hide = function() {
+    $(window).off('resize.daterangepicker scroll.daterangepicker');
+    originalHide.call(this);
+  };
+
+  // FIX PROBLÈME 1: Masquer dernière ligne si toutes les dates sont "off"
+  const originalBuildCalendar = this.picker.buildCalendar;
+  this.picker.buildCalendar = function(month, year, hour, minute, second) {
+    const calendar = originalBuildCalendar.call(this, month, year, hour, minute, second);
+    setTimeout(() => {
+      this.container.find('.calendar-table').each(function() {
+        const lastRow = $(this).find('tbody tr:last-child');
+        let allOff = true;
+        lastRow.find('td').each(function() {
+          if (!$(this).hasClass('off')) {
+            allOff = false;
+            return false;
+          }
+        });
+        if (allOff) lastRow.hide();
+      });
+    }, 0);
+    return calendar;
+  };
+
+  const originalClear = this.picker.clear;
+  this.picker.clear = () => {
+    this.nextUnavailableDate = null;
+    originalClear.call(this.picker);
+  };
+}
 
   updateCalendarUI() {
     if (!this.picker) return;
@@ -376,12 +357,12 @@ class CalendarManager {
       datesTextElements.forEach(element => {
         element.textContent = combinedText;
       });
-      console.log('✅ Texte de dates mis à jour:', combinedText);
+      console.log('Texte de dates mis à jour:', combinedText);
     } else {
       datesTextElements.forEach(element => {
         element.textContent = "Sélectionner une date";
       });
-      console.log('📝 Texte de dates réinitialisé');
+      console.log('Texte de dates réinitialisé à la valeur par défaut');
     }
   }
 
@@ -393,7 +374,7 @@ class CalendarManager {
   }
 }
 
-// Classes de gestion du cache et iCal (inchangées)
+// Classes de gestion du cache et iCal
 class CalendarCache {
   constructor() {
     this.cleanup();
@@ -581,6 +562,7 @@ class ICalManager {
     return this.loadingError;
   }
 }
+
 
 // Export global
 window.CalendarManager = CalendarManager;
