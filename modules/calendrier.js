@@ -473,11 +473,5 @@ class ICalManager {
   }
 }
 
-// Initialisation automatique
-document.addEventListener('DOMContentLoaded', () => {
-  window.calendarManager = new CalendarManager();
-  console.log('✅ Calendar Manager initialisé');
-});
-
 // Export global
 window.CalendarManager = CalendarManager;
