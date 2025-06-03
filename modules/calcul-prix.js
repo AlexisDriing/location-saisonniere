@@ -579,13 +579,3 @@ class PriceCalculator {
 
 // Export global
 window.PriceCalculator = PriceCalculator;
-
-// INITIALISATION AUTOMATIQUE (comme dans votre ancien code)
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    window.priceCalculator = new PriceCalculator();
-    console.log('✅ PriceCalculator initialisé automatiquement');
-  } catch (error) {
-    console.error('❌ Erreur PriceCalculator:', error);
-  }
-});
