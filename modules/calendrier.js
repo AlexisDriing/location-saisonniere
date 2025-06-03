@@ -6,7 +6,6 @@ class CalendarManager {
     this.cache = new CalendarCache();
     this.icalManager = new ICalManager();
     this.nextUnavailableDate = null;
-    
     this.init();
   }
 
