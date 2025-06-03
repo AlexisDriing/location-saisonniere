@@ -58,47 +58,36 @@ class DetailLogementPage {
     document.head.appendChild(link);
   }
 
-  // Dans pages/detail-logement.js - MODIFIER l'ordre d'initialisation
-
-initializeManagers() {
-  try {
-    console.log('🚀 Début initialisation des managers...');
-    
-    // 1. Interface (logos, popins, extras) - PREMIER
-    this.managers.interface = new InterfaceManager();
-    console.log('✅ InterfaceManager initialisé');
-    
-    // 2. Voyageurs (adultes, enfants, bébés) - DEUXIÈME  
-    this.managers.travelers = new TravelersManager();
-    window.travelersManager = this.managers.travelers;
-    console.log('✅ TravelersManager initialisé');
-    
-    // 3. Calculateur de prix - TROISIÈME (dépend des voyageurs)
-    this.managers.priceCalculator = new PriceCalculator();
-    console.log('✅ PriceCalculator initialisé');
-    
-    // 4. Calendrier (dates + iCal) - QUATRIÈME (dépend du calculateur)
-    this.managers.calendar = new CalendarManager();
-    console.log('✅ CalendarManager initialisé');
-    
-    // 5. Affichage des tarifs par saison - CINQUIÈME
-    this.managers.tariffs = new TariffsDisplayManager();
-    console.log('✅ TariffsDisplayManager initialisé');
-    
-    // 6. Améliorations mobile - SIXIÈME
-    this.managers.mobileEnhancements = new MobileEnhancementsManager();
-    console.log('✅ MobileEnhancementsManager initialisé');
-    
-    // 7. Données de réservation - DERNIER (peut changer l'état des boutons)
-    this.managers.reservationData = new ReservationDataManager();
-    console.log('✅ ReservationDataManager initialisé');
-    
-    console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
-    
-  } catch (error) {
-    console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
+  initializeManagers() {
+    try {
+      // 1. Interface (logos, popins, extras) - PREMIER
+      this.managers.interface = new InterfaceManager();
+      
+      // 2. Voyageurs (adultes, enfants, bébés) - DEUXIÈME  
+      this.managers.travelers = new TravelersManager();
+      window.travelersManager = this.managers.travelers;
+      
+      // 3. Calculateur de prix - TROISIÈME (dépend des voyageurs)
+      this.managers.priceCalculator = new PriceCalculator();
+      
+      // 4. Calendrier (dates + iCal) - QUATRIÈME (dépend du calculateur)
+      this.managers.calendar = new CalendarManager();
+      
+      // 5. Affichage des tarifs par saison - CINQUIÈME
+      this.managers.tariffs = new TariffsDisplayManager();
+      
+      // 6. Données de réservation - SIXIÈME 
+      this.managers.reservationData = new ReservationDataManager();
+      
+      // 7. Améliorations mobile - DERNIER
+      this.managers.mobileEnhancements = new MobileEnhancementsManager();
+      
+      console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
+    }
   }
-}
 
   // Méthodes utilitaires pour débuggage
   getManager(name) {
