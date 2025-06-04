@@ -153,6 +153,43 @@ class CalendarManager {
     };
   }
 
+  // À ajouter dans votre CalendarManager après l'initialisation du picker
+enhancePickerPositioning() {
+  if (!this.picker) return;
+
+  const $ = jQuery;
+  
+  // Sauvegarder la fonction move originale
+  const originalMove = this.picker.move;
+  
+  this.picker.move = function() {
+    originalMove.call(this);
+    
+    // Récupérer la position du champ input
+    const inputElement = $('#input-calendar');
+    const rect = inputElement[0].getBoundingClientRect();
+    
+    // Calculer les positions
+    const currentTop = parseInt(this.container.css('top'), 10);
+    const currentLeft = parseInt(this.container.css('left'), 10);
+    const offset = currentTop - (rect.bottom + window.pageYOffset);
+    
+    // Repositionner en position fixe sous l'input
+    this.container.css({
+      position: 'fixed',
+      top: (rect.bottom + offset) + 'px',
+      left: currentLeft + 'px'
+    });
+  };
+  
+  // Repositionner lors du redimensionnement de la fenêtre
+  $(window).on('resize', () => {
+    if (this.picker.isShowing) {
+      this.picker.move();
+    }
+  });
+}
+  
   updateCalendarUI() {
     if (!this.picker) return;
     
