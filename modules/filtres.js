@@ -129,23 +129,26 @@ class FiltersManager {
       });
     }
 
-    // Prix
-    if (this.elements.boutonValiderTarif) {
-      this.elements.boutonValiderTarif.addEventListener('click', (e) => {
+    // Prix - utiliser event delegation pour capturer tous les clics
+    document.body.addEventListener('click', (e) => {
+      // Bouton valider tarif
+      const targetValider = e.target.closest('#bouton-valider-tarif');
+      if (targetValider) {
         e.preventDefault();
         this.updatePriceFromSlider(false); // desktop
         this.triggerPropertyManagerFilter();
-      });
-    }
-
-    if (this.elements.boutonEffacerTarif) {
-      this.elements.boutonEffacerTarif.addEventListener('click', (e) => {
+        return;
+      }
+      
+      // Bouton effacer tarif
+      if (e.target.id === 'bouton-effacer-tarif' || e.target.closest('#bouton-effacer-tarif')) {
         e.preventDefault();
         e.stopPropagation();
         this.resetPriceFilter();
         this.triggerPropertyManagerFilter();
-      });
-    }
+        return false;
+      }
+    });
 
     // Préférences
     if (this.elements.boutonValiderPreferences) {
