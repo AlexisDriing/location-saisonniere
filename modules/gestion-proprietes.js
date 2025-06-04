@@ -441,17 +441,18 @@ class PropertyManager {
   }
 
   displayFilteredProperties(properties) {
+    // TOUJOURS masquer tous les éléments d'abord
+    document.querySelectorAll('.housing-item').forEach(item => {
+      item.style.display = 'none';
+    });
+    
     if (properties.length === 0) {
+      console.log('Aucun logement ne correspond aux critères de filtrage');
       this.showNoResults(true);
       return;
     }
     
     this.showNoResults(false);
-    
-    // Masquer tous les éléments
-    document.querySelectorAll('.housing-item').forEach(item => {
-      item.style.display = 'none';
-    });
     
     // Conteneur parent
     const housingContainer = document.querySelector('.collection-grid');
