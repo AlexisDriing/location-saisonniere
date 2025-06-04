@@ -517,21 +517,27 @@ class PropertyManager {
       filters.adults = parseInt(adultsElement.textContent, 10) || 1;
     }
     
-    // Prix maximum
-    const texteFiltrePrice = document.querySelector('#text-filtre-tarif');
-    if (texteFiltrePrice && texteFiltrePrice.textContent.includes('Max')) {
-      const matches = texteFiltrePrice.textContent.match(/\d+/);
-      if (matches) {
-        filters.price_max = parseInt(matches[0], 10);
-      }
+    // Prix maximum - vérifier d'abord FiltersManager
+    if (window.filtersManager && window.filtersManager.state.prixMax) {
+      filters.price_max = window.filtersManager.state.prixMax;
     }
-    
-    // Version mobile du prix
-    const texteFiltrePrice_mobile = document.querySelector('#text-filtre-tarif-mobile');
-    if (texteFiltrePrice_mobile) {
-      const matches = texteFiltrePrice_mobile.textContent.match(/\d+/);
-      if (matches) {
-        filters.price_max = parseInt(matches[0], 10);
+    // Sinon essayer les éléments de l'interface (fallback)
+    else {
+      const texteFiltrePrice = document.querySelector('#text-filtre-tarif');
+      if (texteFiltrePrice && texteFiltrePrice.textContent.includes('Max')) {
+        const matches = texteFiltrePrice.textContent.match(/\d+/);
+        if (matches) {
+          filters.price_max = parseInt(matches[0], 10);
+        }
+      }
+      
+      // Version mobile du prix
+      const texteFiltrePrice_mobile = document.querySelector('#text-filtre-tarif-mobile');
+      if (texteFiltrePrice_mobile) {
+        const matches = texteFiltrePrice_mobile.textContent.match(/\d+/);
+        if (matches) {
+          filters.price_max = parseInt(matches[0], 10);
+        }
       }
     }
     
