@@ -126,29 +126,21 @@ class PriceCalculator {
       button.style.cursor = "not-allowed";
     });
     
-    // Réinitialiser les éléments de réduction (desktop ET mobile)
-    const reductionElements = [
-      ...this.elements.prixReduction,
-      ...document.querySelectorAll('#prix-reduction-mobile')
-    ];
-    
-    reductionElements.forEach(element => {
+    // ===== RÉINITIALISER LES RÉDUCTIONS (SIMPLIFIÉ) =====
+    this.elements.prixReduction.forEach(element => {
       if (element) {
         element.textContent = "";
         element.style.display = "none";
       }
     });
     
-    const blocReductionElements = [
-      ...this.elements.blocReduction,
-      ...document.querySelectorAll('#bloc-reduction-mobile')
-    ];
-    
-    blocReductionElements.forEach(element => {
+    this.elements.blocReduction.forEach(element => {
       if (element) {
         element.style.display = "none";
       }
     });
+    
+    console.log(`✅ Réductions réinitialisées sur ${this.elements.prixReduction.length} éléments`);
     
     // Réinitialiser les autres éléments
     if (this.elements.calcNuit.length) {
@@ -438,20 +430,10 @@ class PriceCalculator {
       });
     }
     
-    // Gestion des réductions (desktop ET mobile)
-    const reductionPriceElements = [
-      ...this.elements.prixReduction,
-      ...Array.from(document.querySelectorAll('#prix-reduction-mobile'))
-    ].filter(el => el !== null);
-    
-    const reductionBlockElements = [
-      ...this.elements.blocReduction,
-      ...Array.from(document.querySelectorAll('#bloc-reduction-mobile'))
-    ].filter(el => el !== null);
-    
+    // ===== GESTION DES RÉDUCTIONS (SIMPLIFIÉ) =====
     if (details.discountAmount > 0) {
-      // AFFICHER la réduction
-      reductionPriceElements.forEach(element => {
+      // AFFICHER la réduction - Utils.getAllElementsById() gère déjà desktop + mobile
+      this.elements.prixReduction.forEach(element => {
         if (element) {
           element.textContent = `-${formatPrice(details.discountAmount)}€`;
           element.style.color = "#2AA551";
@@ -459,25 +441,29 @@ class PriceCalculator {
         }
       });
       
-      reductionBlockElements.forEach(element => {
+      this.elements.blocReduction.forEach(element => {
         if (element) {
           element.style.display = "flex";
         }
       });
+      
+      console.log(`✅ Réduction affichée: -${formatPrice(details.discountAmount)}€ sur ${this.elements.prixReduction.length} éléments`);
     } else {
       // MASQUER la réduction
-      reductionPriceElements.forEach(element => {
+      this.elements.prixReduction.forEach(element => {
         if (element) {
           element.textContent = "";
           element.style.display = "none";
         }
       });
       
-      reductionBlockElements.forEach(element => {
+      this.elements.blocReduction.forEach(element => {
         if (element) {
           element.style.display = "none";
         }
       });
+      
+      console.log('✅ Réduction masquée sur tous les éléments');
     }
     
     // Taxe de séjour
