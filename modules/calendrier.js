@@ -128,6 +128,7 @@ class CalendarManager {
   enhancePickerUI() {
     if (!this.picker) return;
 
+    this.enhancePickerPositioning();
     const originalRenderCalendar = this.picker.renderCalendar;
     this.picker.renderCalendar = (side) => {
       originalRenderCalendar.call(this.picker, side);
