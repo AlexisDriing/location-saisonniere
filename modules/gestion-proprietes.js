@@ -741,106 +741,26 @@ class PropertyManager {
   }
 
   // ================================
-  // GESTION DES DATES
+  // GESTION DES DATES (DÉLÉGUÉE AU CALENDARLISTMANAGER)
   // ================================
-
-  setupFilterListeners() {
-    if (this.dateButton && typeof jQuery !== 'undefined' && jQuery.fn.daterangepicker) {
-      const self = this;
-      
-      jQuery(this.dateButton).on('apply.daterangepicker', function(e, picker) {
-        if (picker.startDate && picker.endDate) {
-          const formattedDates = self.formatDateRange(picker.startDate, picker.endDate);
-          
-          if (self.textDatesSearch) {
-            self.textDatesSearch.textContent = formattedDates;
-            self.textDatesSearch.style.color = '#272A2B';
-          }
-          
-          self.startDate = picker.startDate.format('YYYY-MM-DD');
-          self.endDate = picker.endDate.format('YYYY-MM-DD');
-          
-          // Stocker dans localStorage
-          const adultsElement = document.getElementById('chiffres-adultes');
-          const enfantsElement = document.getElementById('chiffres-enfants');
-          
-          localStorage.setItem('selected_search_data', JSON.stringify({
-            startDate: self.startDate,
-            endDate: self.endDate,
-            adultes: parseInt(adultsElement ? adultsElement.textContent : '1', 10),
-            enfants: parseInt(enfantsElement ? enfantsElement.textContent : '0', 10),
-            timestamp: Date.now()
-          }));
-          
-          // Effectuer le filtrage
-          self.applyFilters();
-          
-          // Mettre à jour les prix
-          self.updatePricesForDates(self.startDate, self.endDate);
-        }
-      });
-      
-      jQuery(this.dateButton).on('cancel.daterangepicker', function(e, picker) {
-        // Réinitialiser les dates
-        if (self.textDatesSearch) {
-          self.textDatesSearch.textContent = 'Dates';
-          self.textDatesSearch.style.color = '';
-        }
-        
-        self.startDate = null;
-        self.endDate = null;
-        
-        // Supprimer les données stockées
-        localStorage.removeItem('selected_search_data');
-        
-        // Réinitialiser le filtrage
-        self.resetFilters();
-        
-        // Réinitialiser l'affichage des prix
-        self.resetPriceDisplay();
-        
-        console.log('🗑️ Dates effacées, filtres réinitialisés');
-      });
-    } else {
-      console.warn('⚠️ DateRangePicker non trouvé, les filtres de dates ne fonctionneront pas');
-    }
-  }
-
-  formatDateRange(startDate, endDate) {
-    const startDay = startDate.format('D');
-    const endDay = endDate.format('D');
-    let month = endDate.format('MMM').toLowerCase();
-    
-    // Abréviations des mois en français
-    const monthAbbr = {
-      'jan': 'janv.',
-      'fév': 'févr.',
-      'mar': 'mars',
-      'avr': 'avr.',
-      'mai': 'mai',
-      'juin': 'juin',
-      'juil': 'juil.',
-      'aoû': 'août',
-      'sep': 'sept.',
-      'oct': 'oct.',
-      'nov': 'nov.',
-      'déc': 'déc.'
-    };
-    
-    for (const key in monthAbbr) {
-      if (month.startsWith(key)) {
-        month = monthAbbr[key];
-        break;
-      }
-    }
-    
-    return `${startDay}-${endDay} ${month}`;
-  }
 
   // Méthode pour définir la localisation de recherche
   setSearchLocation(location) {
     this.searchLocation = location;
     console.log('📍 Localisation de recherche définie:', location);
+  }
+
+  // Méthodes appelées par CalendarListManager
+  setDates(startDate, endDate) {
+    this.startDate = startDate;
+    this.endDate = endDate;
+    console.log('📅 Dates définies:', startDate, 'à', endDate);
+  }
+
+  clearDates() {
+    this.startDate = null;
+    this.endDate = null;
+    console.log('🗑️ Dates effacées');
   }
 
   // ================================
