@@ -29,6 +29,10 @@ class PropertyManager {
   async init() {
     console.log('🏠 Initialisation PropertyManager...');
     
+    // Export global IMMÉDIATEMENT pour que les autres modules puissent le voir
+    window.propertyManager = this;
+    console.log('✅ PropertyManager assigné à window.propertyManager');
+    
     // Enregistrer toutes les propriétés
     await this.registerAllProperties();
     
@@ -41,9 +45,32 @@ class PropertyManager {
     setTimeout(() => {
       this.applyInitialPagination();
     }, 1000);
+  }
 
-    // Export global
-    window.propertyManager = this;
+  // ================================
+  // MÉTHODES POUR CALENDRIER (REQUISES)
+  // ================================
+
+  // Méthodes appelées par CalendarListManager
+  setDates(startDate, endDate) {
+    this.startDate = startDate;
+    this.endDate = endDate;
+    console.log('📅 PropertyManager: Dates définies:', startDate, 'à', endDate);
+  }
+
+  clearDates() {
+    this.startDate = null;
+    this.endDate = null;
+    console.log('🗑️ PropertyManager: Dates effacées');
+  }
+
+  // Méthode pour vérifier la disponibilité du PropertyManager
+  isReady() {
+    return this.propertiesRegistered && 
+           typeof this.setDates === 'function' && 
+           typeof this.clearDates === 'function' &&
+           typeof this.applyFilters === 'function' &&
+           typeof this.updatePricesForDates === 'function';
   }
 
   // ================================
@@ -249,7 +276,7 @@ class PropertyManager {
       
       console.log('💰 Prix calculés:', data);
       
-      // Mettre à jour l'affichage des prix
+      // Mettre à jour l'affichage des prix pour chaque logement
       Object.entries(data.prices).forEach(([propertyId, priceInfo]) => {
         this.updatePropertyPriceDisplay(propertyId, priceInfo, data.nights);
       });
@@ -513,7 +540,7 @@ class PropertyManager {
     }
     
     // Prix maximum - vérifier d'abord FiltersManager
-    if (window.filtersManager && window.filtersManager.state.prixMax) {
+    if (window.filtersManager && window.filtersManager.state && window.filtersManager.state.prixMax) {
       filters.price_max = window.filtersManager.state.prixMax;
     }
     // Sinon essayer les éléments de l'interface (fallback)
@@ -736,26 +763,13 @@ class PropertyManager {
   }
 
   // ================================
-  // GESTION DES DATES (DÉLÉGUÉE AU CALENDARLISTMANAGER)
+  // GESTION DE LA LOCALISATION
   // ================================
 
   // Méthode pour définir la localisation de recherche
   setSearchLocation(location) {
     this.searchLocation = location;
     console.log('📍 Localisation de recherche définie:', location);
-  }
-
-  // Méthodes appelées par CalendarListManager
-  setDates(startDate, endDate) {
-    this.startDate = startDate;
-    this.endDate = endDate;
-    console.log('📅 Dates définies:', startDate, 'à', endDate);
-  }
-
-  clearDates() {
-    this.startDate = null;
-    this.endDate = null;
-    console.log('🗑️ Dates effacées');
   }
 
   // ================================
