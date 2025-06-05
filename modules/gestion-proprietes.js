@@ -450,7 +450,6 @@ class PropertyManager {
     }
     
     this.showNoResults(false);
-    
     // Masquer tous les éléments
     document.querySelectorAll('.housing-item').forEach(item => {
       item.style.display = 'none';
