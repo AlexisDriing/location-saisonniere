@@ -76,7 +76,6 @@ class PropertyManager {
         promises.push(promise);
       }
     });
-    
     try {
       await Promise.all(promises);
       this.propertiesRegistered = true;
