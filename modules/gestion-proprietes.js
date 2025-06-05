@@ -29,15 +29,14 @@ class PropertyManager {
   async init() {
     console.log('🏠 Initialisation PropertyManager...');
     
-    // Export global IMMÉDIATEMENT pour que les autres modules puissent le voir
-    window.propertyManager = this;
-    console.log('✅ PropertyManager assigné à window.propertyManager');
-    
     // Enregistrer toutes les propriétés
     await this.registerAllProperties();
     
     // Stocker l'état initial des prix
     this.storeInitialPriceStates();
+    
+    // Initialiser les écouteurs d'événements pour les filtres
+    this.setupFilterListeners();
     
     console.log('✅ PropertyManager initialisé');
     
@@ -45,32 +44,9 @@ class PropertyManager {
     setTimeout(() => {
       this.applyInitialPagination();
     }, 1000);
-  }
 
-  // ================================
-  // MÉTHODES POUR CALENDRIER (REQUISES)
-  // ================================
-
-  // Méthodes appelées par CalendarListManager
-  setDates(startDate, endDate) {
-    this.startDate = startDate;
-    this.endDate = endDate;
-    console.log('📅 PropertyManager: Dates définies:', startDate, 'à', endDate);
-  }
-
-  clearDates() {
-    this.startDate = null;
-    this.endDate = null;
-    console.log('🗑️ PropertyManager: Dates effacées');
-  }
-
-  // Méthode pour vérifier la disponibilité du PropertyManager
-  isReady() {
-    return this.propertiesRegistered && 
-           typeof this.setDates === 'function' && 
-           typeof this.clearDates === 'function' &&
-           typeof this.applyFilters === 'function' &&
-           typeof this.updatePricesForDates === 'function';
+    // Export global
+    window.propertyManager = this;
   }
 
   // ================================
@@ -100,6 +76,7 @@ class PropertyManager {
         promises.push(promise);
       }
     });
+    
     try {
       await Promise.all(promises);
       this.propertiesRegistered = true;
@@ -276,7 +253,7 @@ class PropertyManager {
       
       console.log('💰 Prix calculés:', data);
       
-      // Mettre à jour l'affichage des prix pour chaque logement
+      // Mettre à jour l'affichage des prix
       Object.entries(data.prices).forEach(([propertyId, priceInfo]) => {
         this.updatePropertyPriceDisplay(propertyId, priceInfo, data.nights);
       });
@@ -474,6 +451,7 @@ class PropertyManager {
     }
     
     this.showNoResults(false);
+    
     // Masquer tous les éléments
     document.querySelectorAll('.housing-item').forEach(item => {
       item.style.display = 'none';
@@ -540,7 +518,7 @@ class PropertyManager {
     }
     
     // Prix maximum - vérifier d'abord FiltersManager
-    if (window.filtersManager && window.filtersManager.state && window.filtersManager.state.prixMax) {
+    if (window.filtersManager && window.filtersManager.state.prixMax) {
       filters.price_max = window.filtersManager.state.prixMax;
     }
     // Sinon essayer les éléments de l'interface (fallback)
@@ -763,8 +741,101 @@ class PropertyManager {
   }
 
   // ================================
-  // GESTION DE LA LOCALISATION
+  // GESTION DES DATES
   // ================================
+
+  setupFilterListeners() {
+    if (this.dateButton && typeof jQuery !== 'undefined' && jQuery.fn.daterangepicker) {
+      const self = this;
+      
+      jQuery(this.dateButton).on('apply.daterangepicker', function(e, picker) {
+        if (picker.startDate && picker.endDate) {
+          const formattedDates = self.formatDateRange(picker.startDate, picker.endDate);
+          
+          if (self.textDatesSearch) {
+            self.textDatesSearch.textContent = formattedDates;
+            self.textDatesSearch.style.color = '#272A2B';
+          }
+          
+          self.startDate = picker.startDate.format('YYYY-MM-DD');
+          self.endDate = picker.endDate.format('YYYY-MM-DD');
+          
+          // Stocker dans localStorage
+          const adultsElement = document.getElementById('chiffres-adultes');
+          const enfantsElement = document.getElementById('chiffres-enfants');
+          
+          localStorage.setItem('selected_search_data', JSON.stringify({
+            startDate: self.startDate,
+            endDate: self.endDate,
+            adultes: parseInt(adultsElement ? adultsElement.textContent : '1', 10),
+            enfants: parseInt(enfantsElement ? enfantsElement.textContent : '0', 10),
+            timestamp: Date.now()
+          }));
+          
+          // Effectuer le filtrage
+          self.applyFilters();
+          
+          // Mettre à jour les prix
+          self.updatePricesForDates(self.startDate, self.endDate);
+        }
+      });
+      
+      jQuery(this.dateButton).on('cancel.daterangepicker', function(e, picker) {
+        // Réinitialiser les dates
+        if (self.textDatesSearch) {
+          self.textDatesSearch.textContent = 'Dates';
+          self.textDatesSearch.style.color = '';
+        }
+        
+        self.startDate = null;
+        self.endDate = null;
+        
+        // Supprimer les données stockées
+        localStorage.removeItem('selected_search_data');
+        
+        // Réinitialiser le filtrage
+        self.resetFilters();
+        
+        // Réinitialiser l'affichage des prix
+        self.resetPriceDisplay();
+        
+        console.log('🗑️ Dates effacées, filtres réinitialisés');
+      });
+    } else {
+      console.warn('⚠️ DateRangePicker non trouvé, les filtres de dates ne fonctionneront pas');
+    }
+  }
+
+  formatDateRange(startDate, endDate) {
+    const startDay = startDate.format('D');
+    const endDay = endDate.format('D');
+    let month = endDate.format('MMM').toLowerCase();
+    
+    // Abréviations des mois en français
+    const monthAbbr = {
+      'jan': 'janv.',
+      'fév': 'févr.',
+      'mar': 'mars',
+      'avr': 'avr.',
+      'mai': 'mai',
+      'juin': 'juin',
+      'juil': 'juil.',
+      'aoû': 'août',
+      'sep': 'sept.',
+      'oct': 'oct.',
+      'nov': 'nov.',
+      'déc': 'déc.'
+    };
+    
+    for (const key in monthAbbr) {
+      if (month.startsWith(key)) {
+        month = monthAbbr[key];
+        break;
+      }
+    }
+    
+    return `${startDay}-${endDay} ${month}`;
+  }
 
   // Méthode pour définir la localisation de recherche
   setSearchLocation(location) {
