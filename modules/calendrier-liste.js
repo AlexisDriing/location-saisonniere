@@ -98,8 +98,10 @@ class CalendarListManager {
         
         // Communiquer avec PropertyManager
         if (window.propertyManager) {
-          window.propertyManager.startDate = picker.startDate.format('YYYY-MM-DD');
-          window.propertyManager.endDate = picker.endDate.format('YYYY-MM-DD');
+          window.propertyManager.setDates(
+            picker.startDate.format('YYYY-MM-DD'),
+            picker.endDate.format('YYYY-MM-DD')
+          );
           
           // Sauvegarder dans localStorage
           self.saveToLocalStorage(picker.startDate, picker.endDate);
@@ -109,8 +111,8 @@ class CalendarListManager {
           
           // Mettre à jour les prix
           window.propertyManager.updatePricesForDates(
-            window.propertyManager.startDate, 
-            window.propertyManager.endDate
+            picker.startDate.format('YYYY-MM-DD'),
+            picker.endDate.format('YYYY-MM-DD')
           );
         }
       }
@@ -126,8 +128,7 @@ class CalendarListManager {
       
       // Communiquer avec PropertyManager
       if (window.propertyManager) {
-        window.propertyManager.startDate = null;
-        window.propertyManager.endDate = null;
+        window.propertyManager.clearDates();
         
         // Supprimer de localStorage
         localStorage.removeItem('selected_search_data');
