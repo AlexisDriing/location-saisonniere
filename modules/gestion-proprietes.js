@@ -984,5 +984,4 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Export global
 window.PropertyManager = PropertyManager;
