@@ -35,9 +35,6 @@ class PropertyManager {
     // Stocker l'état initial des prix
     this.storeInitialPriceStates();
     
-    // Initialiser les écouteurs d'événements pour les filtres
-    this.setupFilterListeners();
-    
     console.log('✅ PropertyManager initialisé');
     
     // Initialiser la pagination après un court délai
