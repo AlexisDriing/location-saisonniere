@@ -21,9 +21,17 @@ class PriceListCalculator {
 
   init() {
     this.loadPricingData();
-    if (!this.datesSelected) {
+    
+    // CORRECTION: Ne pas modifier l'affichage initial !
+    // L'affichage des prix vient déjà de Webflow avec les bonnes données
+    // PropertyManager doit pouvoir lire ces prix originaux pour l'extraction
+    // On ne modifie l'affichage que si des dates sont sélectionnées
+    
+    if (this.datesSelected) {
       this.updatePriceDisplay();
     }
+    
+    // Sinon, on laisse l'affichage Webflow original intact
   }
 
   loadPricingData() {
@@ -42,6 +50,13 @@ class PriceListCalculator {
 
   updatePriceDisplay() {
     if (!this.pricingData || !this.pricingData.seasons) return;
+    
+    // CORRECTION: Vérifier qu'on ne interfère pas avec PropertyManager
+    // Si PropertyManager n'a pas encore fini l'enregistrement, attendre
+    if (window.propertyManager && !window.propertyManager.propertiesRegistered) {
+      console.log('⏳ PriceListCalculator: Attente de l\'enregistrement des propriétés...');
+      return;
+    }
     
     let minPrice = Infinity;
     let platformPrice = 0;
@@ -110,8 +125,33 @@ class PriceListManager {
 
   init() {
     console.log('💰 Initialisation PriceListManager...');
-    this.initializeAllCalculators();
-    console.log('✅ PriceListManager initialisé');
+    
+    // CORRECTION: Attendre que PropertyManager ait fini avant d'initialiser
+    if (window.propertyManager && !window.propertyManager.propertiesRegistered) {
+      console.log('⏳ PriceListManager: Attente de PropertyManager...');
+      
+      // Attendre que PropertyManager soit prêt
+      const checkInterval = setInterval(() => {
+        if (window.propertyManager && window.propertyManager.propertiesRegistered) {
+          clearInterval(checkInterval);
+          this.initializeAllCalculators();
+          console.log('✅ PriceListManager initialisé après PropertyManager');
+        }
+      }, 100);
+      
+      // Timeout après 10 secondes
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.propertyManager || !window.propertyManager.propertiesRegistered) {
+          console.warn('⚠️ PriceListManager: Timeout, initialisation forcée');
+          this.initializeAllCalculators();
+        }
+      }, 10000);
+    } else {
+      // PropertyManager déjà prêt ou inexistant
+      this.initializeAllCalculators();
+      console.log('✅ PriceListManager initialisé directement');
+    }
     
     // Export global
     window.priceListManager = this;
@@ -130,6 +170,20 @@ class PriceListManager {
   // Méthode pour réinitialiser tous les prix
   resetAllPrices() {
     this.calculators.forEach(calculator => {
+      // Ne mettre à jour que si des dates sont sélectionnées
+      if (calculator.datesSelected) {
+        calculator.updatePriceDisplay();
+      }
+      // Sinon, laisser l'affichage original
+    });
+  }
+
+  // Méthode pour forcer la mise à jour (quand des dates sont sélectionnées)
+  updateAllPrices() {
+    this.calculators.forEach(calculator => {
+      calculator.datesSelected = !!(window.propertyManager && 
+                                   window.propertyManager.startDate && 
+                                   window.propertyManager.endDate);
       calculator.updatePriceDisplay();
     });
   }
