@@ -7,7 +7,7 @@ const CONFIG = {
   
   // 🚀 NOUVELLES OPTIONS DE PERFORMANCE
   PERFORMANCE: {
-    enableDebug: false,              // false en production
+    enableDebug: true,              // false en production
     logTimings: true,               // mesurer les temps de chargement
     maxConcurrentRequests: 5,       // limite les requêtes simultanées
     lazyLoadDelay: 100,             // délai avant chargement automatique
