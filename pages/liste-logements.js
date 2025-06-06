@@ -68,12 +68,12 @@ class ListeLogementsPage {
       
       // 3. Gestion des formulaires - TROISIÈME
       this.managers.forms = new FormsManager();
+            
+      // 5. Gestion des filtres - CINQUIÈME
+      this.managers.filters = new FiltersManager();
       
       // 4. Gestion des propriétés - QUATRIÈME (cœur de la page)
       this.managers.propertyManager = new PropertyManager();
-      
-      // 5. Gestion des filtres - CINQUIÈME
-      this.managers.filters = new FiltersManager();
       
       // 6. Recherche géographique - SIXIÈME
       this.managers.searchMap = new SearchMapManager();
