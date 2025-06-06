@@ -60,46 +60,54 @@ class SearchMapManager {
   // ================================
 
   setupSearchForms() {
-    // Desktop
-    const searchForm = document.querySelector('form');
-    const searchInput = document.querySelector('#search-input');
-    const suggestionsList = document.querySelector('#suggestions');
+  // Desktop
+  const searchForm = document.querySelector('form');
+  const searchInput = document.querySelector('#search-input');
+  const suggestionsList = document.querySelector('#suggestions');
 
-    // Mobile
-    const searchInputMobile = document.querySelector('#search-input-mobile');
-    const suggestionsListMobile = document.querySelector('#suggestions-mobile');
-    const searchFormMobile = searchInputMobile ? searchInputMobile.closest('form') : null;
+  // Mobile
+  const searchInputMobile = document.querySelector('#search-input-mobile');
+  const suggestionsListMobile = document.querySelector('#suggestions-mobile');
+  const searchFormMobile = searchInputMobile ? searchInputMobile.closest('form') : null;
 
-    // Prévenir la soumission des formulaires
-    if (searchForm) {
-      searchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleSearch(searchInput);
-      });
-    }
-
-    if (searchFormMobile) {
-      searchFormMobile.addEventListener('submit', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleSearch(searchInputMobile);
-      });
-    }
-
-    // Gestionnaires de saisie
-    if (searchInput) {
-      searchInput.addEventListener('input', async (e) => {
-        await this.handleSearchInput(e.target, suggestionsList);
-      });
-    }
-
-    if (searchInputMobile) {
-      searchInputMobile.addEventListener('input', async (e) => {
-        await this.handleSearchInput(e.target, suggestionsListMobile);
-      });
-    }
+  // Prévenir la soumission des formulaires
+  if (searchForm) {
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleSearch(searchInput);
+    });
   }
+
+  if (searchFormMobile) {
+    searchFormMobile.addEventListener('submit', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleSearch(searchInputMobile);
+    });
+  }
+
+  // 🚀 NOUVEAU : Gestionnaires de saisie avec debounce
+  if (searchInput) {
+    let searchTimeout;
+    searchInput.addEventListener('input', async (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        await this.handleSearchInput(e.target, suggestionsList);
+      }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
+    });
+  }
+
+  if (searchInputMobile) {
+    let searchTimeoutMobile;
+    searchInputMobile.addEventListener('input', async (e) => {
+      clearTimeout(searchTimeoutMobile);
+      searchTimeoutMobile = setTimeout(async () => {
+        await this.handleSearchInput(e.target, suggestionsListMobile);
+      }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
+    });
+  }
+}
 
   // ================================
   // GESTION DE LA SAISIE
