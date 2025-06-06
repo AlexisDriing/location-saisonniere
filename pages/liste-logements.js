@@ -59,40 +59,44 @@ class ListeLogementsPage {
   }
 
   initializeManagers() {
-    try {
-      // 1. Éléments UI - PREMIER (création des conteneurs)
-      this.managers.uiElements = new UIElementsManager();
-      
-      // 2. Formatage des adresses - DEUXIÈME
-      this.managers.addressFormatter = new AddressFormatterManager();
-      
-      // 3. Gestion des formulaires - TROISIÈME
-      this.managers.forms = new FormsManager();
-            
-      // 5. Gestion des filtres - CINQUIÈME
-      this.managers.filters = new FiltersManager();
-      
-      // 4. Gestion des propriétés - QUATRIÈME (cœur de la page)
+  try {
+    // 1. Éléments UI - PREMIER (création des conteneurs)
+    this.managers.uiElements = new UIElementsManager();
+    
+    // 2. Formatage des adresses - DEUXIÈME
+    this.managers.addressFormatter = new AddressFormatterManager();
+    
+    // 3. Gestion des formulaires - TROISIÈME
+    this.managers.forms = new FormsManager();
+    
+    // 4. Gestion des filtres - QUATRIÈME
+    this.managers.filters = new FiltersManager();
+    
+    // 5. Recherche géographique - CINQUIÈME
+    this.managers.searchMap = new SearchMapManager();
+    
+    // 6. Calendrier liste - SIXIÈME
+    this.managers.calendarList = new CalendarListManager();
+    
+    // 7. Prix liste - SEPTIÈME
+    this.managers.priceList = new PriceListManager();
+    
+    // 8. Synchronisation mobile - HUITIÈME
+    this.managers.mobileSync = new MobileSyncManager();
+    
+    // 9. Gestion des propriétés - DERNIER ! (après que tous les autres soient prêts)
+    // Petit délai pour s'assurer que tous les modules précédents sont stabilisés
+    setTimeout(() => {
       this.managers.propertyManager = new PropertyManager();
-      
-      // 6. Recherche géographique - SIXIÈME
-      this.managers.searchMap = new SearchMapManager();
-      
-      // 7. Calendrier liste - SEPTIÈME
-      this.managers.calendarList = new CalendarListManager();
-      
-      // 8. Prix liste - HUITIÈME
-      this.managers.priceList = new PriceListManager();
-      
-      // 9. Synchronisation mobile - NEUVIÈME
-      this.managers.mobileSync = new MobileSyncManager();
-      
-      console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
-    }
+      console.log('✅ PropertyManager initialisé en dernier');
+    }, 100);
+    
+    console.log('✅ Tous les gestionnaires initialisés (PropertyManager en cours...):', Object.keys(this.managers));
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
   }
+}
 
   // Méthodes utilitaires pour débuggage
   getManager(name) {
