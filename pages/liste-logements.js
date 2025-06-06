@@ -59,33 +59,30 @@ class ListeLogementsPage {
   }
 
   initializeManagers() {
-    try {
-      // 1. Éléments UI - PREMIER (création des conteneurs)
-      this.managers.uiElements = new UIElementsManager();
-      
-      // 2. Formatage des adresses - DEUXIÈME
-      this.managers.addressFormatter = new AddressFormatterManager();
-      
-      // 3. Gestion des formulaires - TROISIÈME
-      this.managers.forms = new FormsManager();
-      
-      // 4. Gestion des propriétés - QUATRIÈME (cœur de la page)
-      this.managers.propertyManager = new PropertyManager();
-      
-      // 5. Gestion des filtres - CINQUIÈME
-      this.managers.filters = new FiltersManager();
-      
-      // 6. Recherche géographique - SIXIÈME
-      this.managers.searchMap = new SearchMapManager();
-      
-      // 7. Calendrier liste - SEPTIÈME
-      this.managers.calendarList = new CalendarListManager();
-      
-      // 8. Prix liste - HUITIÈME
-      this.managers.priceList = new PriceListManager();
-      
-      // 9. Synchronisation mobile - NEUVIÈME
-      this.managers.mobileSync = new MobileSyncManager();
+  try {
+    // 1. Éléments UI - PREMIER (création des conteneurs)
+    this.managers.uiElements = new UIElementsManager();
+    
+    // 2. Formatage des adresses - DEUXIÈME
+    this.managers.addressFormatter = new AddressFormatterManager();
+    
+    // 3. Gestion des formulaires - TROISIÈME
+    this.managers.forms = new FormsManager();
+    
+    // 4. CORRECTION : FiltersManager AVANT PropertyManager
+    this.managers.filters = new FiltersManager();
+    
+    // 5. Gestion des propriétés - APRÈS FiltersManager
+    this.managers.propertyManager = new PropertyManager();
+    
+    // 6. Recherche géographique - SIXIÈME
+    this.managers.searchMap = new SearchMapManager();
+    
+    // 7. Prix liste - SEPTIÈME (avant calendrier pour éviter conflits)
+    this.managers.priceList = new PriceListManager();
+    
+    // 9. Synchronisation mobile - DERNIER
+    this.managers.mobileSync = new MobileSyncManager();
       
       console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
       
