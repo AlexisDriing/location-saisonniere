@@ -133,7 +133,7 @@ class SearchMapManager {
 
     if (userLocation) {    
       if (window.propertyManager) {
-        window.propertyManager.searchLocation = userLocation;
+        window.propertyManager.setSearchLocation(userLocation);
         window.propertyManager.applyFilters();
       }
     } else {
