@@ -9,7 +9,7 @@ const CONFIG = {
   PERFORMANCE: {
     enableDebug: true,              // false en production
     logTimings: true,               // mesurer les temps de chargement
-    maxConcurrentRequests: 5,       // limite les requêtes simultanées
+    maxConcurrentRequests: 50,       // limite les requêtes simultanées
     lazyLoadDelay: 100,             // délai avant chargement automatique
     moduleLoadTimeout: 5000,        // timeout pour le chargement des modules
     cacheSize: 100,                 // taille max du cache en mémoire
