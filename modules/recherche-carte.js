@@ -371,6 +371,5 @@ class SearchMapManager {
     return window.propertyManager ? window.propertyManager.searchLocation : null;
   }
 }
-
 // Export global
 window.SearchMapManager = SearchMapManager;
