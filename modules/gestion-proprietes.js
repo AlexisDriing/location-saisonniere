@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE AVEC CHARGEMENT AUTOMATIQUE
+// Gestionnaire principal des propriétés pour la page liste
 class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
@@ -23,25 +23,11 @@ class PropertyManager {
     this.searchLocation = null;
     
     this.initialPriceStates = new Map();
-    
-    // 🚀 Gestionnaire de performance
-    this.requestQueue = [];
-    this.activeRequests = 0;
-    this.requestCache = new Map();
-    this.lastCacheCleanup = Date.now();
-    this.performanceMetrics = {
-      totalRequests: 0,
-      cacheHits: 0,
-      averageResponseTime: 0,
-      responseTimes: []
-    };
-    
     this.init();
   }
 
   async init() {
     console.log('🏠 Initialisation PropertyManager...');
-    const startTime = performance.now();
     
     // Enregistrer toutes les propriétés
     await this.registerAllProperties();
@@ -52,32 +38,15 @@ class PropertyManager {
     // Initialiser les écouteurs d'événements pour les filtres
     this.setupFilterListeners();
     
-    const initTime = Math.round(performance.now() - startTime);
-    console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
+    console.log('✅ PropertyManager initialisé');
     
     // Initialiser la pagination après un court délai
     setTimeout(() => {
       this.applyInitialPagination();
-    }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
+    }, 1000);
 
     // Export global
     window.propertyManager = this;
-    
-    // Nettoyage automatique du cache
-    this.setupCacheCleanup();
-  }
-
-  // Configuration du nettoyage automatique du cache
-  setupCacheCleanup() {
-    // Nettoyer le cache toutes les 5 minutes
-    setInterval(() => {
-      this.cleanupCache();
-    }, 5 * 60 * 1000);
-    
-    // Nettoyer quand l'utilisateur quitte la page
-    window.addEventListener('beforeunload', () => {
-      this.cleanupCache();
-    });
   }
 
   // ================================
@@ -96,8 +65,13 @@ class PropertyManager {
       const propertyId = href.split('/').pop();
       
       if (propertyId) {
+        // Récupérer les métadonnées de la propriété
         const metadata = this.extractPropertyMetadata(element);
+        
+        // Stocker l'ID de propriété comme attribut
         element.setAttribute('data-property-id', propertyId);
+        
+        // Enregistrer la propriété
         const promise = this.registerProperty(propertyId, metadata);
         promises.push(promise);
       }
@@ -195,6 +169,8 @@ class PropertyManager {
 
   async registerProperty(propertyId, metadata) {
     try {
+      console.log(`📝 Enregistrement: ${propertyId}`, metadata);
+      
       const response = await fetch(`${window.CONFIG.API_URL}/register-property`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -260,24 +236,14 @@ class PropertyManager {
       const adultsElement = document.getElementById('chiffres-adultes');
       const adultsCount = adultsElement ? parseInt(adultsElement.textContent, 10) : 1;
       
-      // Vérifier le cache d'abord
-      const cacheKey = `prices_${startDate}_${endDate}_${adultsCount}_${visiblePropertyIds.join(',')}`;
-      const cachedPrices = this.getFromCache(cacheKey);
-      
-      if (cachedPrices) {
-        console.log('🚀 Utilisation du cache pour les prix');
-        this.updatePriceDisplays(cachedPrices.prices, cachedPrices.nights);
-        return;
-      }
-      
       // Construire l'URL pour la requête
       let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}`;
       visiblePropertyIds.forEach(id => {
         url += `&property_ids=${encodeURIComponent(id)}`;
       });
       
-      // Utiliser la queue de requêtes
-      const response = await this.queueRequest(url);
+      // Effectuer la requête
+      const response = await fetch(url);
       const data = await response.json();
       
       if (!data.prices) {
@@ -285,22 +251,16 @@ class PropertyManager {
         return;
       }
       
-      // Mettre en cache
-      this.setInCache(cacheKey, { prices: data.prices, nights: data.nights });
-      
       console.log('💰 Prix calculés:', data);
-      this.updatePriceDisplays(data.prices, data.nights);
+      
+      // Mettre à jour l'affichage des prix
+      Object.entries(data.prices).forEach(([propertyId, priceInfo]) => {
+        this.updatePropertyPriceDisplay(propertyId, priceInfo, data.nights);
+      });
       
     } catch (error) {
       console.error('❌ Erreur mise à jour prix:', error);
     }
-  }
-
-  // Méthode séparée pour mettre à jour l'affichage des prix
-  updatePriceDisplays(prices, nights) {
-    Object.entries(prices).forEach(([propertyId, priceInfo]) => {
-      this.updatePropertyPriceDisplay(propertyId, priceInfo, nights);
-    });
   }
 
   updatePropertyPriceDisplay(propertyId, priceInfo, nights) {
@@ -315,6 +275,7 @@ class PropertyManager {
     const pourcentage = housingItem.querySelector('.pourcentage');
     
     if (nights > 1) {
+      // AVEC dates - Afficher prix/nuit + total
       if (textePrix) {
         textePrix.innerHTML = `<strong>${priceInfo.price_per_night}€</strong> / nuit`;
       }
@@ -331,6 +292,7 @@ class PropertyManager {
         texteTotal.style.display = 'block';
       }
     } else {
+      // SANS dates ou 1 nuit - Format standard
       if (textePrix) {
         const discountText = priceInfo.platform_price_per_night > priceInfo.price_per_night ? 
           `<del>${priceInfo.platform_price_per_night}€</del> ` : '';
@@ -343,6 +305,7 @@ class PropertyManager {
       }
     }
     
+    // Mettre à jour le pourcentage de réduction
     if (pourcentage) {
       if (priceInfo.platform_discount_percentage > 0) {
         pourcentage.textContent = `-${priceInfo.platform_discount_percentage}%`;
@@ -362,10 +325,12 @@ class PropertyManager {
       const textePrix = item.querySelector('.texte-prix');
       const pourcentage = item.querySelector('.pourcentage');
       
+      // Masquer l'élément du total
       if (texteTotal) {
         texteTotal.style.display = 'none';
       }
       
+      // Restaurer l'état initial
       if (propertyId && this.initialPriceStates.has(propertyId)) {
         const initialState = this.initialPriceStates.get(propertyId);
         
@@ -382,186 +347,7 @@ class PropertyManager {
   }
 
   // ================================
-  // SYSTÈME DE CACHE OPTIMISÉ
-  // ================================
-
-  buildCacheKey(filters) {
-    const keyParts = [
-      filters.start || 'no-start',
-      filters.end || 'no-end',
-      filters.capacity || 'no-capacity',
-      filters.price_max || 'no-price',
-      filters.latitude || 'no-lat',
-      filters.longitude || 'no-lng',
-      (filters.amenities || []).sort().join(',') || 'no-amenities',
-      (filters.options || []).sort().join(',') || 'no-options',
-      (filters.types || []).sort().join(',') || 'no-types',
-      this.currentPage,
-      this.pageSize
-    ];
-    
-    return keyParts.join('|');
-  }
-
-  setInCache(key, data) {
-    const maxCacheSize = window.CONFIG?.PERFORMANCE?.cacheSize || 100;
-    
-    // Nettoyer le cache s'il devient trop grand
-    if (this.requestCache.size >= maxCacheSize) {
-      this.cleanupCache();
-    }
-    
-    this.requestCache.set(key, {
-      data: data,
-      timestamp: Date.now(),
-      accessCount: 1
-    });
-  }
-
-  getFromCache(key) {
-    const cached = this.requestCache.get(key);
-    if (!cached) return null;
-    
-    // Vérifier si le cache n'est pas expiré (30 secondes pour les filtres, 5 minutes pour les prix)
-    const maxAge = key.startsWith('prices_') ? 5 * 60 * 1000 : 30 * 1000;
-    if (Date.now() - cached.timestamp > maxAge) {
-      this.requestCache.delete(key);
-      return null;
-    }
-    
-    // Incrémenter le compteur d'accès pour les statistiques
-    cached.accessCount++;
-    this.performanceMetrics.cacheHits++;
-    
-    return cached.data;
-  }
-
-  cleanupCache() {
-    console.log('🧹 Nettoyage du cache...');
-    const now = Date.now();
-    const expiredKeys = [];
-    let oldestTimestamp = now;
-    let oldestKey = null;
-    
-    // Identifier les entrées expirées et la plus ancienne
-    for (const [key, value] of this.requestCache.entries()) {
-      const maxAge = key.startsWith('prices_') ? 5 * 60 * 1000 : 30 * 1000;
-      
-      if (now - value.timestamp > maxAge) {
-        expiredKeys.push(key);
-      } else if (value.timestamp < oldestTimestamp) {
-        oldestTimestamp = value.timestamp;
-        oldestKey = key;
-      }
-    }
-    
-    // Supprimer les entrées expirées
-    expiredKeys.forEach(key => this.requestCache.delete(key));
-    
-    // Si le cache est encore trop grand, supprimer les plus anciennes
-    const maxSize = window.CONFIG?.PERFORMANCE?.cacheSize || 100;
-    while (this.requestCache.size > maxSize && oldestKey) {
-      this.requestCache.delete(oldestKey);
-      
-      // Trouver la prochaine plus ancienne
-      oldestTimestamp = now;
-      oldestKey = null;
-      for (const [key, value] of this.requestCache.entries()) {
-        if (value.timestamp < oldestTimestamp) {
-          oldestTimestamp = value.timestamp;
-          oldestKey = key;
-        }
-      }
-    }
-    
-    this.lastCacheCleanup = now;
-    console.log(`🧹 ${expiredKeys.length} entrées expirées supprimées, taille cache: ${this.requestCache.size}`);
-  }
-
-  // ================================
-  // GESTIONNAIRE DE REQUÊTES OPTIMISÉ
-  // ================================
-
-  async queueRequest(url) {
-    return new Promise((resolve, reject) => {
-      const requestItem = { 
-        url, 
-        resolve, 
-        reject,
-        timestamp: Date.now()
-      };
-      
-      const maxConcurrent = window.CONFIG?.PERFORMANCE?.maxConcurrentRequests || 5;
-      
-      if (this.activeRequests < maxConcurrent) {
-        this.executeRequest(requestItem);
-      } else {
-        this.requestQueue.push(requestItem);
-        if (window.CONFIG?.PERFORMANCE?.logTimings) {
-          console.log(`📋 Requête mise en queue (${this.requestQueue.length} en attente)`);
-        }
-      }
-    });
-  }
-
-  async executeRequest({ url, resolve, reject, timestamp }) {
-    this.activeRequests++;
-    const requestStartTime = performance.now();
-    
-    try {
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log(`🌐 Exécution requête (${this.activeRequests}/${window.CONFIG?.PERFORMANCE?.maxConcurrentRequests || 5})`);
-      }
-      
-      const response = await fetch(url);
-      
-      // Mesurer le temps de réponse
-      const responseTime = Math.round(performance.now() - requestStartTime);
-      this.recordResponseTime(responseTime);
-      
-      resolve(response);
-      
-    } catch (error) {
-      const responseTime = Math.round(performance.now() - requestStartTime);
-      this.recordResponseTime(responseTime);
-      reject(error);
-    } finally {
-      this.activeRequests--;
-      
-      // Traiter la prochaine requête en queue
-      if (this.requestQueue.length > 0) {
-        const nextRequest = this.requestQueue.shift();
-        
-        // Vérifier que la requête n'est pas trop ancienne (timeout)
-        const requestAge = Date.now() - nextRequest.timestamp;
-        const timeout = window.CONFIG?.PERFORMANCE?.moduleLoadTimeout || 5000;
-        
-        if (requestAge < timeout) {
-          this.executeRequest(nextRequest);
-        } else {
-          console.warn('⚠️ Requête expirée, ignorée');
-          nextRequest.reject(new Error('Request timeout'));
-        }
-      }
-    }
-  }
-
-  recordResponseTime(time) {
-    this.performanceMetrics.totalRequests++;
-    this.performanceMetrics.responseTimes.push(time);
-    
-    // Garder seulement les 100 derniers temps pour le calcul de la moyenne
-    if (this.performanceMetrics.responseTimes.length > 100) {
-      this.performanceMetrics.responseTimes.shift();
-    }
-    
-    // Calculer la moyenne
-    const sum = this.performanceMetrics.responseTimes.reduce((a, b) => a + b, 0);
-    this.performanceMetrics.averageResponseTime = Math.round(sum / this.performanceMetrics.responseTimes.length);
-  }
-
-  // ================================
-  // FILTRAGE ET PAGINATION OPTIMISÉS
+  // FILTRAGE ET PAGINATION
   // ================================
 
   updateCurrentFilters(filters) {
@@ -573,38 +359,16 @@ class PropertyManager {
     
     this.isFiltering = true;
     console.log('🔍 Application des filtres...');
-    const filterStartTime = performance.now();
     
     if (resetPage) {
       this.currentPage = 1;
     }
     
+    // Récupérer les valeurs des filtres
     const filters = this.getFilterValues();
     this.updateCurrentFilters(filters);
     
     try {
-      // Vérifier le cache d'abord
-      const cacheKey = this.buildCacheKey(filters);
-      const cachedData = this.getFromCache(cacheKey);
-      
-      if (cachedData) {
-        console.log('🚀 Utilisation du cache pour les filtres');
-        this.displayFilteredProperties(cachedData.properties);
-        this.totalResults = cachedData.total || 0;
-        this.totalPages = cachedData.total_pages || 1;
-        this.currentPage = cachedData.page || 1;
-        this.renderPagination();
-        
-        // Mettre à jour les prix si des dates sont sélectionnées
-        if (filters.start && filters.end) {
-          this.updatePricesForDates(filters.start, filters.end);
-        }
-        
-        const cacheTime = Math.round(performance.now() - filterStartTime);
-        console.log(`✅ Filtres appliqués depuis le cache en ${cacheTime}ms`);
-        return;
-      }
-      
       // Construire l'URL de la requête
       let url = `${window.CONFIG.API_URL}/filter-properties?`;
       
@@ -638,23 +402,16 @@ class PropertyManager {
       
       url += `page=${this.currentPage}&limit=${this.pageSize}`;
       
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log('🌐 URL requête:', url);
-      }
+      console.log('🌐 URL requête:', url);
       
       // Afficher indicateur de chargement
       this.showLoading(true);
       
-      // Utiliser la queue de requêtes
-      const response = await this.queueRequest(url);
+      // Effectuer la requête
+      const response = await fetch(url);
       const data = await response.json();
       
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log('📊 Réponse serveur:', data);
-      }
-      
-      // Mettre en cache la réponse
-      this.setInCache(cacheKey, data);
+      console.log('📊 Réponse serveur:', data);
       
       // Mettre à jour les informations de pagination
       this.totalResults = data.total || 0;
@@ -674,9 +431,6 @@ class PropertyManager {
         this.showNoResults(true);
       }
       
-      const totalTime = Math.round(performance.now() - filterStartTime);
-      console.log(`✅ Filtres appliqués en ${totalTime}ms`);
-      
     } catch (error) {
       console.error('❌ Erreur filtrage:', error);
       this.showError(true);
@@ -688,6 +442,7 @@ class PropertyManager {
 
   displayFilteredProperties(properties) {
     if (properties.length === 0) {
+      // Masquer TOUS les logements quand aucun résultat
       document.querySelectorAll('.housing-item').forEach(item => {
         item.style.display = 'none';
       });
@@ -697,16 +452,19 @@ class PropertyManager {
     
     this.showNoResults(false);
     
+    // Masquer tous les éléments
     document.querySelectorAll('.housing-item').forEach(item => {
       item.style.display = 'none';
     });
     
+    // Conteneur parent
     const housingContainer = document.querySelector('.collection-grid');
     if (!housingContainer) {
       console.error('❌ Conteneur de logements non trouvé');
       return;
     }
     
+    // Afficher et réorganiser les propriétés filtrées
     properties.forEach(propData => {
       const element = document.querySelector(`.lien-logement[data-property-id="${propData.id}"]`);
       if (element) {
@@ -714,10 +472,12 @@ class PropertyManager {
         if (housingItem) {
           housingItem.style.display = '';
           
+          // Mettre à jour la distance si applicable
           if (this.searchLocation && propData.distance !== undefined) {
             this.updateDistanceDisplay(housingItem, propData.distance);
           }
           
+          // Réorganiser dans l'ordre trié
           housingContainer.appendChild(housingItem);
         }
       }
@@ -744,12 +504,14 @@ class PropertyManager {
       end: this.endDate
     };
     
+    // Ajouter coordonnées de recherche si disponibles
     if (this.searchLocation) {
       filters.latitude = this.searchLocation.lat;
       filters.longitude = this.searchLocation.lng;
       filters.distance_max = 100;
     }
     
+    // Nombre d'adultes pour calcul taxe de séjour
     const adultsElement = document.getElementById('chiffres-adultes');
     if (adultsElement) {
       filters.adults = parseInt(adultsElement.textContent, 10) || 1;
@@ -758,7 +520,9 @@ class PropertyManager {
     // Prix maximum - vérifier d'abord FiltersManager
     if (window.filtersManager && window.filtersManager.state.prixMax) {
       filters.price_max = window.filtersManager.state.prixMax;
-    } else {
+    }
+    // Sinon essayer les éléments de l'interface (fallback)
+    else {
       const texteFiltrePrice = document.querySelector('#text-filtre-tarif');
       if (texteFiltrePrice && texteFiltrePrice.textContent.includes('Max')) {
         const matches = texteFiltrePrice.textContent.match(/\d+/);
@@ -767,6 +531,7 @@ class PropertyManager {
         }
       }
       
+      // Version mobile du prix
       const texteFiltrePrice_mobile = document.querySelector('#text-filtre-tarif-mobile');
       if (texteFiltrePrice_mobile) {
         const matches = texteFiltrePrice_mobile.textContent.match(/\d+/);
@@ -838,6 +603,7 @@ class PropertyManager {
       this.applySimplePagination();
     }
     
+    // Scroll vers le haut
     window.scrollTo({
       top: document.querySelector('.collection-list-wrapper')?.offsetTop - 100 || 0,
       behavior: 'smooth'
@@ -860,14 +626,18 @@ class PropertyManager {
     const paginationList = document.createElement('ul');
     paginationList.className = 'pagination-list';
     
+    // Bouton précédent
     const prevButton = this.createPaginationButton('Précédent', 'prev', this.currentPage <= 1);
     paginationList.appendChild(prevButton);
     
+    // Pages avec ellipses
     this.addPageNumbers(paginationList);
     
+    // Bouton suivant
     const nextButton = this.createPaginationButton('Suivant', 'next', this.currentPage >= this.totalPages);
     paginationList.appendChild(nextButton);
     
+    // Texte de résultats
     const resultsText = document.createElement('div');
     resultsText.className = 'pagination-results-text';
     const start = (this.currentPage - 1) * this.pageSize + 1;
@@ -894,6 +664,7 @@ class PropertyManager {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
     
+    // Page 1 + ellipses si nécessaire
     if (startPage > 1) {
       this.addPageButton(paginationList, 1);
       if (startPage > 2) {
@@ -904,10 +675,12 @@ class PropertyManager {
       }
     }
     
+    // Pages visibles
     for (let i = startPage; i <= endPage; i++) {
       this.addPageButton(paginationList, i);
     }
     
+    // Dernière page + ellipses si nécessaire
     if (endPage < this.totalPages) {
       if (endPage < this.totalPages - 1) {
         const ellipsis = document.createElement('li');
@@ -987,20 +760,28 @@ class PropertyManager {
           self.startDate = picker.startDate.format('YYYY-MM-DD');
           self.endDate = picker.endDate.format('YYYY-MM-DD');
           
+          // Stocker dans localStorage
+          const adultsElement = document.getElementById('chiffres-adultes');
+          const enfantsElement = document.getElementById('chiffres-enfants');
+          
           localStorage.setItem('selected_search_data', JSON.stringify({
             startDate: self.startDate,
             endDate: self.endDate,
-            adultes: parseInt(document.getElementById('chiffres-adultes')?.textContent || '1', 10),
-            enfants: parseInt(document.getElementById('chiffres-enfants')?.textContent || '0', 10),
+            adultes: parseInt(adultsElement ? adultsElement.textContent : '1', 10),
+            enfants: parseInt(enfantsElement ? enfantsElement.textContent : '0', 10),
             timestamp: Date.now()
           }));
           
+          // Effectuer le filtrage
           self.applyFilters();
+          
+          // Mettre à jour les prix
           self.updatePricesForDates(self.startDate, self.endDate);
         }
       });
       
       jQuery(this.dateButton).on('cancel.daterangepicker', function(e, picker) {
+        // Réinitialiser les dates
         if (self.textDatesSearch) {
           self.textDatesSearch.textContent = 'Dates';
           self.textDatesSearch.style.color = '';
@@ -1009,8 +790,13 @@ class PropertyManager {
         self.startDate = null;
         self.endDate = null;
         
+        // Supprimer les données stockées
         localStorage.removeItem('selected_search_data');
+        
+        // Réinitialiser le filtrage
         self.resetFilters();
+        
+        // Réinitialiser l'affichage des prix
         self.resetPriceDisplay();
         
         console.log('🗑️ Dates effacées, filtres réinitialisés');
@@ -1025,6 +811,7 @@ class PropertyManager {
     const endDay = endDate.format('D');
     let month = endDate.format('MMM').toLowerCase();
     
+    // Abréviations des mois en français
     const monthAbbr = {
       'jan': 'janv.',
       'fév': 'févr.',
@@ -1050,6 +837,7 @@ class PropertyManager {
     return `${startDay}-${endDay} ${month}`;
   }
 
+  // Méthode pour définir la localisation de recherche
   setSearchLocation(location) {
     this.searchLocation = location;
     console.log('📍 Localisation de recherche définie:', location);
@@ -1060,9 +848,13 @@ class PropertyManager {
   // ================================
 
   resetFilters() {
+    // Vider les filtres actuels
     this.currentFilters = {};
+    
+    // Réinitialiser la localisation de recherche
     this.searchLocation = null;
     
+    // Masquer les distances affichées
     document.querySelectorAll('.distance').forEach(element => {
       element.classList.remove('visible');
       element.style.display = 'none';
@@ -1072,8 +864,13 @@ class PropertyManager {
       element.style.display = 'none';
     });
     
+    // Réinitialiser à la première page
     this.currentPage = 1;
+    
+    // Revenir à la pagination initiale
     this.applyInitialPagination();
+    
+    // Masquer les messages d'erreur
     this.showNoResults(false);
     this.showError(false);
     
@@ -1106,35 +903,15 @@ class PropertyManager {
   }
 
   // ================================
-  // MÉTHODES DE DEBUGGING ET STATS
-  // ================================
-
-  getPerformanceStats() {
-    return {
-      ...this.performanceMetrics,
-      cacheSize: this.requestCache.size,
-      activeRequests: this.activeRequests,
-      queueLength: this.requestQueue.length,
-      cacheHitRate: this.performanceMetrics.totalRequests > 0 ? 
-        Math.round((this.performanceMetrics.cacheHits / this.performanceMetrics.totalRequests) * 100) : 0,
-      lastCacheCleanup: new Date(this.lastCacheCleanup).toLocaleTimeString()
-    };
-  }
-
-  clearCache() {
-    this.requestCache.clear();
-    this.performanceMetrics.cacheHits = 0;
-    console.log('🧹 Cache entièrement vidé');
-  }
-
-  // ================================
   // MÉTHODES PUBLIQUES
   // ================================
 
+  // Méthode pour être appelée par d'autres modules
   triggerFilter() {
     this.applyFilters();
   }
 
+  // Méthode pour obtenir l'état actuel
   getState() {
     return {
       currentPage: this.currentPage,
@@ -1145,8 +922,7 @@ class PropertyManager {
       endDate: this.endDate,
       searchLocation: this.searchLocation,
       isFiltering: this.isFiltering,
-      propertiesRegistered: this.propertiesRegistered,
-      performanceStats: this.getPerformanceStats()
+      propertiesRegistered: this.propertiesRegistered
     };
   }
 }
@@ -1183,7 +959,7 @@ document.addEventListener('click', function(e) {
     'adultes-plus-mobile', 'adultes-moins-mobile', 
     'enfants-plus-mobile', 'enfants-moins-mobile'
   ].includes(buttonId);
-   
+  
   if (isCounterButton) {
     setTimeout(function() {
       const adultsElement = document.getElementById('chiffres-adultes');
