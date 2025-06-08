@@ -1,4 +1,4 @@
-// Page liste - Point d'entrée principal qui orchestre tous les modules - VERSION OPTIMISÉE
+// Page liste - Point d'entrée principal qui orchestre tous les modules - VERSION CORRIGÉE
 class ListeLogementsPage {
   constructor() {
     this.managers = {};
@@ -6,7 +6,7 @@ class ListeLogementsPage {
       filters: false,
       searchMap: false,
       calendarList: false,
-      propertyManager: false
+      propertyManager: false // On garde le tracking mais PropertyManager va se charger automatiquement
     };
     this.initStartTime = performance.now();
     this.init();
@@ -78,8 +78,13 @@ class ListeLogementsPage {
         this.loadSecondaryModules();
       }, delay);
       
-      // 🚀 PHASE 3 : Configuration du chargement à la demande
+      // 🚀 PHASE 3 : Configuration du chargement à la demande SAUF PropertyManager
       this.setupLazyLoading();
+      
+      // 🚀 FIX : PropertyManager se charge automatiquement après les autres modules
+      setTimeout(() => {
+        this.loadPropertyManagerAutomatically();
+      }, delay + 200); // 300ms après le début
       
       console.log('✅ Gestionnaires initialisés en mode optimisé');
       
@@ -119,7 +124,28 @@ class ListeLogementsPage {
     }
   }
 
-  // 🚀 PHASE 3 : Configuration du chargement à la demande
+  // 🚀 FIX : PropertyManager se charge automatiquement (pas à la demande)
+  async loadPropertyManagerAutomatically() {
+    if (!this.lazyModules.propertyManager) {
+      console.log('🏠 Chargement automatique de PropertyManager...');
+      const startTime = performance.now();
+      
+      // S'assurer que les dépendances optionnelles sont chargées
+      await this.loadFiltersIfNeeded();
+      await this.loadSearchAndCalendarIfNeeded();
+      
+      this.managers.propertyManager = new PropertyManager();
+      this.lazyModules.propertyManager = true;
+      
+      const loadTime = Math.round(performance.now() - startTime);
+      if (window.CONFIG?.PERFORMANCE?.logTimings) {
+        console.log(`✅ PropertyManager chargé automatiquement en ${loadTime}ms`);
+      }
+    }
+    return this.managers.propertyManager;
+  }
+
+  // 🚀 PHASE 3 : Configuration du chargement à la demande (sans PropertyManager)
   setupLazyLoading() {
     console.log('🚀 Phase 3: Configuration chargement à la demande...');
     
@@ -153,11 +179,6 @@ class ListeLogementsPage {
         this.loadSearchAndCalendarIfNeeded();
       }
     });
-    
-    // Écouter les événements personnalisés
-    document.addEventListener('filter-needed', () => {
-      this.loadPropertyManagerIfNeeded();
-    });
   }
 
   // 🚀 NOUVEAU : Pré-chargement si l'utilisateur reste sur la page
@@ -167,8 +188,6 @@ class ListeLogementsPage {
     // Si l'utilisateur est toujours là après 3 secondes, on peut pré-charger
     this.loadFiltersIfNeeded();
     this.loadSearchAndCalendarIfNeeded();
-    
-    // PropertyManager reste à la demande car c'est le plus lourd
   }
 
   // 🚀 CHARGEMENT À LA DEMANDE : Filtres
@@ -206,30 +225,18 @@ class ListeLogementsPage {
     }
   }
 
-  // 🚀 CHARGEMENT À LA DEMANDE : PropertyManager (le plus lourd)
-  async loadPropertyManagerIfNeeded() {
-    if (!this.lazyModules.propertyManager) {
-      console.log('🔄 Chargement PropertyManager à la demande...');
-      const startTime = performance.now();
-      
-      // S'assurer que les dépendances sont chargées
-      await this.loadFiltersIfNeeded();
-      await this.loadSearchAndCalendarIfNeeded();
-      
-      this.managers.propertyManager = new PropertyManager();
-      this.lazyModules.propertyManager = true;
-      
-      const loadTime = Math.round(performance.now() - startTime);
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log(`✅ PropertyManager chargé en ${loadTime}ms`);
-      }
-    }
-    return this.managers.propertyManager;
-  }
-
   // 🚀 MÉTHODE PUBLIQUE : Accès sécurisé au PropertyManager
   async getPropertyManager() {
-    return await this.loadPropertyManagerIfNeeded();
+    // PropertyManager se charge automatiquement maintenant, donc on attend qu'il soit prêt
+    let attempts = 0;
+    const maxAttempts = 50; // 5 secondes max
+    
+    while (!this.managers.propertyManager && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
+    return this.managers.propertyManager;
   }
 
   // 🚀 MÉTHODE PUBLIQUE : Vérifier si un module est chargé
@@ -242,7 +249,7 @@ class ListeLogementsPage {
     console.log('🚀 Chargement forcé de tous les modules...');
     await this.loadFiltersIfNeeded();
     await this.loadSearchAndCalendarIfNeeded();
-    await this.loadPropertyManagerIfNeeded();
+    await this.loadPropertyManagerAutomatically();
     console.log('✅ Tous les modules chargés');
   }
 
@@ -288,7 +295,8 @@ class ListeLogementsPage {
       loadedCount: loadedModules.length,
       totalModules: totalModules,
       loadingPercentage: Math.round((loadedModules.length / totalModules) * 100),
-      managers: Object.keys(this.managers)
+      managers: Object.keys(this.managers),
+      propertyManagerReady: !!this.managers.propertyManager
     };
   }
 
@@ -323,7 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
         stats: () => window.listeLogementsPage.getPerformanceStats(),
         loadAll: () => window.listeLogementsPage.loadAllModules(),
         restart: () => window.listeLogementsPage.restart(),
-        getManager: (name) => window.listeLogementsPage.getManager(name)
+        getManager: (name) => window.listeLogementsPage.getManager(name),
+        getPropertyManager: () => window.listeLogementsPage.getPropertyManager()
       };
       console.log('🐛 Mode debug activé. Utilisez window.debugListePage pour débugger');
     }
