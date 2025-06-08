@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE
+// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE AVEC CHARGEMENT AUTOMATIQUE
 class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
@@ -24,7 +24,7 @@ class PropertyManager {
     
     this.initialPriceStates = new Map();
     
-    // 🚀 NOUVEAU : Gestionnaire de performance
+    // 🚀 Gestionnaire de performance
     this.requestQueue = [];
     this.activeRequests = 0;
     this.requestCache = new Map();
@@ -63,11 +63,11 @@ class PropertyManager {
     // Export global
     window.propertyManager = this;
     
-    // 🚀 NOUVEAU : Nettoyage automatique du cache
+    // Nettoyage automatique du cache
     this.setupCacheCleanup();
   }
 
-  // 🚀 NOUVEAU : Configuration du nettoyage automatique du cache
+  // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
     // Nettoyer le cache toutes les 5 minutes
     setInterval(() => {
@@ -81,7 +81,7 @@ class PropertyManager {
   }
 
   // ================================
-  // ENREGISTREMENT DES PROPRIÉTÉS (inchangé)
+  // ENREGISTREMENT DES PROPRIÉTÉS
   // ================================
 
   async registerAllProperties() {
@@ -220,7 +220,7 @@ class PropertyManager {
   }
 
   // ================================
-  // GESTION DES PRIX (inchangé)
+  // GESTION DES PRIX
   // ================================
 
   storeInitialPriceStates() {
@@ -260,7 +260,7 @@ class PropertyManager {
       const adultsElement = document.getElementById('chiffres-adultes');
       const adultsCount = adultsElement ? parseInt(adultsElement.textContent, 10) : 1;
       
-      // 🚀 NOUVEAU : Vérifier le cache d'abord
+      // Vérifier le cache d'abord
       const cacheKey = `prices_${startDate}_${endDate}_${adultsCount}_${visiblePropertyIds.join(',')}`;
       const cachedPrices = this.getFromCache(cacheKey);
       
@@ -276,7 +276,7 @@ class PropertyManager {
         url += `&property_ids=${encodeURIComponent(id)}`;
       });
       
-      // 🚀 NOUVEAU : Utiliser la queue de requêtes
+      // Utiliser la queue de requêtes
       const response = await this.queueRequest(url);
       const data = await response.json();
       
@@ -285,7 +285,7 @@ class PropertyManager {
         return;
       }
       
-      // 🚀 NOUVEAU : Mettre en cache
+      // Mettre en cache
       this.setInCache(cacheKey, { prices: data.prices, nights: data.nights });
       
       console.log('💰 Prix calculés:', data);
@@ -296,7 +296,7 @@ class PropertyManager {
     }
   }
 
-  // 🚀 NOUVEAU : Méthode séparée pour mettre à jour l'affichage des prix
+  // Méthode séparée pour mettre à jour l'affichage des prix
   updatePriceDisplays(prices, nights) {
     Object.entries(prices).forEach(([propertyId, priceInfo]) => {
       this.updatePropertyPriceDisplay(propertyId, priceInfo, nights);
@@ -382,7 +382,7 @@ class PropertyManager {
   }
 
   // ================================
-  // 🚀 NOUVEAU : SYSTÈME DE CACHE OPTIMISÉ
+  // SYSTÈME DE CACHE OPTIMISÉ
   // ================================
 
   buildCacheKey(filters) {
@@ -479,7 +479,7 @@ class PropertyManager {
   }
 
   // ================================
-  // 🚀 NOUVEAU : GESTIONNAIRE DE REQUÊTES OPTIMISÉ
+  // GESTIONNAIRE DE REQUÊTES OPTIMISÉ
   // ================================
 
   async queueRequest(url) {
@@ -583,7 +583,7 @@ class PropertyManager {
     this.updateCurrentFilters(filters);
     
     try {
-      // 🚀 NOUVEAU : Vérifier le cache d'abord
+      // Vérifier le cache d'abord
       const cacheKey = this.buildCacheKey(filters);
       const cachedData = this.getFromCache(cacheKey);
       
@@ -645,7 +645,7 @@ class PropertyManager {
       // Afficher indicateur de chargement
       this.showLoading(true);
       
-      // 🚀 NOUVEAU : Utiliser la queue de requêtes
+      // Utiliser la queue de requêtes
       const response = await this.queueRequest(url);
       const data = await response.json();
       
@@ -653,7 +653,7 @@ class PropertyManager {
         console.log('📊 Réponse serveur:', data);
       }
       
-      // 🚀 NOUVEAU : Mettre en cache la réponse
+      // Mettre en cache la réponse
       this.setInCache(cacheKey, data);
       
       // Mettre à jour les informations de pagination
@@ -822,7 +822,7 @@ class PropertyManager {
   }
 
   // ================================
-  // PAGINATION (inchangée mais optimisée avec cache)
+  // PAGINATION
   // ================================
 
   changePage(newPage) {
@@ -968,7 +968,7 @@ class PropertyManager {
   }
 
   // ================================
-  // GESTION DES DATES (inchangée)
+  // GESTION DES DATES
   // ================================
 
   setupFilterListeners() {
@@ -1056,7 +1056,7 @@ class PropertyManager {
   }
 
   // ================================
-  // RÉINITIALISATION (inchangée)
+  // RÉINITIALISATION
   // ================================
 
   resetFilters() {
@@ -1081,7 +1081,7 @@ class PropertyManager {
   }
 
   // ================================
-  // INTERFACE UTILISATEUR (inchangée)
+  // INTERFACE UTILISATEUR
   // ================================
 
   showLoading(show) {
@@ -1106,7 +1106,7 @@ class PropertyManager {
   }
 
   // ================================
-  // 🚀 NOUVEAUX : MÉTHODES DE DEBUGGING ET STATS
+  // MÉTHODES DE DEBUGGING ET STATS
   // ================================
 
   getPerformanceStats() {
@@ -1128,7 +1128,7 @@ class PropertyManager {
   }
 
   // ================================
-  // MÉTHODES PUBLIQUES (inchangées)
+  // MÉTHODES PUBLIQUES
   // ================================
 
   triggerFilter() {
@@ -1151,7 +1151,7 @@ class PropertyManager {
   }
 }
 
-// Gestionnaire global des clics de pagination (inchangé)
+// Gestionnaire global des clics de pagination
 document.addEventListener('click', function(e) {
   const link = e.target.closest('.pagination-link');
   if (link && window.propertyManager) {
@@ -1175,7 +1175,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Gestionnaire pour mettre à jour localStorage quand les voyageurs changent (inchangé)
+// Gestionnaire pour mettre à jour localStorage quand les voyageurs changent
 document.addEventListener('click', function(e) {
   const buttonId = e.target.id;
   const isCounterButton = [
