@@ -1,7 +1,8 @@
-// Gestionnaire de recherche géographique avec Mapbox
+// Gestionnaire de recherche géographique avec Mapbox - VERSION SÉCURISÉE
 class SearchMapManager {
   constructor() {
-    this.apiKey = 'pk.eyJ1IjoiYWxleGlzZHJpaW5nIiwiYSI6ImNtNmF3bDg2OTAxcXYyaXF6anZxNzBxMXgifQ.I5p3_YC6TD2syl6MACtDVA';
+    // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
+    // this.apiKey = null; // Clé maintenant côté serveur
     this.init();
   }
 
@@ -142,22 +143,22 @@ class SearchMapManager {
   }
 
   // ================================
-  // API MAPBOX
+  // 🔒 API MAPBOX SÉCURISÉE - Passe par votre serveur
   // ================================
 
   async fetchSuggestions(query) {
     try {
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-                  `autocomplete=true&limit=5&types=place,poi,region&bbox=-31.266001,34.560859,39.869301,71.185474&access_token=${this.apiKey}`;
-          
+      // 🔒 MAINTENANT on utilise VOTRE serveur au lieu de l'API Mapbox directement
+      const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}`;
+      
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+        throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       if (!data.features || !Array.isArray(data.features)) {
-        console.error("Réponse inattendue de l'API:", data);
+        console.error("Réponse inattendue du serveur:", data);
         return [];
       }
       
@@ -169,15 +170,15 @@ class SearchMapManager {
   }
 
   async getCoordinatesFromAddress(address) {
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${this.apiKey}&session_token=false`;
-
     try {
+      // 🔒 MAINTENANT on utilise VOTRE serveur au lieu de l'API Mapbox directement
+      const url = `${window.CONFIG.API_URL}/geocode?address=${encodeURIComponent(address)}`;
+
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.features && data.features.length > 0) {
-        const coordinates = data.features[0].geometry.coordinates;
-        return { lng: coordinates[0], lat: coordinates[1] };
+      if (data.coordinates) {
+        return data.coordinates;
       } else {
         console.error('Adresse introuvable :', address);
         return null;
@@ -379,5 +380,6 @@ class SearchMapManager {
     return window.propertyManager ? window.propertyManager.searchLocation : null;
   }
 }
+
 // Export global
 window.SearchMapManager = SearchMapManager;
