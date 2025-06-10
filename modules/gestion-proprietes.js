@@ -86,13 +86,60 @@ class PropertyManager {
 
   async registerAllProperties() {
     console.log('📝 Enregistrement des propriétés...');
+    const allMetadata = [];
+    
+    // NOUVEAU : Collecter toutes les données d'abord
+    this.propertyElements.forEach(element => {
+      const href = element.getAttribute('href');
+      const propertyId = href.split('/').pop();
+      
+      if (propertyId) {
+        const metadata = this.extractPropertyMetadata(element);
+        element.setAttribute('data-property-id', propertyId);
+        
+        // Au lieu d'envoyer directement, on stocke
+        allMetadata.push({
+          property_id: propertyId,
+          ...metadata
+        });
+      }
+    });
+    
+    // NOUVEAU : Envoyer TOUT en UNE SEULE fois
+    try {
+      console.log(`📤 Envoi de ${allMetadata.length} propriétés en une requête...`);
+      
+      const response = await fetch(`${window.CONFIG.API_URL}/register-bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: allMetadata })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      this.propertiesRegistered = true;
+      this.registeredCount = data.count;
+      console.log(`✅ ${data.count} propriétés enregistrées en une fois !`);
+      
+    } catch (error) {
+      console.error('❌ Erreur bulk registration:', error);
+      console.log('Fallback sur méthode individuelle...');
+      
+      // Si ça échoue, on revient à l'ancienne méthode
+      await this.registerAllPropertiesOldWay();
+    }
+  }
+
+  // Nouvelle fonction avec l'ancienne méthode en cas de fallback
+  async registerAllPropertiesOldWay() {
+    // Votre ancien code de registerAllProperties
     let promises = [];
     
     this.propertyElements.forEach(element => {
-      const propertyLink = element;
-      if (!propertyLink) return;
-      
-      const href = propertyLink.getAttribute('href');
+      const href = element.getAttribute('href');
       const propertyId = href.split('/').pop();
       
       if (propertyId) {
@@ -106,7 +153,7 @@ class PropertyManager {
     try {
       await Promise.all(promises);
       this.propertiesRegistered = true;
-      console.log(`✅ ${this.registeredCount} propriétés enregistrées`);
+      console.log(`✅ ${this.registeredCount} propriétés enregistrées (méthode classique)`);
     } catch (error) {
       console.error('❌ Erreur lors de l\'enregistrement des propriétés:', error);
     }
