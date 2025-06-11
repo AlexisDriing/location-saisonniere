@@ -617,6 +617,12 @@ class PropertyManager {
 
   async applyFilters(resetPage = true) {
     if (this.isFiltering || !this.propertiesRegistered) return;
+
+    if (this.filterTimeout) {
+        clearTimeout(this.filterTimeout);
+    }
+    
+    this.filterTimeout = setTimeout(async () => {
     
     this.isFiltering = true;
     console.log('🔍 Application des filtres...');
@@ -731,6 +737,7 @@ class PropertyManager {
       this.isFiltering = false;
       this.showLoading(false);
     }
+    }, 300); // AJOUT DE CETTE LIGNE
   }
 
   displayFilteredProperties(properties) {
