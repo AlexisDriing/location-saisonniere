@@ -42,7 +42,7 @@ class FiltersManager {
       prixMax: null,
       adultes: 1,
       enfants: 0,
-      capaciteMax: 8
+      capaciteMax: 10
     };
     
     this.init();
@@ -64,16 +64,8 @@ class FiltersManager {
   // ================================
 
   loadCapacityFromData() {
-    try {
-      let element = document.querySelector("[data-json-tarifs-line]") || document.querySelector("[data-json-tarifs]");
-      if (element) {
-        const data = JSON.parse(element.getAttribute(element.hasAttribute("data-json-tarifs-line") ? "data-json-tarifs-line" : "data-json-tarifs"));
-        this.state.capaciteMax = data.capacity || 8;
-      }
-    } catch (e) {
-      console.log("Capacité par défaut utilisée");
-    }
-  }
+  this.state.capaciteMax = 10;
+}
 
   // ================================
   // GESTION DES ÉVÉNEMENTS
