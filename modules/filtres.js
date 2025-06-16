@@ -771,5 +771,16 @@ class FiltersManager {
     this.updateTravelersUI();
   }
 
+// 🔧 NOUVELLE MÉTHODE : Debug pour voir les états
+  debugStates() {
+    return {
+      validatedState: { ...this.state },
+      tempState: { ...this.tempState },
+      equipementsButtonText: this.elements.texteFiltreEquipements?.textContent || '',
+      preferencesButtonText: this.elements.texteFiltrePreferences?.textContent || ''
+    };
+  }
+}
+  
 // Export global
 window.FiltersManager = FiltersManager;
