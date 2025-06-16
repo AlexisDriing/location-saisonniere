@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres
+// Gestionnaire complet des filtres - SOLUTION DE L'AUTRE IA COMPLÉTÉE
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -34,7 +34,7 @@ class FiltersManager {
       boutonEffacerVoyageurs: document.querySelector('#bouton-effacer-voyageurs')
     };
     
-    // État des filtres
+    // État des filtres CONFIRMÉS (après validation)
     this.state = {
       equipements: [],
       optionsAccueil: [],
@@ -45,6 +45,13 @@ class FiltersManager {
       capaciteMax: 10
     };
     
+    // État temporaire (pendant la sélection)
+    this.tempState = {
+      equipements: [],
+      optionsAccueil: [],
+      modesLocation: []
+    };
+    
     this.init();
   }
 
@@ -52,6 +59,7 @@ class FiltersManager {
     console.log('🔧 Initialisation FiltersManager...');
     this.loadCapacityFromData();
     this.setupEventListeners();
+    this.setupDropdownListeners();
     this.updateAllUI();
     console.log('✅ FiltersManager initialisé');
     
@@ -64,34 +72,43 @@ class FiltersManager {
   // ================================
 
   loadCapacityFromData() {
-  this.state.capaciteMax = 10;
-}
+    this.state.capaciteMax = 10;
+  }
 
   // ================================
-  // GESTION DES ÉVÉNEMENTS
+  // GESTION DES ÉVÉNEMENTS - MODIFIÉ
   // ================================
 
   setupEventListeners() {
-    // Équipements
+    // Équipements - Ne plus mettre à jour le bouton immédiatement
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        checkbox.addEventListener('change', () => this.updateEquipementsFilter());
+        checkbox.addEventListener('change', () => {
+          // MODIFIÉ : Mettre à jour seulement l'état temporaire
+          this.updateTempEquipements();
+        });
       }
     });
 
-    // Options et modes
+    // Options et modes - Ne plus mettre à jour le bouton immédiatement
     this.optionAccueilCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        checkbox.addEventListener('change', () => this.updatePreferencesFilter());
+        checkbox.addEventListener('change', () => {
+          // MODIFIÉ : Mettre à jour seulement l'état temporaire
+          this.updateTempPreferences();
+        });
       }
     });
 
     this.modeLocationCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        checkbox.addEventListener('change', () => this.updatePreferencesFilter());
+        checkbox.addEventListener('change', () => {
+          // MODIFIÉ : Mettre à jour seulement l'état temporaire
+          this.updateTempPreferences();
+        });
       }
     });
 
@@ -106,9 +123,11 @@ class FiltersManager {
   }
 
   setupActionButtons() {
-    // Équipements
+    // Équipements - MODIFIÉ
     if (this.elements.boutonValiderEquipements) {
       this.elements.boutonValiderEquipements.addEventListener('click', () => {
+        // NOUVEAU : Confirmer les changements
+        this.confirmEquipementsChanges();
         this.triggerPropertyManagerFilter();
         this.closeDropdown(this.elements.boutonFiltreEquipements);
       });
@@ -117,6 +136,23 @@ class FiltersManager {
     if (this.elements.boutonEffacerEquipements) {
       this.elements.boutonEffacerEquipements.addEventListener('click', () => {
         this.clearEquipementsFilter();
+        this.triggerPropertyManagerFilter();
+      });
+    }
+
+    // Préférences - MODIFIÉ
+    if (this.elements.boutonValiderPreferences) {
+      this.elements.boutonValiderPreferences.addEventListener('click', () => {
+        // NOUVEAU : Confirmer les changements
+        this.confirmPreferencesChanges();
+        this.triggerPropertyManagerFilter();
+        this.closeDropdown(this.elements.boutonFiltrePreferences);
+      });
+    }
+
+    if (this.elements.boutonEffacerPreferences) {
+      this.elements.boutonEffacerPreferences.addEventListener('click', () => {
+        this.clearPreferencesFilter();
         this.triggerPropertyManagerFilter();
       });
     }
@@ -141,21 +177,6 @@ class FiltersManager {
         return false;
       }
     });
-
-    // Préférences
-    if (this.elements.boutonValiderPreferences) {
-      this.elements.boutonValiderPreferences.addEventListener('click', () => {
-        this.triggerPropertyManagerFilter();
-        this.closeDropdown(this.elements.boutonFiltrePreferences);
-      });
-    }
-
-    if (this.elements.boutonEffacerPreferences) {
-      this.elements.boutonEffacerPreferences.addEventListener('click', () => {
-        this.clearPreferencesFilter();
-        this.triggerPropertyManagerFilter();
-      });
-    }
 
     // Voyageurs
     if (this.elements.boutonValiderVoyageurs) {
@@ -206,26 +227,185 @@ class FiltersManager {
   }
 
   // ================================
-  // GESTION DES ÉQUIPEMENTS
+  // NOUVELLES MÉTHODES POUR L'ÉTAT TEMPORAIRE
   // ================================
 
-  updateEquipementsFilter() {
-    let nombreCochees = 0;
-    this.state.equipements = [];
+  updateTempEquipements() {
+    this.tempState.equipements = [];
     
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        nombreCochees++;
-        this.state.equipements.push(label.textContent.trim());
+        this.tempState.equipements.push(label.textContent.trim());
       }
     });
-
-    this.updateEquipementsButton(nombreCochees);
-    return nombreCochees;
+    
+    // Ne PAS mettre à jour le bouton ici
+    console.log('État temporaire équipements:', this.tempState.equipements);
   }
+
+  updateTempPreferences() {
+    this.tempState.optionsAccueil = [];
+    this.tempState.modesLocation = [];
+    
+    this.optionAccueilCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label && checkbox.checked) {
+        this.tempState.optionsAccueil.push(label.textContent.trim());
+      }
+    });
+    
+    this.modeLocationCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label && checkbox.checked) {
+        this.tempState.modesLocation.push(label.textContent.trim());
+      }
+    });
+    
+    // Ne PAS mettre à jour le bouton ici
+    console.log('État temporaire préférences:', {
+      options: this.tempState.optionsAccueil,
+      modes: this.tempState.modesLocation
+    });
+  }
+
+  // ================================
+  // CONFIRMATION DES CHANGEMENTS
+  // ================================
+
+  confirmEquipementsChanges() {
+    // Copier l'état temporaire vers l'état confirmé
+    this.state.equipements = [...this.tempState.equipements];
+    
+    // Maintenant on peut mettre à jour le bouton
+    this.updateEquipementsButton(this.state.equipements.length);
+    
+    console.log('✅ Équipements confirmés:', this.state.equipements);
+  }
+
+  confirmPreferencesChanges() {
+    // Copier l'état temporaire vers l'état confirmé
+    this.state.optionsAccueil = [...this.tempState.optionsAccueil];
+    this.state.modesLocation = [...this.tempState.modesLocation];
+    
+    // Maintenant on peut mettre à jour le bouton
+    const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
+    this.updatePreferencesButton(totalPreferences);
+    
+    console.log('✅ Préférences confirmées:', {
+      options: this.state.optionsAccueil,
+      modes: this.state.modesLocation
+    });
+  }
+
+  // ================================
+  // SYNCHRONISATION À L'OUVERTURE
+  // ================================
+
+  // Méthode pour synchroniser les checkboxes avec l'état confirmé
+  syncCheckboxesWithState() {
+    // Synchroniser équipements
+    this.equipementCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label) {
+        const isChecked = this.state.equipements.includes(label.textContent.trim());
+        checkbox.checked = isChecked;
+        
+        // Mettre à jour l'apparence Webflow
+        const webflowCheckbox = container.querySelector('.w-checkbox-input');
+        if (webflowCheckbox) {
+          if (isChecked) {
+            webflowCheckbox.classList.add('w--redirected-checked');
+          } else {
+            webflowCheckbox.classList.remove('w--redirected-checked');
+          }
+        }
+      }
+    });
+    
+    // Synchroniser options d'accueil
+    this.optionAccueilCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label) {
+        const isChecked = this.state.optionsAccueil.includes(label.textContent.trim());
+        checkbox.checked = isChecked;
+        
+        const webflowCheckbox = container.querySelector('.w-checkbox-input');
+        if (webflowCheckbox) {
+          if (isChecked) {
+            webflowCheckbox.classList.add('w--redirected-checked');
+          } else {
+            webflowCheckbox.classList.remove('w--redirected-checked');
+          }
+        }
+      }
+    });
+    
+    // Synchroniser modes de location
+    this.modeLocationCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label) {
+        const isChecked = this.state.modesLocation.includes(label.textContent.trim());
+        checkbox.checked = isChecked;
+        
+        const webflowCheckbox = container.querySelector('.w-checkbox-input');
+        if (webflowCheckbox) {
+          if (isChecked) {
+            webflowCheckbox.classList.add('w--redirected-checked');
+          } else {
+            webflowCheckbox.classList.remove('w--redirected-checked');
+          }
+        }
+      }
+    });
+    
+    // Synchroniser l'état temporaire avec l'état confirmé
+    this.tempState.equipements = [...this.state.equipements];
+    this.tempState.optionsAccueil = [...this.state.optionsAccueil];
+    this.tempState.modesLocation = [...this.state.modesLocation];
+  }
+
+  // ================================
+  // AJOUT D'ÉCOUTEURS POUR L'OUVERTURE DES DROPDOWNS
+  // ================================
+
+  setupDropdownListeners() {
+    // Écouter l'ouverture du dropdown équipements
+    if (this.elements.boutonFiltreEquipements) {
+      this.elements.boutonFiltreEquipements.addEventListener('click', () => {
+        // Petit délai pour laisser le dropdown s'ouvrir
+        setTimeout(() => {
+          this.syncCheckboxesWithState();
+        }, 50);
+      });
+    }
+    
+    // Écouter l'ouverture du dropdown préférences
+    if (this.elements.boutonFiltrePreferences) {
+      this.elements.boutonFiltrePreferences.addEventListener('click', () => {
+        // Petit délai pour laisser le dropdown s'ouvrir
+        setTimeout(() => {
+          this.syncCheckboxesWithState();
+        }, 50);
+      });
+    }
+  }
+
+  // ================================
+  // GESTION DES ÉQUIPEMENTS
+  // ================================
 
   updateEquipementsButton(nombreCochees) {
     if (this.elements.texteFiltreEquipements) {
@@ -240,6 +420,7 @@ class FiltersManager {
   }
 
   clearEquipementsFilter() {
+    // Décocher toutes les checkboxes
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
@@ -248,40 +429,17 @@ class FiltersManager {
       }
     });
     
+    // Réinitialiser les états
     this.state.equipements = [];
-    this.updateEquipementsFilter();
+    this.tempState.equipements = [];
+    
+    // Mettre à jour le bouton
+    this.updateEquipementsButton(0);
   }
 
   // ================================
   // GESTION DES PRÉFÉRENCES
   // ================================
-
-  updatePreferencesFilter() {
-    this.state.optionsAccueil = [];
-    this.state.modesLocation = [];
-    
-    this.optionAccueilCheckboxes.forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label && checkbox.checked) {
-        this.state.optionsAccueil.push(label.textContent.trim());
-      }
-    });
-    
-    this.modeLocationCheckboxes.forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label && checkbox.checked) {
-        this.state.modesLocation.push(label.textContent.trim());
-      }
-    });
-
-    const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
-    this.updatePreferencesButton(totalPreferences);
-    return totalPreferences;
-  }
 
   updatePreferencesButton(totalPreferences) {
     if (this.elements.texteFiltrePreferences) {
@@ -296,6 +454,7 @@ class FiltersManager {
   }
 
   clearPreferencesFilter() {
+    // Décocher toutes les checkboxes
     [...this.optionAccueilCheckboxes, ...this.modeLocationCheckboxes].forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
@@ -304,13 +463,18 @@ class FiltersManager {
       }
     });
     
+    // Réinitialiser les états
     this.state.optionsAccueil = [];
     this.state.modesLocation = [];
-    this.updatePreferencesFilter();
+    this.tempState.optionsAccueil = [];
+    this.tempState.modesLocation = [];
+    
+    // Mettre à jour le bouton
+    this.updatePreferencesButton(0);
   }
 
   // ================================
-  // GESTION DU PRIX
+  // GESTION DU PRIX (inchangée)
   // ================================
 
   updatePriceFromSlider(isMobile) {
@@ -399,7 +563,7 @@ class FiltersManager {
   }
 
   // ================================
-  // GESTION DES VOYAGEURS
+  // GESTION DES VOYAGEURS (inchangée)
   // ================================
 
   incrementAdults() {
@@ -505,9 +669,13 @@ class FiltersManager {
   }
 
   updateAllUI() {
-    this.updateEquipementsFilter();
-    this.updatePreferencesFilter();
+    // Mettre à jour selon l'état CONFIRMÉ seulement
+    this.updateEquipementsButton(this.state.equipements.length);
+    this.updatePreferencesButton(this.state.optionsAccueil.length + this.state.modesLocation.length);
     this.updateTravelersUI();
+    
+    // Synchroniser les checkboxes avec l'état confirmé au démarrage
+    this.syncCheckboxesWithState();
   }
 
   // ================================
@@ -601,6 +769,16 @@ class FiltersManager {
     this.state.adultes = adults;
     this.state.enfants = children;
     this.updateTravelersUI();
+  }
+
+  // Méthode de debug pour voir les états
+  debugStates() {
+    return {
+      confirmedState: { ...this.state },
+      tempState: { ...this.tempState },
+      equipementsButtonText: this.elements.texteFiltreEquipements?.textContent || '',
+      preferencesButtonText: this.elements.texteFiltrePreferences?.textContent || ''
+    };
   }
 }
 
