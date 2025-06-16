@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - VERSION CORRIGÉE avec validation différée
+// Gestionnaire complet des filtres
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -34,9 +34,8 @@ class FiltersManager {
       boutonEffacerVoyageurs: document.querySelector('#bouton-effacer-voyageurs')
     };
     
-    // 🔧 NOUVEAU : État avec validation différée
+    // État des filtres
     this.state = {
-      // État VALIDÉ (appliqué aux filtres)
       equipements: [],
       optionsAccueil: [],
       modesLocation: [],
@@ -44,13 +43,6 @@ class FiltersManager {
       adultes: 1,
       enfants: 0,
       capaciteMax: 10
-    };
-    
-    // 🔧 NOUVEAU : État TEMPORAIRE (dans les modals, pas encore validé)
-    this.tempState = {
-      equipements: [],
-      optionsAccueil: [],
-      modesLocation: []
     };
     
     this.init();
@@ -72,20 +64,19 @@ class FiltersManager {
   // ================================
 
   loadCapacityFromData() {
-    this.state.capaciteMax = 10;
-  }
+  this.state.capaciteMax = 10;
+}
 
   // ================================
   // GESTION DES ÉVÉNEMENTS
   // ================================
 
   setupEventListeners() {
-    // 🔧 MODIFIÉ : Les checkboxes ne mettent plus à jour l'affichage immédiatement
+    // Équipements
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        // 🔧 NOUVEAU : Seulement mettre à jour l'état temporaire
-        checkbox.addEventListener('change', () => this.updateTempEquipementsState());
+        checkbox.addEventListener('change', () => this.updateEquipementsFilter());
       }
     });
 
@@ -93,16 +84,14 @@ class FiltersManager {
     this.optionAccueilCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        // 🔧 NOUVEAU : Seulement mettre à jour l'état temporaire
-        checkbox.addEventListener('change', () => this.updateTempPreferencesState());
+        checkbox.addEventListener('change', () => this.updatePreferencesFilter());
       }
     });
 
     this.modeLocationCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
-        // 🔧 NOUVEAU : Seulement mettre à jour l'état temporaire
-        checkbox.addEventListener('change', () => this.updateTempPreferencesState());
+        checkbox.addEventListener('change', () => this.updatePreferencesFilter());
       }
     });
 
@@ -114,37 +103,12 @@ class FiltersManager {
     
     // Boutons mobiles
     this.setupMobileButtons();
-    
-    // 🔧 NOUVEAU : Gestion fermeture des modals
-    this.setupModalCloseHandlers();
-  }
-
-  // 🔧 NOUVELLE MÉTHODE : Gestion fermeture modals
-  setupModalCloseHandlers() {
-    // Détecter fermeture des dropdowns sans validation
-    document.addEventListener('click', (e) => {
-      // Si clic en dehors des modals de filtres
-      const isClickInsideEquipements = e.target.closest('#filtre-equipements') || 
-                                      e.target.closest('#button-filtre-equipements');
-      const isClickInsidePreferences = e.target.closest('#filtre-option-accueil') || 
-                                      e.target.closest('#filtre-mode-location') ||
-                                      e.target.closest('#button-filtre-preferences');
-      
-      if (!isClickInsideEquipements) {
-        this.resetTempEquipementsToValidated();
-      }
-      
-      if (!isClickInsidePreferences) {
-        this.resetTempPreferencesToValidated();
-      }
-    });
   }
 
   setupActionButtons() {
-    // 🔧 MODIFIÉ : Équipements - Validation différée
+    // Équipements
     if (this.elements.boutonValiderEquipements) {
       this.elements.boutonValiderEquipements.addEventListener('click', () => {
-        this.validateEquipementsFilter(); // 🔧 NOUVELLE méthode
         this.triggerPropertyManagerFilter();
         this.closeDropdown(this.elements.boutonFiltreEquipements);
       });
@@ -153,22 +117,6 @@ class FiltersManager {
     if (this.elements.boutonEffacerEquipements) {
       this.elements.boutonEffacerEquipements.addEventListener('click', () => {
         this.clearEquipementsFilter();
-        this.triggerPropertyManagerFilter();
-      });
-    }
-
-    // 🔧 MODIFIÉ : Préférences - Validation différée
-    if (this.elements.boutonValiderPreferences) {
-      this.elements.boutonValiderPreferences.addEventListener('click', () => {
-        this.validatePreferencesFilter(); // 🔧 NOUVELLE méthode
-        this.triggerPropertyManagerFilter();
-        this.closeDropdown(this.elements.boutonFiltrePreferences);
-      });
-    }
-
-    if (this.elements.boutonEffacerPreferences) {
-      this.elements.boutonEffacerPreferences.addEventListener('click', () => {
-        this.clearPreferencesFilter();
         this.triggerPropertyManagerFilter();
       });
     }
@@ -193,6 +141,21 @@ class FiltersManager {
         return false;
       }
     });
+
+    // Préférences
+    if (this.elements.boutonValiderPreferences) {
+      this.elements.boutonValiderPreferences.addEventListener('click', () => {
+        this.triggerPropertyManagerFilter();
+        this.closeDropdown(this.elements.boutonFiltrePreferences);
+      });
+    }
+
+    if (this.elements.boutonEffacerPreferences) {
+      this.elements.boutonEffacerPreferences.addEventListener('click', () => {
+        this.clearPreferencesFilter();
+        this.triggerPropertyManagerFilter();
+      });
+    }
 
     // Voyageurs
     if (this.elements.boutonValiderVoyageurs) {
@@ -243,174 +206,26 @@ class FiltersManager {
   }
 
   // ================================
-  // 🔧 NOUVELLES MÉTHODES : GESTION ÉTAT TEMPORAIRE
+  // GESTION DES ÉQUIPEMENTS
   // ================================
 
-  updateTempEquipementsState() {
-    this.tempState.equipements = [];
+  updateEquipementsFilter() {
+    let nombreCochees = 0;
+    this.state.equipements = [];
     
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        this.tempState.equipements.push(label.textContent.trim());
+        nombreCochees++;
+        this.state.equipements.push(label.textContent.trim());
       }
     });
-    
-    console.log('🔧 État temporaire équipements:', this.tempState.equipements);
-    // 🔧 IMPORTANT : NE PAS mettre à jour l'affichage du bouton ici !
-  }
 
-  updateTempPreferencesState() {
-    this.tempState.optionsAccueil = [];
-    this.tempState.modesLocation = [];
-    
-    this.optionAccueilCheckboxes.forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label && checkbox.checked) {
-        this.tempState.optionsAccueil.push(label.textContent.trim());
-      }
-    });
-    
-    this.modeLocationCheckboxes.forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label && checkbox.checked) {
-        this.tempState.modesLocation.push(label.textContent.trim());
-      }
-    });
-    
-    console.log('🔧 État temporaire préférences:', this.tempState.optionsAccueil, this.tempState.modesLocation);
-    // 🔧 IMPORTANT : NE PAS mettre à jour l'affichage du bouton ici !
+    this.updateEquipementsButton(nombreCochees);
+    return nombreCochees;
   }
-
-  // 🔧 NOUVELLE MÉTHODE : Valider les équipements
-  validateEquipementsFilter() {
-    // Copier l'état temporaire vers l'état validé
-    this.state.equipements = [...this.tempState.equipements];
-    
-    // MAINTENANT mettre à jour l'affichage
-    this.updateEquipementsButton(this.state.equipements.length);
-    
-    // 🔧 NOUVEAU : Synchroniser les checkboxes avec l'état validé
-    this.syncEquipementsCheckboxes();
-    
-    console.log('✅ Équipements validés:', this.state.equipements);
-  }
-
-  // 🔧 NOUVELLE MÉTHODE : Valider les préférences
-  validatePreferencesFilter() {
-    // Copier l'état temporaire vers l'état validé
-    this.state.optionsAccueil = [...this.tempState.optionsAccueil];
-    this.state.modesLocation = [...this.tempState.modesLocation];
-    
-    // MAINTENANT mettre à jour l'affichage
-    const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
-    this.updatePreferencesButton(totalPreferences);
-    
-    // 🔧 NOUVEAU : Synchroniser les checkboxes avec l'état validé
-    this.syncPreferencesCheckboxes();
-    
-    console.log('✅ Préférences validées:', this.state.optionsAccueil, this.state.modesLocation);
-  }
-
-  // 🔧 NOUVELLE MÉTHODE : Synchroniser équipements avec état validé
-  syncEquipementsCheckboxes() {
-    this.equipementCheckboxes.forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label) {
-        const labelText = label.textContent.trim();
-        const shouldBeChecked = this.state.equipements.includes(labelText);
-        
-        if (checkbox.checked !== shouldBeChecked) {
-          checkbox.checked = shouldBeChecked;
-          this.triggerCheckboxChange(checkbox);
-        }
-      }
-    });
-    
-    // Mettre à jour l'état temporaire pour qu'il soit en sync
-    this.tempState.equipements = [...this.state.equipements];
-    
-    console.log('🔄 Checkboxes équipements synchronisées avec état validé');
-  }
-
-  // 🔧 NOUVELLE MÉTHODE : Synchroniser préférences avec état validé
-  syncPreferencesCheckboxes() {
-    [...this.optionAccueilCheckboxes, ...this.modeLocationCheckboxes].forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label) {
-        const labelText = label.textContent.trim();
-        const shouldBeChecked = this.state.optionsAccueil.includes(labelText) || 
-                               this.state.modesLocation.includes(labelText);
-        
-        if (checkbox.checked !== shouldBeChecked) {
-          checkbox.checked = shouldBeChecked;
-          this.triggerCheckboxChange(checkbox);
-        }
-      }
-    });
-    
-    // Mettre à jour l'état temporaire pour qu'il soit en sync
-    this.tempState.optionsAccueil = [...this.state.optionsAccueil];
-    this.tempState.modesLocation = [...this.state.modesLocation];
-    
-    console.log('🔄 Checkboxes préférences synchronisées avec état validé');
-  }
-
-  // 🔧 NOUVELLE MÉTHODE : Reset temp vers validé (fermeture sans validation)
-  resetTempEquipementsToValidated() {
-    // Restaurer les checkboxes selon l'état validé
-    this.equipementCheckboxes.forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label) {
-        const labelText = label.textContent.trim();
-        checkbox.checked = this.state.equipements.includes(labelText);
-        this.triggerCheckboxChange(checkbox);
-      }
-    });
-    
-    // Mettre à jour l'état temporaire
-    this.tempState.equipements = [...this.state.equipements];
-    
-    console.log('🔄 État temporaire équipements restauré vers état validé');
-  }
-
-  resetTempPreferencesToValidated() {
-    // Restaurer les checkboxes selon l'état validé
-    [...this.optionAccueilCheckboxes, ...this.modeLocationCheckboxes].forEach(container => {
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      const label = container.querySelector('.w-form-label');
-      
-      if (checkbox && label) {
-        const labelText = label.textContent.trim();
-        const isInValidatedState = this.state.optionsAccueil.includes(labelText) || 
-                                  this.state.modesLocation.includes(labelText);
-        checkbox.checked = isInValidatedState;
-        this.triggerCheckboxChange(checkbox);
-      }
-    });
-    
-    // Mettre à jour l'état temporaire
-    this.tempState.optionsAccueil = [...this.state.optionsAccueil];
-    this.tempState.modesLocation = [...this.state.modesLocation];
-    
-    console.log('🔄 État temporaire préférences restauré vers état validé');
-  }
-
-  // ================================
-  // GESTION DES ÉQUIPEMENTS (modifiée)
-  // ================================
 
   updateEquipementsButton(nombreCochees) {
     if (this.elements.texteFiltreEquipements) {
@@ -433,15 +248,40 @@ class FiltersManager {
       }
     });
     
-    // 🔧 MODIFIÉ : Reset des deux états
     this.state.equipements = [];
-    this.tempState.equipements = [];
-    this.updateEquipementsButton(0);
+    this.updateEquipementsFilter();
   }
 
   // ================================
-  // GESTION DES PRÉFÉRENCES (modifiée)
+  // GESTION DES PRÉFÉRENCES
   // ================================
+
+  updatePreferencesFilter() {
+    this.state.optionsAccueil = [];
+    this.state.modesLocation = [];
+    
+    this.optionAccueilCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label && checkbox.checked) {
+        this.state.optionsAccueil.push(label.textContent.trim());
+      }
+    });
+    
+    this.modeLocationCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label && checkbox.checked) {
+        this.state.modesLocation.push(label.textContent.trim());
+      }
+    });
+
+    const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
+    this.updatePreferencesButton(totalPreferences);
+    return totalPreferences;
+  }
 
   updatePreferencesButton(totalPreferences) {
     if (this.elements.texteFiltrePreferences) {
@@ -464,16 +304,13 @@ class FiltersManager {
       }
     });
     
-    // 🔧 MODIFIÉ : Reset des deux états
     this.state.optionsAccueil = [];
     this.state.modesLocation = [];
-    this.tempState.optionsAccueil = [];
-    this.tempState.modesLocation = [];
-    this.updatePreferencesButton(0);
+    this.updatePreferencesFilter();
   }
 
   // ================================
-  // GESTION DU PRIX (inchangée)
+  // GESTION DU PRIX
   // ================================
 
   updatePriceFromSlider(isMobile) {
@@ -562,7 +399,7 @@ class FiltersManager {
   }
 
   // ================================
-  // GESTION DES VOYAGEURS (inchangée)
+  // GESTION DES VOYAGEURS
   // ================================
 
   incrementAdults() {
@@ -657,7 +494,7 @@ class FiltersManager {
   }
 
   // ================================
-  // ACTIONS GLOBALES (modifiées)
+  // ACTIONS GLOBALES
   // ================================
 
   clearAllFilters() {
@@ -668,18 +505,13 @@ class FiltersManager {
   }
 
   updateAllUI() {
-    // 🔧 MODIFIÉ : Mettre à jour selon l'état VALIDÉ seulement
-    this.updateEquipementsButton(this.state.equipements.length);
-    this.updatePreferencesButton(this.state.optionsAccueil.length + this.state.modesLocation.length);
+    this.updateEquipementsFilter();
+    this.updatePreferencesFilter();
     this.updateTravelersUI();
-    
-    // 🔧 NOUVEAU : Synchroniser les checkboxes avec l'état validé au démarrage
-    this.syncEquipementsCheckboxes();
-    this.syncPreferencesCheckboxes();
   }
 
   // ================================
-  // INTÉGRATION AVEC PROPERTYMANAGER (inchangée)
+  // INTÉGRATION AVEC PROPERTYMANAGER
   // ================================
 
   triggerPropertyManagerFilter() {
@@ -770,17 +602,7 @@ class FiltersManager {
     this.state.enfants = children;
     this.updateTravelersUI();
   }
-
-// 🔧 NOUVELLE MÉTHODE : Debug pour voir les états
-  debugStates() {
-    return {
-      validatedState: { ...this.state },
-      tempState: { ...this.tempState },
-      equipementsButtonText: this.elements.texteFiltreEquipements?.textContent || '',
-      preferencesButtonText: this.elements.texteFiltrePreferences?.textContent || ''
-    };
-  }
 }
-  
+
 // Export global
 window.FiltersManager = FiltersManager;
