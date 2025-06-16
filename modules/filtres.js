@@ -646,7 +646,7 @@ class FiltersManager {
   }
 
   // ================================
-  // MÉTHODES UTILITAIRES (inchangées)
+  // MÉTHODES UTILITAIRES
   // ================================
 
   addClickListener(elementIds, callback) {
@@ -712,6 +712,17 @@ class FiltersManager {
     this.state.enfants = children;
     this.updateTravelersUI();
   }
+
+  // 🔧 NOUVELLE MÉTHODE : Debug pour voir les états
+  debugStates() {
+    return {
+      validatedState: { ...this.state },
+      tempState: { ...this.tempState },
+      equipementsButtonText: this.elements.texteFiltreEquipements?.textContent || '',
+      preferencesButtonText: this.elements.texteFiltrePreferences?.textContent || ''
+    };
+  }
+}
 
 // Export global
 window.FiltersManager = FiltersManager;
