@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker
+// Gestion complète du calendrier : iCal + DateRangePicker - VERSION CORRIGÉE
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -6,6 +6,7 @@ class CalendarManager {
     this.cache = new CalendarCache();
     this.icalManager = new ICalManager();
     this.nextUnavailableDate = null;
+    this.isCalculatingNextDate = false; // 🔧 NOUVEAU : Protection contre doubles calculs
     this.init();
   }
 
@@ -104,9 +105,26 @@ class CalendarManager {
       }
     });
 
+    // 🔧 VERSION AMÉLIORÉE du cancel
     $('#input-calendar, #input-calendar-mobile').on('cancel.daterangepicker', (e, picker) => {
+      console.log('🔧 cancel.daterangepicker déclenché');
+      
+      // Reset complet des variables
       this.nextUnavailableDate = null;
+      this.isCalculatingNextDate = false;
+      
+      // 🔧 NOUVEAU : Reset explicite du picker state AVANT resetDatePicker
+      picker.startDate = null;
+      picker.endDate = null;
+      
       this.resetDatePicker(picker);
+      
+      // 🔧 NOUVEAU : Forcer un re-render après reset
+      setTimeout(() => {
+        if (this.picker && this.picker.updateCalendars) {
+          this.picker.updateCalendars();
+        }
+      }, 100);
     });
 
     $('#input-calendar, #input-calendar-mobile').on('hide.daterangepicker', (e, picker) => {
@@ -152,6 +170,31 @@ class CalendarManager {
       this.nextUnavailableDate = null;
       originalClear.call(this.picker);
     };
+
+    // 🔧 VERSION AMÉLIORÉE de setStartDate override
+    const originalSetStartDate = this.picker.setStartDate;
+    this.picker.setStartDate = (date) => {
+      console.log('🔧 setStartDate appelé avec:', date ? date.format('YYYY-MM-DD') : 'null');
+      
+      // 🔧 RESET systématique des variables
+      this.nextUnavailableDate = null;
+      this.isCalculatingNextDate = false;
+      
+      // Appel original
+      originalSetStartDate.call(this.picker, date);
+      
+      // 🔧 NOUVEAU : Recalcul différé pour éviter race condition
+      if (date && date.isValid()) {
+        setTimeout(() => {
+          if (this.picker.startDate && 
+              this.picker.startDate.isSame(date, 'day') && 
+              !this.picker.endDate) {
+            console.log('🔧 Recalcul nextUnavailableDate pour:', date.format('YYYY-MM-DD'));
+            this.updateCalendarUI();
+          }
+        }, 50); // 50ms pour laisser le picker se mettre à jour
+      }
+    };
   }
 
   // À ajouter dans votre CalendarManager après l'initialisation du picker
@@ -194,6 +237,7 @@ enhancePickerPositioning() {
   updateCalendarUI() {
     if (!this.picker) return;
     
+    const $ = jQuery;
     const buttons = this.picker.container.find('.drp-buttons');
     
     if (!buttons.find('.left-section').length) {
@@ -313,11 +357,38 @@ enhancePickerPositioning() {
     }
   }
 
+  // 🔧 MODIFIÉ : resetDatePicker avec ordre sécurisé
   resetDatePicker(picker) {
-    picker.setStartDate(moment().startOf('day'));
+    // 🔧 ORDRE SÉCURISÉ : Reset AVANT setStartDate
+    picker.startDate = null;        // ← Reset AVANT
+    picker.endDate = null;          // ← Reset AVANT  
+    this.nextUnavailableDate = null;
+    this.isCalculatingNextDate = false;
+    
+    // Puis les appels pour compatibilité DateRangePicker
+    picker.setStartDate(moment().startOf('day')); // ← APRÈS les resets
     picker.setEndDate(null);
+    
     jQuery('#input-calendar, #input-calendar-mobile').val('');
     this.updateDatesText(null, null);
+    
+    console.log('🔧 resetDatePicker : state complètement nettoyé');
+  }
+
+  // 🔧 BONUS : Méthode de debug pour vérifier l'état
+  debugPickerState() {
+    const picker = this.picker;
+    return {
+      hasPickerStartDate: !!(picker && picker.startDate),
+      pickerStartDate: picker && picker.startDate ? picker.startDate.format('YYYY-MM-DD') : null,
+      hasPickerEndDate: !!(picker && picker.endDate),
+      nextUnavailableDate: this.nextUnavailableDate ? this.nextUnavailableDate.format('YYYY-MM-DD') : null,
+      isCalculating: this.isCalculatingNextDate,
+      // Détecter l'état "buggé"
+      isProbablyInBuggedState: picker && picker.startDate && 
+                              picker.startDate.isSame(moment().startOf('day'), 'day') && 
+                              !this.nextUnavailableDate
+    };
   }
 }
 
