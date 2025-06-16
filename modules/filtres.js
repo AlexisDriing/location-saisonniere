@@ -296,6 +296,9 @@ class FiltersManager {
     // MAINTENANT mettre à jour l'affichage
     this.updateEquipementsButton(this.state.equipements.length);
     
+    // 🔧 NOUVEAU : Synchroniser les checkboxes avec l'état validé
+    this.syncEquipementsCheckboxes();
+    
     console.log('✅ Équipements validés:', this.state.equipements);
   }
 
@@ -309,7 +312,58 @@ class FiltersManager {
     const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
     this.updatePreferencesButton(totalPreferences);
     
+    // 🔧 NOUVEAU : Synchroniser les checkboxes avec l'état validé
+    this.syncPreferencesCheckboxes();
+    
     console.log('✅ Préférences validées:', this.state.optionsAccueil, this.state.modesLocation);
+  }
+
+  // 🔧 NOUVELLE MÉTHODE : Synchroniser équipements avec état validé
+  syncEquipementsCheckboxes() {
+    this.equipementCheckboxes.forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label) {
+        const labelText = label.textContent.trim();
+        const shouldBeChecked = this.state.equipements.includes(labelText);
+        
+        if (checkbox.checked !== shouldBeChecked) {
+          checkbox.checked = shouldBeChecked;
+          this.triggerCheckboxChange(checkbox);
+        }
+      }
+    });
+    
+    // Mettre à jour l'état temporaire pour qu'il soit en sync
+    this.tempState.equipements = [...this.state.equipements];
+    
+    console.log('🔄 Checkboxes équipements synchronisées avec état validé');
+  }
+
+  // 🔧 NOUVELLE MÉTHODE : Synchroniser préférences avec état validé
+  syncPreferencesCheckboxes() {
+    [...this.optionAccueilCheckboxes, ...this.modeLocationCheckboxes].forEach(container => {
+      const checkbox = container.querySelector('input[type="checkbox"]');
+      const label = container.querySelector('.w-form-label');
+      
+      if (checkbox && label) {
+        const labelText = label.textContent.trim();
+        const shouldBeChecked = this.state.optionsAccueil.includes(labelText) || 
+                               this.state.modesLocation.includes(labelText);
+        
+        if (checkbox.checked !== shouldBeChecked) {
+          checkbox.checked = shouldBeChecked;
+          this.triggerCheckboxChange(checkbox);
+        }
+      }
+    });
+    
+    // Mettre à jour l'état temporaire pour qu'il soit en sync
+    this.tempState.optionsAccueil = [...this.state.optionsAccueil];
+    this.tempState.modesLocation = [...this.state.modesLocation];
+    
+    console.log('🔄 Checkboxes préférences synchronisées avec état validé');
   }
 
   // 🔧 NOUVELLE MÉTHODE : Reset temp vers validé (fermeture sans validation)
@@ -618,6 +672,10 @@ class FiltersManager {
     this.updateEquipementsButton(this.state.equipements.length);
     this.updatePreferencesButton(this.state.optionsAccueil.length + this.state.modesLocation.length);
     this.updateTravelersUI();
+    
+    // 🔧 NOUVEAU : Synchroniser les checkboxes avec l'état validé au démarrage
+    this.syncEquipementsCheckboxes();
+    this.syncPreferencesCheckboxes();
   }
 
   // ================================
@@ -712,17 +770,6 @@ class FiltersManager {
     this.state.enfants = children;
     this.updateTravelersUI();
   }
-
-  // 🔧 NOUVELLE MÉTHODE : Debug pour voir les états
-  debugStates() {
-    return {
-      validatedState: { ...this.state },
-      tempState: { ...this.tempState },
-      equipementsButtonText: this.elements.texteFiltreEquipements?.textContent || '',
-      preferencesButtonText: this.elements.texteFiltrePreferences?.textContent || ''
-    };
-  }
-}
 
 // Export global
 window.FiltersManager = FiltersManager;
