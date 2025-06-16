@@ -248,8 +248,8 @@ enhancePickerPositioning() {
       
       if (nights > 0) {
         nightsCount.text(nights + (nights > 1 ? ' nuits' : ' nuit'));
-        const startDateText = this.picker.startDate.format('ddd').toLowerCase() + '. ' + this.picker.startDate.format('DD/MM');
-        const endDateText = this.picker.endDate.format('ddd').toLowerCase() + '. ' + this.picker.endDate.format('DD/MM');
+        const startDateText = this.picker.startDate.format('ddd').toLowerCase() + ' ' + this.picker.startDate.format('DD/MM');
+        const endDateText = this.picker.endDate.format('ddd').toLowerCase() + ' ' + this.picker.endDate.format('DD/MM');
         selectedDates.text(startDateText + ' - ' + endDateText);
         buttons.find('.left-section').css('flex-direction', 'row');
         nightsCount.show();
