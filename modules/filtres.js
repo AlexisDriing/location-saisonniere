@@ -67,71 +67,71 @@ class FiltersManager {
     window.filtersManager = this;
   }
 
-  updateMobileFilterIndicator() {
-    // Compter les filtres actifs (sans dates ni localisation)
-    let count = 0;
-    
-    // Compter équipements
-    count += this.state.equipements.length;
-    
-    // Compter options d'accueil
-    count += this.state.optionsAccueil.length;
-    
-    // Compter modes de location
-    count += this.state.modesLocation.length;
-    
-    // Compter prix max (1 si défini)
-    if (this.state.prixMax !== null) {
-      count++;
-    }
-    
-    // Compter voyageurs (1 si différent du défaut)
-    if (this.state.adultes !== 1 || this.state.enfants !== 0) {
-      count++;
-    }
-    
-    // Mettre à jour l'interface mobile
-    const numberFilter = document.querySelector('.number-filter');
-    const buttonFilterMobile = document.querySelector('.button-filter-mobile');
-    const textFiltre = document.querySelector('.text-filtre');
-    
-    if (count > 0) {
-      // Afficher le bloc number-filter
-      if (numberFilter) {
-        numberFilter.style.display = 'flex'; // ou 'block' selon votre layout
-      }
-      
-      // Changer la couleur de la bordure du bouton
-      if (buttonFilterMobile) {
-        buttonFilterMobile.style.borderColor = '#235B59';
-        buttonFilterMobile.style.borderWidth = '1px';
-        buttonFilterMobile.style.borderStyle = 'solid';
-      }
-      
-      // Mettre à jour le texte avec le nombre de filtres
-      if (textFiltre) {
-        textFiltre.textContent = count.toString();
-      }
-    } else {
-      // Masquer si aucun filtre
-      if (numberFilter) {
-        numberFilter.style.display = 'none';
-      }
-      
-      if (buttonFilterMobile) {
-        // Réinitialiser le style du bouton
-        buttonFilterMobile.style.borderColor = '';
-        buttonFilterMobile.style.borderWidth = '';
-        buttonFilterMobile.style.borderStyle = '';
-      }
-      
-      if (textFiltre) {
-        textFiltre.textContent = '0';
-      }
-    }
-    
-    console.log(`📱 Indicateur mobile mis à jour: ${count} filtre(s) actif(s)`);
+  // REMPLACEZ votre méthode updateMobileFilterIndicator() par celle-ci :
+
+updateMobileFilterIndicator() {
+  // Compter les filtres actifs individuellement (sans dates ni localisation)
+  let count = 0;
+  
+  // Compter CHAQUE équipement sélectionné
+  count += this.state.equipements.length;
+  
+  // Compter CHAQUE option d'accueil sélectionnée
+  count += this.state.optionsAccueil.length;
+  
+  // Compter CHAQUE mode de location sélectionné
+  count += this.state.modesLocation.length;
+  
+  // Compter prix max comme 1 filtre (1 si défini)
+  if (this.state.prixMax !== null) {
+    count++;
   }
+  
+  // Compter voyageurs comme 1 filtre (1 si différent du défaut)
+  if (this.state.adultes !== 1 || this.state.enfants !== 0) {
+    count++;
+  }
+  
+  // Mettre à jour l'interface mobile
+  const numberFilter = document.querySelector('.number-filter');
+  const buttonFilterMobile = document.querySelector('.button-filter-mobile');
+  const textFiltre = document.querySelector('.text-filtre');
+  
+  if (count > 0) {
+    // Afficher le bloc number-filter
+    if (numberFilter) {
+      numberFilter.style.display = 'flex'; // ou 'block' selon votre layout
+    }
+    
+    // Changer la couleur de la bordure du bouton
+    if (buttonFilterMobile) {
+      buttonFilterMobile.style.borderColor = '#235B59';
+      buttonFilterMobile.style.borderWidth = '1px';
+      buttonFilterMobile.style.borderStyle = 'solid';
+    }
+    
+    // Mettre à jour le texte avec le nombre total de filtres
+    if (textFiltre) {
+      textFiltre.textContent = count.toString();
+    }
+  } else {
+    // Masquer si aucun filtre
+    if (numberFilter) {
+      numberFilter.style.display = 'none';
+    }
+    
+    if (buttonFilterMobile) {
+      // Réinitialiser le style du bouton
+      buttonFilterMobile.style.borderColor = '';
+      buttonFilterMobile.style.borderWidth = '';
+      buttonFilterMobile.style.borderStyle = '';
+    }
+    
+    if (textFiltre) {
+      textFiltre.textContent = '0';
+    }
+  }
+}
   // ================================
   // CONFIGURATION INITIALE
   // ================================
