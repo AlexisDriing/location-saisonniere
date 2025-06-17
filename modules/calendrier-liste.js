@@ -228,8 +228,8 @@ class CalendarListManager {
         
         if (nights > 0) {
           nightsCount.text(nights + (nights > 1 ? ' nuits' : ' nuit'));
-          const startDateText = picker.startDate.format('ddd').toLowerCase() + '. ' + picker.startDate.format('DD/MM');
-          const endDateText = picker.endDate.format('ddd').toLowerCase() + '. ' + picker.endDate.format('DD/MM');
+          const startDateText = picker.startDate.format('ddd').toLowerCase() + ' ' + picker.startDate.format('DD/MM');
+          const endDateText = picker.endDate.format('ddd').toLowerCase() + ' ' + picker.endDate.format('DD/MM');
           selectedDates.text(startDateText + ' - ' + endDateText);
           buttons.find('.left-section').css('flex-direction', 'row');
           nightsCount.show();
