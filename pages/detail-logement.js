@@ -15,6 +15,28 @@ class DetailLogementPage {
     this.initializeManagers();
     
     console.log('✅ Page détail initialisée avec succès');
+    // Attendre que les données soient chargées puis cacher le loader
+    setTimeout(() => {
+      // Vérifier si des dates de recherche existent
+      const hasStoredData = localStorage.getItem('selected_search_data');
+      const datesTexte = document.getElementById('dates-texte');
+      const totalPrix = document.getElementById('total-prix');
+      
+      // Si pas de données sauvegardées OU si les éléments sont déjà mis à jour
+      if (!hasStoredData || 
+          (datesTexte && datesTexte.textContent !== 'Sélectionner une date') ||
+          (totalPrix && totalPrix.textContent !== '-')) {
+        console.log('✅ Page prête, on cache le loader');
+        window.hidePageLoader();
+      } else {
+        // Les données existent mais pas encore appliquées, attendre un peu plus
+        console.log('⏳ Données en cours de chargement, on attend...');
+        setTimeout(() => {
+          console.log('⏱️ Timeout final, on cache le loader');
+          window.hidePageLoader();
+        }, 1000);
+      }
+    }, 800);
   }
 
   async loadExternalDependencies() {
