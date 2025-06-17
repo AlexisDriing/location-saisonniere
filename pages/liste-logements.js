@@ -43,7 +43,6 @@ class ListeLogementsPage {
       }
     }, 500);
   }
-  }
 
   async loadExternalDependencies() {
     // Charger Moment.js si pas disponible
