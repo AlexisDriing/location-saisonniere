@@ -274,25 +274,56 @@ updateMobileFilterIndicator() {
   }
 
   setupMobileButtons() {
-    // Bouton valider mobile
-    document.body.addEventListener('click', (e) => {
-      if (e.target.id === 'bouton-valider-mobile') {
-        e.preventDefault();
-        this.updatePriceFromSlider(true); // mobile
-        this.updateVoyageursFilter();
-        this.triggerPropertyManagerFilter();
-        this.closeMobilePopup();
-        // NOUVEAU : Mettre à jour l'indicateur après validation mobile
-        this.updateMobileFilterIndicator();
+  document.body.addEventListener('click', (e) => {
+    if (e.target.id === 'bouton-valider-mobile') {
+      e.preventDefault();
+      
+      // NOUVEAU : Confirmer les équipements SI modifiés
+      if (this.tempState.equipements.length > 0) {
+        this.confirmEquipementsChanges();
       }
       
-      if (e.target.id === 'bouton-effacer-mobile') {
-        e.preventDefault();
-        this.clearAllFilters();
-        this.triggerPropertyManagerFilter();
+      // NOUVEAU : Confirmer les préférences SI modifiées
+      if (this.tempState.optionsAccueil.length > 0 || this.tempState.modesLocation.length > 0) {
+        this.confirmPreferencesChanges();
       }
-    });
-  }
+      
+      // MODIFIÉ : Ne mettre à jour le prix QUE s'il a été changé
+      // On vérifie d'abord si le slider a une valeur différente de 500 (max par défaut)
+      const mobileSlider = document.querySelector('.bloc-slider.mobile-slider[fs-rangeslider-max="500"]');
+      if (mobileSlider) {
+        const displayElement = mobileSlider.querySelector('[fs-rangeslider-element="display-value"]');
+        if (displayElement) {
+          const match = displayElement.textContent.match(/(\d+)/);
+          if (match) {
+            const sliderValue = parseInt(match[1], 10);
+            // Ne mettre à jour QUE si différent de 500 (valeur max/défaut)
+            if (sliderValue < 500) {
+              this.updatePriceFromSlider(true);
+            }
+          }
+        }
+      }
+      
+      // MODIFIÉ : Ne mettre à jour les voyageurs QUE s'ils ont changé
+      if (this.state.adultes !== 1 || this.state.enfants !== 0) {
+        this.updateVoyageursFilter();
+      }
+      
+      this.triggerPropertyManagerFilter();
+      this.closeMobilePopup();
+      
+      // IMPORTANT : Toujours mettre à jour l'indicateur à la fin
+      this.updateMobileFilterIndicator();
+    }
+    
+    if (e.target.id === 'bouton-effacer-mobile') {
+      e.preventDefault();
+      this.clearAllFilters();
+      this.triggerPropertyManagerFilter();
+    }
+  });
+}
 
   // ================================
   // NOUVELLES MÉTHODES POUR L'ÉTAT TEMPORAIRE
