@@ -23,25 +23,6 @@ class ListeLogementsPage {
     
     const totalTime = Math.round(performance.now() - this.initStartTime);
     console.log(`✅ Page liste initialisée avec succès en ${totalTime}ms`);
-    // Attendre que PropertyManager soit prêt puis cacher le loader
-    setTimeout(async () => {
-      try {
-        const propertyManager = await this.getPropertyManager();
-        if (propertyManager && propertyManager.propertiesRegistered) {
-          console.log('✅ PropertyManager prêt, on cache le loader');
-          window.hidePageLoader();
-        } else {
-          // Si pas encore prêt, attendre encore un peu
-          setTimeout(() => {
-            console.log('⏱️ Timeout atteint, on cache le loader');
-            window.hidePageLoader();
-          }, 1000);
-        }
-      } catch (error) {
-        console.error('Erreur:', error);
-        window.hidePageLoader();
-      }
-    }, 500);
   }
 
   async loadExternalDependencies() {
