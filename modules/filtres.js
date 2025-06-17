@@ -67,6 +67,71 @@ class FiltersManager {
     window.filtersManager = this;
   }
 
+  updateMobileFilterIndicator() {
+    // Compter les filtres actifs (sans dates ni localisation)
+    let count = 0;
+    
+    // Compter équipements
+    count += this.state.equipements.length;
+    
+    // Compter options d'accueil
+    count += this.state.optionsAccueil.length;
+    
+    // Compter modes de location
+    count += this.state.modesLocation.length;
+    
+    // Compter prix max (1 si défini)
+    if (this.state.prixMax !== null) {
+      count++;
+    }
+    
+    // Compter voyageurs (1 si différent du défaut)
+    if (this.state.adultes !== 1 || this.state.enfants !== 0) {
+      count++;
+    }
+    
+    // Mettre à jour l'interface mobile
+    const numberFilter = document.querySelector('.number-filter');
+    const buttonFilterMobile = document.querySelector('.button-filter-mobile');
+    const textFiltre = document.querySelector('.text-filtre');
+    
+    if (count > 0) {
+      // Afficher le bloc number-filter
+      if (numberFilter) {
+        numberFilter.style.display = 'flex'; // ou 'block' selon votre layout
+      }
+      
+      // Changer la couleur de la bordure du bouton
+      if (buttonFilterMobile) {
+        buttonFilterMobile.style.borderColor = '#235B59';
+        buttonFilterMobile.style.borderWidth = '1px';
+        buttonFilterMobile.style.borderStyle = 'solid';
+      }
+      
+      // Mettre à jour le texte avec le nombre de filtres
+      if (textFiltre) {
+        textFiltre.textContent = count.toString();
+      }
+    } else {
+      // Masquer si aucun filtre
+      if (numberFilter) {
+        numberFilter.style.display = 'none';
+      }
+      
+      if (buttonFilterMobile) {
+        // Réinitialiser le style du bouton
+        buttonFilterMobile.style.borderColor = '';
+        buttonFilterMobile.style.borderWidth = '';
+        buttonFilterMobile.style.borderStyle = '';
+      }
+      
+      if (textFiltre) {
+        textFiltre.textContent = '0';
+      }
+    }
+    
+    console.log(`📱 Indicateur mobile mis à jour: ${count} filtre(s) actif(s)`);
+  }
   // ================================
   // CONFIGURATION INITIALE
   // ================================
@@ -216,6 +281,8 @@ class FiltersManager {
         this.updateVoyageursFilter();
         this.triggerPropertyManagerFilter();
         this.closeMobilePopup();
+        // NOUVEAU : Mettre à jour l'indicateur après validation mobile
+        this.updateMobileFilterIndicator();
       }
       
       if (e.target.id === 'bouton-effacer-mobile') {
@@ -285,6 +352,9 @@ class FiltersManager {
     
     // Maintenant on peut mettre à jour le bouton
     this.updateEquipementsButton(this.state.equipements.length);
+
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
     
     console.log('✅ Équipements confirmés:', this.state.equipements);
   }
@@ -297,6 +367,9 @@ class FiltersManager {
     // Maintenant on peut mettre à jour le bouton
     const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
     this.updatePreferencesButton(totalPreferences);
+
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
     
     console.log('✅ Préférences confirmées:', {
       options: this.state.optionsAccueil,
@@ -435,6 +508,9 @@ class FiltersManager {
     
     // Mettre à jour le bouton
     this.updateEquipementsButton(0);
+
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
   }
 
   // ================================
@@ -471,6 +547,9 @@ class FiltersManager {
     
     // Mettre à jour le bouton
     this.updatePreferencesButton(0);
+
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
   }
 
   // ================================
@@ -496,6 +575,8 @@ class FiltersManager {
           if (isMobile && this.elements.texteFiltrePrice_mobile) {
             this.elements.texteFiltrePrice_mobile.textContent = `${prix}€ / nuit maximum`;
           }
+          // NOUVEAU : Mettre à jour l'indicateur mobile
+          this.updateMobileFilterIndicator();
         }
       }
     }
@@ -529,6 +610,8 @@ class FiltersManager {
     if (window.propertyManager && window.propertyManager.currentFilters) {
       delete window.propertyManager.currentFilters.price_max;
     }
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
   }
 
   resetSliders() {
@@ -644,6 +727,8 @@ class FiltersManager {
       }
       this.setActiveButtonStyle(this.elements.boutonFiltreVoyageurs);
     }
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
   }
 
   resetVoyageursFilter() {
@@ -655,6 +740,8 @@ class FiltersManager {
       this.elements.texteFiltreVoyageurs.textContent = "Voyageurs";
       this.resetButtonStyle(this.elements.boutonFiltreVoyageurs);
     }
+    // NOUVEAU : Mettre à jour l'indicateur mobile
+    this.updateMobileFilterIndicator();
   }
 
   // ================================
@@ -676,6 +763,9 @@ class FiltersManager {
     
     // Synchroniser les checkboxes avec l'état confirmé au démarrage
     this.syncCheckboxesWithState();
+
+    // NOUVEAU : Initialiser l'indicateur mobile
+    this.updateMobileFilterIndicator();
   }
 
   // ================================
