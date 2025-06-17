@@ -61,6 +61,7 @@ class FiltersManager {
     this.setupEventListeners();
     this.setupDropdownListeners();
     this.updateAllUI();
+    this.updateMobileFilterIndicator();
     console.log('✅ FiltersManager initialisé');
     
     // Export global
