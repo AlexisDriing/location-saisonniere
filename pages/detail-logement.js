@@ -13,6 +13,9 @@ class DetailLogementPage {
     
     // Initialiser tous les gestionnaires dans le bon ordre
     this.initializeManagers();
+
+    // 🆕 NOUVEAU : Configurer le nettoyage
+    this.setupPageUnloadHandler();
     
     console.log('✅ Page détail initialisée avec succès');
   }
@@ -88,7 +91,28 @@ class DetailLogementPage {
       console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
     }
   }
-
+// 🆕 NOUVEAU : Nettoyer les dates modifiées quand on quitte vraiment la page
+  setupPageUnloadHandler() {
+    // Détecter quand l'utilisateur quitte vraiment (pas juste navigation avant/arrière)
+    let isNavigatingToReservation = false;
+    
+    // Marquer si on va vers la page réservation
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href && link.href.includes('/reservation')) {
+        isNavigatingToReservation = true;
+        setTimeout(() => { isNavigatingToReservation = false; }, 100);
+      }
+    });
+    
+    // Nettoyer seulement si on ne va pas vers réservation
+    window.addEventListener('beforeunload', () => {
+      if (!isNavigatingToReservation) {
+        localStorage.removeItem("current_detail_dates");
+        console.log("🧹 Dates modifiées nettoyées (sortie de page)");
+      }
+    });
+  }
   // Méthodes utilitaires pour débuggage
   getManager(name) {
     return this.managers[name];
