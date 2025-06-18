@@ -231,6 +231,10 @@ class ReservationDataManager {
         if (typeof searchData.enfants === "number") {
           window.travelersManager.children = searchData.enfants;
         }
+        // 🆕 NOUVEAU : Charger aussi les bébés s'ils existent
+        if (typeof searchData.bebes === "number") {
+          window.travelersManager.babies = searchData.bebes;
+        }
         window.travelersManager.updateUI();
       } else {
         // Fallback: mettre à jour directement les éléments
