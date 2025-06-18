@@ -103,20 +103,25 @@ class CalendarManager {
     // 🆕 NOUVEAU : Sauvegarder les dates modifiées pour les retours
     const adultsElement = Utils.getElementByIdWithFallback("chiffres-adultes");
     const childrenElement = Utils.getElementByIdWithFallback("chiffres-enfants");
+    const babiesElement = Utils.getElementByIdWithFallback("chiffres-bebes");
     
+    // Récupérer les données existantes si elles existent (pour ne pas perdre les voyageurs)
+    let currentData = {};
+    const existingData = localStorage.getItem('current_detail_dates');
+    if (existingData) {
+      currentData = JSON.parse(existingData);
+    }
+    
+    // Mettre à jour avec les nouvelles dates
     localStorage.setItem('current_detail_dates', JSON.stringify({
+      ...currentData, // Garder les voyageurs existants
       startDate: picker.startDate.format('YYYY-MM-DD'),
       endDate: picker.endDate.format('YYYY-MM-DD'),
-      adultes: parseInt(adultsElement?.textContent || "1"),
-      enfants: parseInt(childrenElement?.textContent || "0"),
+      adultes: parseInt(adultsElement?.textContent || currentData.adultes || "1"),
+      enfants: parseInt(childrenElement?.textContent || currentData.enfants || "0"),
+      bebes: parseInt(babiesElement?.textContent || currentData.bebes || "0"),
       timestamp: Date.now()
     }));
-    console.log('📅 Dates modifiées sauvegardées pour retour navigation');
-  } else {
-    $(e.target).val('');
-    this.updateDatesText(null, null);
-  }
-});
 
     // 🔧 VERSION AMÉLIORÉE du cancel
     $('#input-calendar, #input-calendar-mobile').on('cancel.daterangepicker', (e, picker) => {
