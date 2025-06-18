@@ -125,7 +125,6 @@ class CalendarManager {
       bebes: parseInt(babiesElement?.textContent || "0"),
       timestamp: Date.now()
     };
-    
     // Fusionner avec les données existantes
     Object.assign(currentData, newData);
     
