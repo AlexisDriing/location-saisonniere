@@ -196,11 +196,22 @@ class ReservationDataManager {
   }
 
   loadSearchDataFromStorage() {
-    const storedData = localStorage.getItem("selected_search_data");
-    if (!storedData) return;
-    
-    try {
-      const searchData = JSON.parse(storedData);
+  // 🆕 NOUVEAU : D'abord vérifier s'il y a des dates modifiées (retour navigation)
+  let storedData = localStorage.getItem("current_detail_dates");
+  let isUsingModifiedDates = false;
+  
+  // Si pas de dates modifiées, utiliser les dates de recherche
+  if (!storedData) {
+    storedData = localStorage.getItem("selected_search_data");
+  } else {
+    isUsingModifiedDates = true;
+    console.log("📅 Utilisation des dates modifiées (retour navigation)");
+  }
+  
+  if (!storedData) return;
+  
+  try {
+    const searchData = JSON.parse(storedData);
       
       // Vérifier si les données ne sont pas trop anciennes (24h)
       if (Date.now() - searchData.timestamp >= 24 * 60 * 60 * 1000) {
@@ -315,6 +326,12 @@ class ReservationDataManager {
       console.error("Erreur lors du traitement des données de recherche:", error);
       localStorage.removeItem("selected_search_data");
     }
+    if (isUsingModifiedDates) {
+        setTimeout(() => {
+          localStorage.removeItem("current_detail_dates");
+          console.log("🧹 Dates modifiées nettoyées après utilisation");
+        }, 1000); // Délai pour s'assurer que tout est bien chargé
+      }
   }
 }
 
