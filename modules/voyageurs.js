@@ -58,6 +58,7 @@ class TravelersManager {
       this.adults++;
       this.updateUI();
       this.notifyPriceCalculator();
+      this.saveCurrentTravelers();
     }
   }
 
@@ -66,6 +67,7 @@ class TravelersManager {
       this.adults--;
       this.updateUI();
       this.notifyPriceCalculator();
+      this.saveCurrentTravelers();
     }
   }
 
@@ -74,6 +76,7 @@ class TravelersManager {
       this.children++;
       this.updateUI();
       this.notifyPriceCalculator();
+      this.saveCurrentTravelers();
     }
   }
 
@@ -82,6 +85,7 @@ class TravelersManager {
       this.children--;
       this.updateUI();
       this.notifyPriceCalculator();
+      this.saveCurrentTravelers();
     }
   }
 
@@ -89,6 +93,7 @@ class TravelersManager {
     this.babies++;
     this.updateUI();
     this.notifyPriceCalculator();
+    this.saveCurrentTravelers();
   }
 
   decrementBabies() {
@@ -96,6 +101,7 @@ class TravelersManager {
       this.babies--;
       this.updateUI();
       this.notifyPriceCalculator();
+      this.saveCurrentTravelers();
     }
   }
 
@@ -160,6 +166,25 @@ class TravelersManager {
     }
   }
 
+// 🆕 NOUVEAU : Sauvegarder les voyageurs modifiés
+saveCurrentTravelers() {
+  // Récupérer les dates actuelles du cache si elles existent
+  let currentData = {};
+  const existingData = localStorage.getItem('current_detail_dates');
+  if (existingData) {
+    currentData = JSON.parse(existingData);
+  }
+  
+  // Mettre à jour avec les voyageurs actuels
+  currentData.adultes = this.adults;
+  currentData.enfants = this.children;
+  currentData.bebes = this.babies;
+  currentData.timestamp = Date.now();
+  
+  localStorage.setItem('current_detail_dates', JSON.stringify(currentData));
+  console.log('👥 Voyageurs modifiés sauvegardés pour retour navigation');
+}
+  
   getTravelersData() {
     return {
       adults: this.adults,
