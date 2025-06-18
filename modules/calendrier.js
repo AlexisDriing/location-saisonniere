@@ -95,15 +95,28 @@ class CalendarManager {
     const $ = jQuery;
     
     $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
-      if (picker.startDate && picker.endDate) {
-        $(e.target).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
-        this.updateDatesText(picker.startDate, picker.endDate);
-        this.nextUnavailableDate = null;
-      } else {
-        $(e.target).val('');
-        this.updateDatesText(null, null);
-      }
-    });
+  if (picker.startDate && picker.endDate) {
+    $(e.target).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+    this.updateDatesText(picker.startDate, picker.endDate);
+    this.nextUnavailableDate = null;
+    
+    // 🆕 NOUVEAU : Sauvegarder les dates modifiées pour les retours
+    const adultsElement = Utils.getElementByIdWithFallback("chiffres-adultes");
+    const childrenElement = Utils.getElementByIdWithFallback("chiffres-enfants");
+    
+    localStorage.setItem('current_detail_dates', JSON.stringify({
+      startDate: picker.startDate.format('YYYY-MM-DD'),
+      endDate: picker.endDate.format('YYYY-MM-DD'),
+      adultes: parseInt(adultsElement?.textContent || "1"),
+      enfants: parseInt(childrenElement?.textContent || "0"),
+      timestamp: Date.now()
+    }));
+    console.log('📅 Dates modifiées sauvegardées pour retour navigation');
+  } else {
+    $(e.target).val('');
+    this.updateDatesText(null, null);
+  }
+});
 
     // 🔧 VERSION AMÉLIORÉE du cancel
     $('#input-calendar, #input-calendar-mobile').on('cancel.daterangepicker', (e, picker) => {
