@@ -270,45 +270,56 @@ class ReservationDataManager {
         });
       }
       
-      // Appliquer les dates au calendrier quand il sera prêt
       const applyDatesToCalendar = () => {
         if (window.jQuery && (jQuery("#input-calendar").data("daterangepicker") || jQuery("#input-calendar-mobile").data("daterangepicker"))) {
           const startDate = moment(searchData.startDate);
           const endDate = moment(searchData.endDate);
-          const picker = jQuery("#input-calendar").data("daterangepicker") || jQuery("#input-calendar-mobile").data("daterangepicker");
           
-          if (picker) {
-            console.log("Application des dates au calendrier:", startDate.format("YYYY-MM-DD"), "à", endDate.format("YYYY-MM-DD"));
-            picker.setStartDate(startDate);
-            picker.setEndDate(endDate);
-            
-            // Mettre à jour le calculateur de prix
-            if (window.priceCalculator) {
-              window.priceCalculator.startDate = startDate;
-              window.priceCalculator.endDate = endDate;
-              window.priceCalculator.calculateAndDisplayPrices();
-            }
-            
-            // Mettre à jour manuellement le texte des dates
-            const datesElements = [
-              document.getElementById("dates-texte"),
-              document.getElementById("dates-texte-mobile")
-            ];
-            
-            if (datesElements[0] || datesElements[1]) {
-              const startText = startDate.format("ddd").toLowerCase() + " " + startDate.format("DD/MM");
-              const endText = endDate.format("ddd").toLowerCase() + " " + endDate.format("DD/MM");
-              const combinedText = startText + " - " + endText;
-              
-              datesElements.forEach(el => {
-                if (el) {
-                  el.textContent = combinedText;
-                  el.style.color = "#272A2B";
-                }
-              });
-              console.log("Texte des dates mis à jour manuellement:", combinedText);
-            }
+          // 🔧 FIX: Appliquer aux DEUX calendriers (desktop ET mobile)
+          const desktopPicker = jQuery("#input-calendar").data("daterangepicker");
+          const mobilePicker = jQuery("#input-calendar-mobile").data("daterangepicker");
+          
+          // Appliquer au picker desktop s'il existe
+          if (desktopPicker) {
+            console.log("Application des dates au calendrier desktop");
+            desktopPicker.setStartDate(startDate);
+            desktopPicker.setEndDate(endDate);
           }
+          
+          // 🔧 FIX: Appliquer AUSSI au picker mobile s'il existe
+          if (mobilePicker) {
+            console.log("Application des dates au calendrier mobile");
+            mobilePicker.setStartDate(startDate);
+            mobilePicker.setEndDate(endDate);
+          }
+          
+          // Mettre à jour le calculateur de prix (une seule fois)
+          if (window.priceCalculator) {
+            window.priceCalculator.startDate = startDate;
+            window.priceCalculator.endDate = endDate;
+            window.priceCalculator.calculateAndDisplayPrices();
+          }
+          
+          // Mettre à jour manuellement le texte des dates
+          const datesElements = [
+            document.getElementById("dates-texte"),
+            document.getElementById("dates-texte-mobile")
+          ];
+          
+          if (datesElements[0] || datesElements[1]) {
+            const startText = startDate.format("ddd").toLowerCase() + " " + startDate.format("DD/MM");
+            const endText = endDate.format("ddd").toLowerCase() + " " + endDate.format("DD/MM");
+            const combinedText = startText + " - " + endText;
+            
+            datesElements.forEach(el => {
+              if (el) {
+                el.textContent = combinedText;
+                el.style.color = "#272A2B";
+              }
+            });
+            console.log("Texte des dates mis à jour manuellement:", combinedText);
+          }
+          
           return true;
         }
         return false;
