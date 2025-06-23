@@ -45,6 +45,9 @@ class PropertyManager {
     
     // Enregistrer toutes les propriétés
     await this.registerAllProperties();
+
+    // Configuration Finsweet
+    this.setupFinsweet();
     
     // Stocker l'état initial des prix
     this.storeInitialPriceStates();
@@ -67,6 +70,48 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
+  setupFinsweet() {
+  // Attendre que Finsweet soit chargé
+  let attempts = 0;
+  const checkInterval = setInterval(() => {
+    attempts++;
+    
+    if (window.fsAttributes || attempts > 50) {
+      clearInterval(checkInterval);
+      
+      if (window.fsAttributes) {
+        window.fsAttributes.push([
+          'cmsload',
+          (instances) => {
+            console.log('✅ Finsweet CMS Load détecté');
+            
+            instances.forEach(instance => {
+              instance.on('renderitems', async (items) => {
+                console.log(`📦 ${items.length} nouveaux items chargés par Finsweet`);
+                
+                // Ré-enregistrer toutes les propriétés visibles
+                await this.registerAllProperties();
+                
+                // Réappliquer les prix si dates sélectionnées
+                if (this.startDate && this.endDate) {
+                  setTimeout(() => {
+                    this.updatePricesForDates(this.startDate, this.endDate);
+                  }, 100);
+                }
+                
+                // Reformater les adresses
+                if (window.addressFormatterManager) {
+                  window.addressFormatterManager.refresh();
+                }
+              });
+            });
+          }
+        ]);
+      }
+    }
+  }, 200);
+}
+  
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
     // Nettoyer le cache toutes les 5 minutes
