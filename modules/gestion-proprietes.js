@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE AVEC CHARGEMENT AUTOMATIQUE
+// Gestionnaire principal des propriétés pour la page liste - VERSION FINSWEET COMPLÈTE
 class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
@@ -24,6 +24,10 @@ class PropertyManager {
     
     this.initialPriceStates = new Map();
     
+    // 🚀 NOUVEAU : Instance Finsweet
+    this.finsweetInstance = null;
+    this.isUsingFinsweet = false;
+    
     // 🚀 Gestionnaire de performance
     this.requestQueue = [];
     this.activeRequests = 0;
@@ -43,11 +47,11 @@ class PropertyManager {
     console.log('🏠 Initialisation PropertyManager...');
     const startTime = performance.now();
     
-    // Enregistrer toutes les propriétés
+    // Configuration Finsweet AVANT l'enregistrement
+    await this.setupFinsweet();
+    
+    // Enregistrer toutes les propriétés visibles initialement
     await this.registerAllProperties();
-
-    // Configuration Finsweet
-    this.setupFinsweet();
     
     // Stocker l'état initial des prix
     this.storeInitialPriceStates();
@@ -58,11 +62,6 @@ class PropertyManager {
     const initTime = Math.round(performance.now() - startTime);
     console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
     
-    // Initialiser la pagination après un court délai
-    setTimeout(() => {
-      this.applyInitialPagination();
-    }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
-
     // Export global
     window.propertyManager = this;
     
@@ -70,48 +69,158 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
-  setupFinsweet() {
-  // Attendre que Finsweet soit chargé
-  let attempts = 0;
-  const checkInterval = setInterval(() => {
-    attempts++;
-    
-    if (window.fsAttributes || attempts > 50) {
-      clearInterval(checkInterval);
-      
-      if (window.fsAttributes) {
-        window.fsAttributes.push([
-          'cmsload',
-          (instances) => {
-            console.log('✅ Finsweet CMS Load détecté');
+  async setupFinsweet() {
+    // Attendre que Finsweet soit prêt
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        
+        if (window.fsAttributes || attempts > 50) {
+          clearInterval(checkInterval);
+          
+          if (window.fsAttributes) {
+            console.log('✅ Finsweet détecté, configuration...');
             
-            instances.forEach(instance => {
-              instance.on('renderitems', async (items) => {
-                console.log(`📦 ${items.length} nouveaux items chargés par Finsweet`);
+            window.fsAttributes.push([
+              'cmsload',
+              (listInstances) => {
+                console.log('📦 Finsweet CMS Load initialisé');
                 
-                // Ré-enregistrer toutes les propriétés visibles
-                await this.registerAllProperties();
-                
-                // Réappliquer les prix si dates sélectionnées
-                if (this.startDate && this.endDate) {
-                  setTimeout(() => {
-                    this.updatePricesForDates(this.startDate, this.endDate);
-                  }, 100);
+                // Stocker l'instance pour usage ultérieur
+                if (listInstances && listInstances.length > 0) {
+                  this.finsweetInstance = listInstances[0];
+                  this.isUsingFinsweet = true;
+                  
+                  // Écouter les événements Finsweet
+                  this.finsweetInstance.on('renderitems', async (renderedItems) => {
+                    console.log(`🔄 ${renderedItems.length} items rendus par Finsweet`);
+                    
+                    // Réenregistrer les nouvelles propriétés
+                    await this.registerNewProperties(renderedItems);
+                    
+                    // Stocker les prix initiaux des nouveaux éléments
+                    this.storeNewInitialPriceStates(renderedItems);
+                    
+                    // Réappliquer les filtres actuels si nécessaire
+                    if (Object.keys(this.currentFilters).length > 0) {
+                      await this.reapplyCurrentFilters();
+                    }
+                    
+                    // Mettre à jour les prix si dates sélectionnées
+                    if (this.startDate && this.endDate) {
+                      setTimeout(() => {
+                        this.updatePricesForDates(this.startDate, this.endDate);
+                      }, 100);
+                    }
+                    
+                    // Reformater les adresses
+                    if (window.addressFormatterManager) {
+                      window.addressFormatterManager.refresh();
+                    }
+                  });
                 }
                 
-                // Reformater les adresses
-                if (window.addressFormatterManager) {
-                  window.addressFormatterManager.refresh();
-                }
-              });
-            });
+                resolve();
+              }
+            ]);
+          } else {
+            console.log('⚠️ Finsweet non trouvé, mode standalone');
+            this.isUsingFinsweet = false;
+            resolve();
           }
-        ]);
+        }
+      }, 200);
+    });
+  }
+
+  // 🚀 NOUVEAU : Enregistrer seulement les nouvelles propriétés
+  async registerNewProperties(renderedItems) {
+    const newMetadata = [];
+    
+    renderedItems.forEach(item => {
+      const element = item.element.querySelector('.lien-logement');
+      if (element) {
+        const href = element.getAttribute('href');
+        const propertyId = href.split('/').pop();
+        
+        if (propertyId && !element.hasAttribute('data-property-id')) {
+          const metadata = this.extractPropertyMetadata(element);
+          element.setAttribute('data-property-id', propertyId);
+          
+          newMetadata.push({
+            property_id: propertyId,
+            ...metadata
+          });
+        }
+      }
+    });
+    
+    if (newMetadata.length > 0) {
+      // Envoyer au serveur
+      try {
+        const response = await fetch(`${window.CONFIG.API_URL}/register-bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ properties: newMetadata })
+        });
+        
+        const data = await response.json();
+        console.log(`✅ ${data.count} nouvelles propriétés enregistrées`);
+        
+      } catch (error) {
+        console.error('❌ Erreur enregistrement nouvelles propriétés:', error);
       }
     }
-  }, 200);
-}
-  
+  }
+
+  // 🚀 NOUVEAU : Stocker les prix initiaux des nouveaux éléments
+  storeNewInitialPriceStates(renderedItems) {
+    renderedItems.forEach(item => {
+      const housingItem = item.element;
+      const propertyId = housingItem.querySelector('.lien-logement')?.getAttribute('data-property-id');
+      
+      if (propertyId && !this.initialPriceStates.has(propertyId)) {
+        const textePrix = housingItem.querySelector('.texte-prix')?.innerHTML || '';
+        const pourcentage = housingItem.querySelector('.pourcentage');
+        
+        this.initialPriceStates.set(propertyId, {
+          textePrix,
+          pourcentage: pourcentage?.textContent || '',
+          pourcentageDisplay: pourcentage?.style.display || 'none'
+        });
+      }
+    });
+  }
+
+  // 🚀 MODIFIÉ : Réappliquer les filtres après chargement Finsweet
+  async reapplyCurrentFilters() {
+    if (!this.isUsingFinsweet || !this.finsweetInstance) return;
+    
+    console.log('🔄 Réapplication des filtres après chargement Finsweet...');
+    
+    // Récupérer les IDs des propriétés qui doivent être visibles
+    const validPropertyIds = new Set();
+    if (this.lastFilteredProperties) {
+      this.lastFilteredProperties.forEach(p => validPropertyIds.add(p.id));
+    }
+    
+    // Utiliser l'API Finsweet pour filtrer
+    const filterFunction = (item) => {
+      const element = item.element.querySelector('.lien-logement');
+      if (!element) return false;
+      
+      const propertyId = element.getAttribute('data-property-id');
+      if (!propertyId) return true; // Garder si pas encore traité
+      
+      // Vérifier si la propriété est dans la liste filtrée
+      return validPropertyIds.has(propertyId);
+    };
+    
+    // Appliquer le filtre via Finsweet
+    await this.finsweetInstance.filter(filterFunction);
+  }
+
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
     // Nettoyer le cache toutes les 5 minutes
@@ -131,6 +240,9 @@ class PropertyManager {
 
   async registerAllProperties() {
     console.log('📝 Enregistrement des propriétés...');
+    
+    // Rafraîchir la liste des propriétés
+    this.propertyElements = document.querySelectorAll('.lien-logement');
     const allMetadata = [];
     
     // NOUVEAU : Collecter toutes les données d'abord
@@ -180,7 +292,6 @@ class PropertyManager {
 
   // Nouvelle fonction avec l'ancienne méthode en cas de fallback
   async registerAllPropertiesOldWay() {
-    // Votre ancien code de registerAllProperties
     let promises = [];
     
     this.propertyElements.forEach(element => {
@@ -687,6 +798,10 @@ class PropertyManager {
       
       if (cachedData) {
         console.log('🚀 Utilisation du cache pour les filtres');
+        
+        // Stocker pour réutilisation
+        this.lastFilteredProperties = cachedData.properties;
+        
         this.displayFilteredProperties(cachedData.properties);
         this.totalResults = cachedData.total || 0;
         this.totalPages = cachedData.total_pages || 1;
@@ -700,6 +815,8 @@ class PropertyManager {
         
         const cacheTime = Math.round(performance.now() - filterStartTime);
         console.log(`✅ Filtres appliqués depuis le cache en ${cacheTime}ms`);
+        
+        this.isFiltering = false;
         return;
       }
       
@@ -761,6 +878,9 @@ class PropertyManager {
       
       // Gérer les résultats
       if (data.properties) {
+        // Stocker pour réutilisation
+        this.lastFilteredProperties = data.properties;
+        
         this.displayFilteredProperties(data.properties);
         this.renderPagination();
         
@@ -785,7 +905,50 @@ class PropertyManager {
     }, 300); // AJOUT DE CETTE LIGNE
   }
 
-  displayFilteredProperties(properties) {
+  // IMPORTANT : Modifier displayFilteredProperties pour Finsweet
+  async displayFilteredProperties(properties) {
+    if (!this.isUsingFinsweet || !this.finsweetInstance) {
+      // Mode standalone (sans Finsweet)
+      this.displayFilteredPropertiesStandalone(properties);
+      return;
+    }
+    
+    // Mode Finsweet
+    console.log(`🎯 Filtrage Finsweet pour ${properties.length} propriétés`);
+    
+    // Créer un Set pour recherche rapide
+    const validPropertyIds = new Set(properties.map(p => p.id));
+    
+    // Utiliser l'API de filtrage Finsweet
+    await this.finsweetInstance.filter((item) => {
+      const element = item.element.querySelector('.lien-logement');
+      if (!element) return false;
+      
+      const propertyId = element.getAttribute('data-property-id');
+      if (!propertyId) return false;
+      
+      // Vérifier si la propriété est dans la liste filtrée
+      const shouldShow = validPropertyIds.has(propertyId);
+      
+      // Mettre à jour la distance si nécessaire
+      if (shouldShow && this.searchLocation) {
+        const propData = properties.find(p => p.id === propertyId);
+        if (propData && propData.distance !== undefined) {
+          this.updateDistanceDisplay(item.element, propData.distance);
+        }
+      }
+      
+      return shouldShow;
+    });
+    
+    // Finsweet gère automatiquement la pagination après le filtrage
+    console.log(`✅ Filtrage Finsweet appliqué`);
+  }
+
+  // Garder l'ancienne méthode pour le mode standalone
+  displayFilteredPropertiesStandalone(properties) {
+    console.log(`📋 Mode standalone : ${properties.length} propriétés`);
+    
     if (properties.length === 0) {
       document.querySelectorAll('.housing-item').forEach(item => {
         item.style.display = 'none';
@@ -796,16 +959,12 @@ class PropertyManager {
     
     this.showNoResults(false);
     
+    // Masquer tout d'abord
     document.querySelectorAll('.housing-item').forEach(item => {
       item.style.display = 'none';
     });
     
-    const housingContainer = document.querySelector('.collection-grid');
-    if (!housingContainer) {
-      console.error('❌ Conteneur de logements non trouvé');
-      return;
-    }
-    
+    // Afficher les propriétés filtrées
     properties.forEach(propData => {
       const element = document.querySelector(`.lien-logement[data-property-id="${propData.id}"]`);
       if (element) {
@@ -816,13 +975,9 @@ class PropertyManager {
           if (this.searchLocation && propData.distance !== undefined) {
             this.updateDistanceDisplay(housingItem, propData.distance);
           }
-          
-          housingContainer.appendChild(housingItem);
         }
       }
     });
-    
-    console.log(`✅ ${properties.length} propriétés affichées`);
   }
 
   updateDistanceDisplay(housingItem, distance) {
@@ -943,7 +1098,19 @@ class PropertyManager {
     });
   }
 
+  // IMPORTANT : Désactiver la pagination custom si Finsweet est actif
   renderPagination() {
+    if (this.isUsingFinsweet) {
+      console.log('🚫 Pagination custom désactivée (Finsweet actif)');
+      // Masquer la pagination custom si elle existe
+      const paginationContainer = document.querySelector('.custom-pagination');
+      if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+      }
+      return;
+    }
+    
+    // Code de pagination pour mode standalone uniquement
     const paginationContainer = document.querySelector('.custom-pagination');
     if (!paginationContainer) return;
     
@@ -1040,6 +1207,12 @@ class PropertyManager {
   applyInitialPagination() {
     if (!this.propertiesRegistered) return;
     
+    // Si Finsweet est actif, ne pas appliquer la pagination custom
+    if (this.isUsingFinsweet) {
+      console.log('🚫 Pagination initiale ignorée (Finsweet actif)');
+      return;
+    }
+    
     const allHousingItems = document.querySelectorAll('.housing-item');
     this.totalResults = this.registeredCount;
     this.totalPages = Math.ceil(this.totalResults / this.pageSize);
@@ -1055,6 +1228,9 @@ class PropertyManager {
   }
 
   applySimplePagination() {
+    // Ne pas appliquer si Finsweet est actif
+    if (this.isUsingFinsweet) return;
+    
     const allHousingItems = document.querySelectorAll('.housing-item');
     const startIndex = (this.currentPage - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
@@ -1158,10 +1334,13 @@ class PropertyManager {
   // RÉINITIALISATION
   // ================================
 
+  // IMPORTANT : Modifier resetFilters pour Finsweet
   resetFilters() {
     this.currentFilters = {};
     this.searchLocation = null;
+    this.lastFilteredProperties = null;
     
+    // Réinitialiser l'affichage des distances
     document.querySelectorAll('.distance').forEach(element => {
       element.classList.remove('visible');
       element.style.display = 'none';
@@ -1171,8 +1350,16 @@ class PropertyManager {
       element.style.display = 'none';
     });
     
-    this.currentPage = 1;
-    this.applyInitialPagination();
+    if (this.isUsingFinsweet && this.finsweetInstance) {
+      // Réinitialiser le filtre Finsweet (afficher tout)
+      this.finsweetInstance.filter(() => true);
+      console.log('🔄 Filtres Finsweet réinitialisés');
+    } else {
+      // Mode standalone
+      this.currentPage = 1;
+      this.applyInitialPagination();
+    }
+    
     this.showNoResults(false);
     this.showError(false);
     
@@ -1216,7 +1403,9 @@ class PropertyManager {
       queueLength: this.requestQueue.length,
       cacheHitRate: this.performanceMetrics.totalRequests > 0 ? 
         Math.round((this.performanceMetrics.cacheHits / this.performanceMetrics.totalRequests) * 100) : 0,
-      lastCacheCleanup: new Date(this.lastCacheCleanup).toLocaleTimeString()
+      lastCacheCleanup: new Date(this.lastCacheCleanup).toLocaleTimeString(),
+      finsweetActive: this.isUsingFinsweet,
+      finsweetInstance: !!this.finsweetInstance
     };
   }
 
@@ -1245,15 +1434,17 @@ class PropertyManager {
       searchLocation: this.searchLocation,
       isFiltering: this.isFiltering,
       propertiesRegistered: this.propertiesRegistered,
-      performanceStats: this.getPerformanceStats()
+      performanceStats: this.getPerformanceStats(),
+      isUsingFinsweet: this.isUsingFinsweet,
+      hasFinsweetInstance: !!this.finsweetInstance
     };
   }
 }
 
-// Gestionnaire global des clics de pagination
+// Gestionnaire global des clics de pagination (pour mode standalone)
 document.addEventListener('click', function(e) {
   const link = e.target.closest('.pagination-link');
-  if (link && window.propertyManager) {
+  if (link && window.propertyManager && !window.propertyManager.isUsingFinsweet) {
     e.preventDefault();
     
     const page = link.getAttribute('data-page');
