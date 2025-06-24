@@ -3,8 +3,7 @@ class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
     this.registeredCount = 0;
-    // 🔴 MODIFIÉ : On ne query plus les éléments ici car ils ne sont pas tous chargés
-    // this.propertyElements = document.querySelectorAll('.lien-logement');
+    this.propertyElements = document.querySelectorAll('.lien-logement');
     this.isFiltering = false;
     
     // Éléments de l'interface pour les filtres
@@ -41,153 +40,32 @@ class PropertyManager {
   }
 
   async init() {
-  console.log('🏠 Initialisation PropertyManager...');
-  const startTime = performance.now();
-  
-  // 🟢 NOUVEAU : Désactiver temporairement la pagination custom
-  this.pauseCustomPagination = true;
-  
-  // Attendre que Finsweet charge tous les logements
-  if (window.fsAttributes) {
-    console.log('⏳ Attente du chargement complet des logements...');
-    await this.waitForFinsweet();
-  }
-  
-  // Maintenant on peut query tous les éléments
-  this.propertyElements = document.querySelectorAll('.lien-logement');
-  console.log(`📊 ${this.propertyElements.length} logements trouvés après chargement complet`);
-  
-  // 🟢 NOUVEAU : Masquer la pagination Webflow
-  this.hideWebflowPagination();
-  
-  // Enregistrer toutes les propriétés
-  await this.registerAllProperties();
-  
-  // Stocker l'état initial des prix
-  this.storeInitialPriceStates();
-  
-  // Initialiser les écouteurs d'événements pour les filtres
-  this.setupFilterListeners();
-  
-  const initTime = Math.round(performance.now() - startTime);
-  console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
-  
-  // 🟢 NOUVEAU : Réactiver la pagination custom
-  this.pauseCustomPagination = false;
-  
-  // Initialiser la pagination après un court délai
-  setTimeout(() => {
-    this.applyInitialPagination();
-  }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
-
-  window.propertyManager = this;
-  this.setupCacheCleanup();
-}
-
-// 🟢 NOUVELLE MÉTHODE : Masquer la pagination Webflow
-hideWebflowPagination() {
-  // Masquer tous les éléments de pagination Webflow
-  const webflowPagination = document.querySelectorAll('.w-pagination-wrapper');
-  webflowPagination.forEach(elem => {
-    elem.style.display = 'none';
-    console.log('🚫 Pagination Webflow masquée');
-  });
-}
-
-// 🟢 VERSION AMÉLIORÉE de waitForFinsweet
-async waitForFinsweet() {
-  return new Promise((resolve) => {
-    let checkCount = 0;
-    const maxChecks = 50; // 5 secondes max
+    console.log('🏠 Initialisation PropertyManager...');
+    const startTime = performance.now();
     
-    const checkForAllItems = () => {
-      checkCount++;
-      const currentItems = document.querySelectorAll('.lien-logement').length;
-      const paginationNext = document.querySelector('.w-pagination-next');
-      
-      console.log(`🔍 Check #${checkCount}: ${currentItems} items trouvés`);
-      
-      // Si on a une pagination "next" mais qu'elle est disabled, tout est chargé
-      if (paginationNext && paginationNext.classList.contains('w-condition-invisible')) {
-        console.log('✅ Pagination complète détectée');
-        resolve();
-        return;
-      }
-      
-      // Si on détecte plus d'items que la limite initiale
-      if (currentItems > 16) {
-        // Attendre encore un peu pour être sûr
-        setTimeout(() => {
-          const finalCount = document.querySelectorAll('.lien-logement').length;
-          console.log(`✅ Chargement terminé: ${finalCount} logements`);
-          resolve();
-        }, 500);
-        return;
-      }
-      
-      // Si on a atteint le max de checks
-      if (checkCount >= maxChecks) {
-        console.warn('⚠️ Timeout - Continuer avec les éléments disponibles');
-        resolve();
-        return;
-      }
-      
-      // Sinon, vérifier à nouveau
-      setTimeout(checkForAllItems, 100);
-    };
+    // Enregistrer toutes les propriétés
+    await this.registerAllProperties();
     
-    // Si fsAttributes existe, l'utiliser
-    if (window.fsAttributes && window.fsAttributes.cmsload) {
-      window.fsAttributes.push([
-        'cmsload',
-        (listInstances) => {
-          console.log('🎯 Finsweet CMS Load callback');
-          
-          if (listInstances && listInstances.length > 0) {
-            const [listInstance] = listInstances;
-            
-            // Forcer le chargement de toutes les pages
-            if (listInstance.loadmore) {
-              console.log('🚀 Chargement de toutes les pages...');
-              listInstance.loadmore();
-            }
-            
-            // Écouter les rendus
-            listInstance.on('renderitems', (items) => {
-              console.log(`📦 ${items.length} nouveaux items rendus`);
-            });
-          }
-          
-          // Commencer la vérification
-          setTimeout(checkForAllItems, 500);
-        }
-      ]);
-    } else {
-      // Fallback sans Finsweet
-      console.log('⚠️ Finsweet non détecté, utilisation du fallback');
-      checkForAllItems();
-    }
-  });
-}
+    // Stocker l'état initial des prix
+    this.storeInitialPriceStates();
+    
+    // Initialiser les écouteurs d'événements pour les filtres
+    this.setupFilterListeners();
+    
+    const initTime = Math.round(performance.now() - startTime);
+    console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
+    
+    // Initialiser la pagination après un court délai
+    setTimeout(() => {
+      this.applyInitialPagination();
+    }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
 
-// 🟢 MODIFIER applySimplePagination pour ignorer si en pause
-applySimplePagination() {
-  if (this.pauseCustomPagination) {
-    console.log('⏸️ Pagination custom en pause');
-    return;
+    // Export global
+    window.propertyManager = this;
+    
+    // Nettoyage automatique du cache
+    this.setupCacheCleanup();
   }
-  
-  // Votre code existant...
-  const allHousingItems = document.querySelectorAll('.housing-item');
-  const startIndex = (this.currentPage - 1) * this.pageSize;
-  const endIndex = startIndex + this.pageSize;
-  
-  allHousingItems.forEach((item, index) => {
-    item.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
-  });
-  
-  this.renderPagination();
-}
 
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
