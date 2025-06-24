@@ -78,33 +78,42 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
-  // 🟢 NOUVELLE MÉTHODE : Attendre Finsweet (VERSION CORRIGÉE)
+  // 🟢 VERSION CORRIGÉE avec l'API Finsweet
   async waitForFinsweet() {
     return new Promise((resolve) => {
       window.fsAttributes = window.fsAttributes || [];
       window.fsAttributes.push([
         'cmsload',
-        (listInstance) => {
-          // 🔧 CORRECTION : Vérifier la structure de l'API Finsweet
-          console.log('🔍 Instance Finsweet:', listInstance);
+        (listInstances) => { // 🔧 C'est un ARRAY d'instances !
+          console.log('🔍 Finsweet CMS Load initialisé');
           
-          // Configuration selon la version de Finsweet
-          if (listInstance.items) {
-            // Version actuelle de Finsweet
-            console.log(`✅ ${listInstance.items.length} items déjà chargés`);
+          // Récupérer la première instance (ou parcourir toutes si plusieurs)
+          const [listInstance] = listInstances;
+          
+          if (!listInstance) {
+            console.warn('⚠️ Aucune instance CMS Load trouvée');
+            resolve();
+            return;
           }
           
-          // Écouter quand tout est chargé
-          listInstance.on('load', () => {
-            console.log(`✅ Finsweet a chargé tous les logements`);
-            // Petit délai pour s'assurer que le DOM est bien à jour
-            setTimeout(resolve, 100);
+          // Écouter l'événement renderitems
+          listInstance.on('renderitems', (renderedItems) => {
+            console.log(`✅ Finsweet a rendu ${renderedItems.length} items`);
+            
+            // Vérifier si on a chargé plus que la limite initiale
+            const totalItems = document.querySelectorAll('.lien-logement').length;
+            console.log(`📊 Total items dans le DOM: ${totalItems}`);
+            
+            // Si on a plus de 16 items, c'est bon
+            if (totalItems > 16 || renderedItems.length > 0) {
+              setTimeout(resolve, 200); // Petit délai pour le DOM
+            }
           });
           
-          // Si déjà chargé (au cas où)
-          if (listInstance.items && listInstance.items.length > 0 && !listInstance.loading) {
-            console.log('✅ Logements déjà chargés');
-            setTimeout(resolve, 100);
+          // Si les items sont déjà chargés
+          if (listInstance.items && listInstance.items.length > 16) {
+            console.log('✅ Items déjà chargés');
+            setTimeout(resolve, 200);
           }
         }
       ]);
