@@ -78,26 +78,34 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
-  // 🟢 NOUVELLE MÉTHODE : Attendre Finsweet
+  // 🟢 NOUVELLE MÉTHODE : Attendre Finsweet (VERSION CORRIGÉE)
   async waitForFinsweet() {
     return new Promise((resolve) => {
       window.fsAttributes = window.fsAttributes || [];
       window.fsAttributes.push([
         'cmsload',
         (listInstance) => {
-          // Configuration pour charger tout automatiquement
-          listInstance.settings.load.animation = false; // Pas d'animation
-          listInstance.settings.load.more = false;      // Pas de bouton "voir plus"
+          // 🔧 CORRECTION : Vérifier la structure de l'API Finsweet
+          console.log('🔍 Instance Finsweet:', listInstance);
           
-          // Optionnel : charger plus vite
-          listInstance.settings.load.pageSize = 100;   // 100 items par batch au lieu de 50
+          // Configuration selon la version de Finsweet
+          if (listInstance.items) {
+            // Version actuelle de Finsweet
+            console.log(`✅ ${listInstance.items.length} items déjà chargés`);
+          }
           
-          // Quand tout est chargé
-          listInstance.on('renderitems', (data) => {
+          // Écouter quand tout est chargé
+          listInstance.on('load', () => {
             console.log(`✅ Finsweet a chargé tous les logements`);
             // Petit délai pour s'assurer que le DOM est bien à jour
             setTimeout(resolve, 100);
           });
+          
+          // Si déjà chargé (au cas où)
+          if (listInstance.items && listInstance.items.length > 0 && !listInstance.loading) {
+            console.log('✅ Logements déjà chargés');
+            setTimeout(resolve, 100);
+          }
         }
       ]);
     });
