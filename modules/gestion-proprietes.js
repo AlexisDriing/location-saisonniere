@@ -3,7 +3,8 @@ class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
     this.registeredCount = 0;
-    this.propertyElements = document.querySelectorAll('.lien-logement');
+    // 🔴 MODIFIÉ : On ne query plus les éléments ici car ils ne sont pas tous chargés
+    // this.propertyElements = document.querySelectorAll('.lien-logement');
     this.isFiltering = false;
     
     // Éléments de l'interface pour les filtres
@@ -43,6 +44,16 @@ class PropertyManager {
     console.log('🏠 Initialisation PropertyManager...');
     const startTime = performance.now();
     
+    // 🟢 AJOUTÉ : Attendre que Finsweet charge tous les logements
+    if (window.fsAttributes) {
+      console.log('⏳ Attente du chargement complet des logements...');
+      await this.waitForFinsweet();
+    }
+    
+    // 🟢 AJOUTÉ : Maintenant on peut query tous les éléments
+    this.propertyElements = document.querySelectorAll('.lien-logement');
+    console.log(`📊 ${this.propertyElements.length} logements trouvés après chargement complet`);
+    
     // Enregistrer toutes les propriétés
     await this.registerAllProperties();
     
@@ -65,6 +76,31 @@ class PropertyManager {
     
     // Nettoyage automatique du cache
     this.setupCacheCleanup();
+  }
+
+  // 🟢 NOUVELLE MÉTHODE : Attendre Finsweet
+  async waitForFinsweet() {
+    return new Promise((resolve) => {
+      window.fsAttributes = window.fsAttributes || [];
+      window.fsAttributes.push([
+        'cmsload',
+        (listInstance) => {
+          // Configuration pour charger tout automatiquement
+          listInstance.settings.load.animation = false; // Pas d'animation
+          listInstance.settings.load.more = false;      // Pas de bouton "voir plus"
+          
+          // Optionnel : charger plus vite
+          listInstance.settings.load.pageSize = 100;   // 100 items par batch au lieu de 50
+          
+          // Quand tout est chargé
+          listInstance.on('renderitems', (data) => {
+            console.log(`✅ Finsweet a chargé tous les logements`);
+            // Petit délai pour s'assurer que le DOM est bien à jour
+            setTimeout(resolve, 100);
+          });
+        }
+      ]);
+    });
   }
 
   // Configuration du nettoyage automatique du cache
