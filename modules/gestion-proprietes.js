@@ -41,84 +41,153 @@ class PropertyManager {
   }
 
   async init() {
-    console.log('🏠 Initialisation PropertyManager...');
-    const startTime = performance.now();
-    
-    // 🟢 AJOUTÉ : Attendre que Finsweet charge tous les logements
-    if (window.fsAttributes) {
-      console.log('⏳ Attente du chargement complet des logements...');
-      await this.waitForFinsweet();
-    }
-    
-    // 🟢 AJOUTÉ : Maintenant on peut query tous les éléments
-    this.propertyElements = document.querySelectorAll('.lien-logement');
-    console.log(`📊 ${this.propertyElements.length} logements trouvés après chargement complet`);
-    
-    // Enregistrer toutes les propriétés
-    await this.registerAllProperties();
-    
-    // Stocker l'état initial des prix
-    this.storeInitialPriceStates();
-    
-    // Initialiser les écouteurs d'événements pour les filtres
-    this.setupFilterListeners();
-    
-    const initTime = Math.round(performance.now() - startTime);
-    console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
-    
-    // Initialiser la pagination après un court délai
-    setTimeout(() => {
-      this.applyInitialPagination();
-    }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
-
-    // Export global
-    window.propertyManager = this;
-    
-    // Nettoyage automatique du cache
-    this.setupCacheCleanup();
+  console.log('🏠 Initialisation PropertyManager...');
+  const startTime = performance.now();
+  
+  // 🟢 NOUVEAU : Désactiver temporairement la pagination custom
+  this.pauseCustomPagination = true;
+  
+  // Attendre que Finsweet charge tous les logements
+  if (window.fsAttributes) {
+    console.log('⏳ Attente du chargement complet des logements...');
+    await this.waitForFinsweet();
   }
+  
+  // Maintenant on peut query tous les éléments
+  this.propertyElements = document.querySelectorAll('.lien-logement');
+  console.log(`📊 ${this.propertyElements.length} logements trouvés après chargement complet`);
+  
+  // 🟢 NOUVEAU : Masquer la pagination Webflow
+  this.hideWebflowPagination();
+  
+  // Enregistrer toutes les propriétés
+  await this.registerAllProperties();
+  
+  // Stocker l'état initial des prix
+  this.storeInitialPriceStates();
+  
+  // Initialiser les écouteurs d'événements pour les filtres
+  this.setupFilterListeners();
+  
+  const initTime = Math.round(performance.now() - startTime);
+  console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
+  
+  // 🟢 NOUVEAU : Réactiver la pagination custom
+  this.pauseCustomPagination = false;
+  
+  // Initialiser la pagination après un court délai
+  setTimeout(() => {
+    this.applyInitialPagination();
+  }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
 
-  // 🟢 VERSION CORRIGÉE avec l'API Finsweet
-  async waitForFinsweet() {
-    return new Promise((resolve) => {
-      window.fsAttributes = window.fsAttributes || [];
+  window.propertyManager = this;
+  this.setupCacheCleanup();
+}
+
+// 🟢 NOUVELLE MÉTHODE : Masquer la pagination Webflow
+hideWebflowPagination() {
+  // Masquer tous les éléments de pagination Webflow
+  const webflowPagination = document.querySelectorAll('.w-pagination-wrapper');
+  webflowPagination.forEach(elem => {
+    elem.style.display = 'none';
+    console.log('🚫 Pagination Webflow masquée');
+  });
+}
+
+// 🟢 VERSION AMÉLIORÉE de waitForFinsweet
+async waitForFinsweet() {
+  return new Promise((resolve) => {
+    let checkCount = 0;
+    const maxChecks = 50; // 5 secondes max
+    
+    const checkForAllItems = () => {
+      checkCount++;
+      const currentItems = document.querySelectorAll('.lien-logement').length;
+      const paginationNext = document.querySelector('.w-pagination-next');
+      
+      console.log(`🔍 Check #${checkCount}: ${currentItems} items trouvés`);
+      
+      // Si on a une pagination "next" mais qu'elle est disabled, tout est chargé
+      if (paginationNext && paginationNext.classList.contains('w-condition-invisible')) {
+        console.log('✅ Pagination complète détectée');
+        resolve();
+        return;
+      }
+      
+      // Si on détecte plus d'items que la limite initiale
+      if (currentItems > 16) {
+        // Attendre encore un peu pour être sûr
+        setTimeout(() => {
+          const finalCount = document.querySelectorAll('.lien-logement').length;
+          console.log(`✅ Chargement terminé: ${finalCount} logements`);
+          resolve();
+        }, 500);
+        return;
+      }
+      
+      // Si on a atteint le max de checks
+      if (checkCount >= maxChecks) {
+        console.warn('⚠️ Timeout - Continuer avec les éléments disponibles');
+        resolve();
+        return;
+      }
+      
+      // Sinon, vérifier à nouveau
+      setTimeout(checkForAllItems, 100);
+    };
+    
+    // Si fsAttributes existe, l'utiliser
+    if (window.fsAttributes && window.fsAttributes.cmsload) {
       window.fsAttributes.push([
         'cmsload',
-        (listInstances) => { // 🔧 C'est un ARRAY d'instances !
-          console.log('🔍 Finsweet CMS Load initialisé');
+        (listInstances) => {
+          console.log('🎯 Finsweet CMS Load callback');
           
-          // Récupérer la première instance (ou parcourir toutes si plusieurs)
-          const [listInstance] = listInstances;
-          
-          if (!listInstance) {
-            console.warn('⚠️ Aucune instance CMS Load trouvée');
-            resolve();
-            return;
-          }
-          
-          // Écouter l'événement renderitems
-          listInstance.on('renderitems', (renderedItems) => {
-            console.log(`✅ Finsweet a rendu ${renderedItems.length} items`);
+          if (listInstances && listInstances.length > 0) {
+            const [listInstance] = listInstances;
             
-            // Vérifier si on a chargé plus que la limite initiale
-            const totalItems = document.querySelectorAll('.lien-logement').length;
-            console.log(`📊 Total items dans le DOM: ${totalItems}`);
-            
-            // Si on a plus de 16 items, c'est bon
-            if (totalItems > 16 || renderedItems.length > 0) {
-              setTimeout(resolve, 200); // Petit délai pour le DOM
+            // Forcer le chargement de toutes les pages
+            if (listInstance.loadmore) {
+              console.log('🚀 Chargement de toutes les pages...');
+              listInstance.loadmore();
             }
-          });
-          
-          // Si les items sont déjà chargés
-          if (listInstance.items && listInstance.items.length > 16) {
-            console.log('✅ Items déjà chargés');
-            setTimeout(resolve, 200);
+            
+            // Écouter les rendus
+            listInstance.on('renderitems', (items) => {
+              console.log(`📦 ${items.length} nouveaux items rendus`);
+            });
           }
+          
+          // Commencer la vérification
+          setTimeout(checkForAllItems, 500);
         }
       ]);
-    });
+    } else {
+      // Fallback sans Finsweet
+      console.log('⚠️ Finsweet non détecté, utilisation du fallback');
+      checkForAllItems();
+    }
+  });
+}
+
+// 🟢 MODIFIER applySimplePagination pour ignorer si en pause
+applySimplePagination() {
+  if (this.pauseCustomPagination) {
+    console.log('⏸️ Pagination custom en pause');
+    return;
   }
+  
+  // Votre code existant...
+  const allHousingItems = document.querySelectorAll('.housing-item');
+  const startIndex = (this.currentPage - 1) * this.pageSize;
+  const endIndex = startIndex + this.pageSize;
+  
+  allHousingItems.forEach((item, index) => {
+    item.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
+  });
+  
+  this.renderPagination();
+}
 
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
