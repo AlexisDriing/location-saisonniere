@@ -85,50 +85,34 @@ class PropertyManager {
   // ================================
 
   async registerAllProperties() {
-    console.log('📝 Enregistrement des propriétés...');
-    const allMetadata = [];
+    console.log('📝 Synchronisation des propriétés avec Webflow...');
     
-    // NOUVEAU : Collecter toutes les données d'abord
-    this.propertyElements.forEach(element => {
-      const href = element.getAttribute('href');
-      const propertyId = href.split('/').pop();
-      
-      if (propertyId) {
-        const metadata = this.extractPropertyMetadata(element);
-        element.setAttribute('data-property-id', propertyId);
-        
-        // Au lieu d'envoyer directement, on stocke
-        allMetadata.push({
-          property_id: propertyId,
-          ...metadata
-        });
-      }
-    });
-    
-    // NOUVEAU : Envoyer TOUT en UNE SEULE fois
     try {
-      console.log(`📤 Envoi de ${allMetadata.length} propriétés en une requête...`);
-      
-      const response = await fetch(`${window.CONFIG.API_URL}/register-bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties: allMetadata })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
+      // Appeler la nouvelle route de sync
+      const response = await fetch(`${window.CONFIG.API_URL}/sync-webflow-properties`);
       const data = await response.json();
-      this.propertiesRegistered = true;
-      this.registeredCount = data.count;
-      console.log(`✅ ${data.count} propriétés enregistrées en une fois !`);
+      
+      if (data.success) {
+        this.propertiesRegistered = true;
+        this.registeredCount = data.count;
+        
+        console.log(`✅ ${data.count} propriétés synchronisées depuis ${data.source}`);
+        if (data.source === 'cache') {
+          console.log(`⚡ Depuis le cache (dernière sync: ${new Date(data.lastSync).toLocaleString()})`);
+        } else {
+          console.log(`🔄 Sync fraîche effectuée en ${Math.round(data.duration/1000)}s`);
+        }
+        
+        // Scanner quand même le DOM pour les éléments visibles
+        this.scanVisibleProperties();
+      } else {
+        throw new Error(data.error || 'Erreur de synchronisation');
+      }
       
     } catch (error) {
-      console.error('❌ Erreur bulk registration:', error);
-      console.log('Fallback sur méthode individuelle...');
-      
-      // Si ça échoue, on revient à l'ancienne méthode
+      console.error('❌ Erreur sync Webflow:', error);
+      // Fallback sur l'ancienne méthode si problème
+      console.log('📝 Fallback sur méthode DOM...');
       await this.registerAllPropertiesOldWay();
     }
   }
@@ -159,6 +143,17 @@ class PropertyManager {
     }
   }
 
+  // 🆕 Nouvelle méthode pour scanner les éléments visibles
+  scanVisibleProperties() {
+    // Juste pour marquer les éléments visibles avec leur ID
+    this.propertyElements.forEach(element => {
+      const href = element.getAttribute('href');
+      const propertyId = href.split('/').pop();
+      element.setAttribute('data-property-id', propertyId);
+    });
+    console.log(`✅ ${this.propertyElements.length} éléments DOM marqués`);
+  }
+  
   extractPropertyMetadata(element) {
     // Récupérer les URLs iCal
     const icalUrls = [];
