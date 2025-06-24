@@ -58,6 +58,8 @@ class PropertyManager {
     // Initialiser la pagination après un court délai
     setTimeout(() => {
       this.applyInitialPagination();
+      // 🆕 Forcer l'application des filtres pour charger toutes les propriétés
+      this.applyFilters(true);
     }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
 
     // Export global
@@ -611,6 +613,13 @@ class PropertyManager {
   }
 
   async applyFilters(resetPage = true) {
+    // 🆕 TEMPORAIRE : Debug
+    console.log('🔍 Debug applyFilters:');
+    console.log('- propertiesRegistered:', this.propertiesRegistered);
+    console.log('- registeredCount:', this.registeredCount);
+    console.log('- totalResults:', this.totalResults);
+    console.log('- DOM elements:', document.querySelectorAll('.housing-item').length);
+    
     if (this.isFiltering || !this.propertiesRegistered) return;
 
     if (this.filterTimeout) {
@@ -991,7 +1000,8 @@ class PropertyManager {
     if (!this.propertiesRegistered) return;
     
     const allHousingItems = document.querySelectorAll('.housing-item');
-    this.totalResults = this.registeredCount;
+    // 🔧 FIX: Utiliser le nombre réel de propriétés synchronisées
+    this.totalResults = this.registeredCount > 0 ? this.registeredCount : allHousingItems.length;
     this.totalPages = Math.ceil(this.totalResults / this.pageSize);
     this.currentPage = 1;
     
