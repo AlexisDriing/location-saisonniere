@@ -38,6 +38,7 @@ class PropertyManager {
     
     // 🆕 NOUVEAU : Propriétés pour la pagination dynamique
     this.allPropertiesData = [];     // Données complètes du serveur
+    this.propertiesDataMap = new Map(); // 🔧 FIX : Map pour accès rapide
     this.templateCard = null;        // Template pour clonage
     this.visibleCards = [];          // Cartes Webflow existantes
     this.clonedCards = [];           // Track des cartes clonées
@@ -165,8 +166,17 @@ class PropertyManager {
           this.allPropertiesData = data.properties;
           console.log(`✅ ${data.properties.length} propriétés complètes reçues du serveur`);
           
+          // 🔧 FIX : Créer une map pour accès rapide par ID
+          this.propertiesDataMap = new Map();
+          data.properties.forEach(prop => {
+            this.propertiesDataMap.set(prop.id, prop);
+          });
+          
           // Précharger quelques images
           this.preloadImages();
+          
+          // 🔧 FIX : Stocker l'état initial des prix APRÈS avoir reçu les données
+          this.storeInitialPriceStates();
         } else {
           console.error('❌ Aucune propriété reçue du serveur');
         }
@@ -348,6 +358,9 @@ class PropertyManager {
   // ================================
 
   storeInitialPriceStates() {
+    console.log('💾 Stockage des états initiaux des prix...');
+    
+    // Pour les cartes Webflow existantes
     document.querySelectorAll('.housing-item').forEach(item => {
       const propertyId = item.querySelector('.lien-logement')?.getAttribute('data-property-id');
       if (propertyId) {
@@ -361,6 +374,48 @@ class PropertyManager {
         });
       }
     });
+    
+    // 🔧 FIX : Pour toutes les propriétés depuis les données serveur
+    if (this.allPropertiesData && this.allPropertiesData.length > 0) {
+      this.allPropertiesData.forEach(prop => {
+        if (!this.initialPriceStates.has(prop.id)) {
+          // Calculer le prix initial pour les propriétés non visibles
+          let priceText = 'Dès ';
+          let discountText = '';
+          
+          if (prop.pricing_data && prop.pricing_data.seasons) {
+            let minPrice = Infinity;
+            let platformPrice = 0;
+            
+            prop.pricing_data.seasons.forEach(season => {
+              if (season.price < minPrice) {
+                minPrice = season.price;
+                if (season.platformPrices) {
+                  const prices = Object.values(season.platformPrices);
+                  platformPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+                }
+              }
+            });
+            
+            if (platformPrice > minPrice) {
+              priceText += `<del>${Math.round(platformPrice)}€</del> `;
+              discountText = `-${Math.round((platformPrice - minPrice) / platformPrice * 100)}%`;
+            }
+            priceText += `<strong>${Math.round(minPrice)}€ / nuit</strong>`;
+          } else if (prop.price) {
+            priceText += `<strong>${prop.price}€ / nuit</strong>`;
+          }
+          
+          this.initialPriceStates.set(prop.id, {
+            textePrix: priceText,
+            pourcentage: discountText,
+            pourcentageDisplay: discountText ? 'block' : 'none'
+          });
+        }
+      });
+    }
+    
+    console.log(`✅ ${this.initialPriceStates.size} états de prix stockés`);
   }
 
   async updatePricesForDates(startDate, endDate) {
@@ -478,62 +533,89 @@ class PropertyManager {
   }
 
   updateExistingCard(card, propertyData) {
-  const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
-  
-  // Lien principal
-  const link = card.querySelector('.lien-logement');
-  if (link) {
-    link.href = `/locations-saisonnieres/${fullData.id}`;
-    link.setAttribute('data-property-id', fullData.id);
+    // 🔧 FIX : Utiliser la map pour un accès plus rapide et fiable
+    const fullData = this.propertiesDataMap ? 
+      this.propertiesDataMap.get(propertyData.id) || propertyData : 
+      propertyData;
+    
+    // Lien principal
+    const link = card.querySelector('.lien-logement');
+    if (link) {
+      link.href = `/locations-saisonnieres/${fullData.id}`;
+      link.setAttribute('data-property-id', fullData.id);
+    }
+    
+    // 🆕 METTRE À JOUR TOUTES LES DONNÉES (pas seulement le prix)
+    
+    // Images
+    const mainImage = card.querySelector('.image-main');
+    if (mainImage) {
+      if (fullData.image_url) {
+        mainImage.src = fullData.image_url;
+        mainImage.alt = fullData.name || 'Logement';
+      } else {
+        console.warn(`Image manquante pour ${fullData.id}`);
+      }
+    }
+    
+    const hostImage = card.querySelector('.image-hote-main');
+    if (hostImage) {
+      if (fullData.host_image_url) {
+        hostImage.src = fullData.host_image_url;
+      } else {
+        // Image par défaut pour l'hôte
+        hostImage.src = 'https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/default-host.jpg';
+      }
+    }
+    
+    // Nom du logement
+    const nameElement = card.querySelector('.text-nom-logement-card');
+    if (nameElement && fullData.name) {
+      const readableName = fullData.name
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      nameElement.textContent = readableName;
+    }
+    
+    // Adresse - IMPORTANT : Formater l'adresse ici
+    const addressElement = card.querySelector('.adresse');
+    if (addressElement && fullData.address) {
+      addressElement.textContent = fullData.address;
+      // 🔧 FIX : Appliquer le formatage d'adresse
+      if (window.addressFormatterManager) {
+        window.addressFormatterManager.formatAddress(addressElement);
+      }
+    }
+    
+    // Nom de l'hôte
+    const hostNameElement = card.querySelector('.bloc-h-te-main div:last-child');
+    if (hostNameElement) {
+      hostNameElement.textContent = fullData.host_name || 'Hôte';
+    }
+    
+    // Prix
+    this.updateCardPrice(card, fullData);
+    
+    // Données cachées
+    this.updateHiddenElements(card, fullData);
+    
+    // Distance - FIX : Ne pas afficher si pas de recherche géo
+    if (this.searchLocation && propertyData.distance !== undefined) {
+      this.updateDistanceDisplay(card, propertyData.distance);
+    } else {
+      // Masquer la distance si pas de recherche
+      const distanceElement = card.querySelector('.distance');
+      const separateurElement = card.querySelector('.separateur');
+      if (distanceElement) {
+        distanceElement.style.display = 'none';
+        distanceElement.classList.remove('visible');
+      }
+      if (separateurElement) {
+        separateurElement.style.display = 'none';
+      }
+    }
   }
-  
-  // 🆕 METTRE À JOUR TOUTES LES DONNÉES (pas seulement le prix)
-  
-  // Images
-  const mainImage = card.querySelector('.image-main');
-  if (mainImage && fullData.image_url) {
-    mainImage.src = fullData.image_url;
-    mainImage.alt = fullData.name || 'Logement';
-  }
-  
-  const hostImage = card.querySelector('.image-hote-main');
-  if (hostImage && fullData.host_image_url) {
-    hostImage.src = fullData.host_image_url;
-  }
-  
-  // Nom du logement
-  const nameElement = card.querySelector('.text-nom-logement-card');
-  if (nameElement && fullData.name) {
-    const readableName = fullData.name
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    nameElement.textContent = readableName;
-  }
-  
-  // Adresse
-  const addressElement = card.querySelector('.adresse');
-  if (addressElement && fullData.address) {
-    addressElement.textContent = fullData.address;
-  }
-  
-  // Nom de l'hôte
-  const hostNameElement = card.querySelector('.bloc-h-te-main div:last-child');
-  if (hostNameElement && fullData.host_name) {
-    hostNameElement.textContent = fullData.host_name;
-  }
-  
-  // Prix
-  this.updateCardPrice(card, fullData);
-  
-  // Données cachées
-  this.updateHiddenElements(card, fullData);
-  
-  // Distance si applicable
-  if (propertyData.distance !== undefined) {
-    this.updateDistanceDisplay(card, propertyData.distance);
-  }
-}
 
   resetPriceDisplay() {
     console.log('🔄 Réinitialisation des prix...');
@@ -932,6 +1014,9 @@ class PropertyManager {
     
     this.showNoResults(false);
     
+    // 🔧 FIX : Tracker les cartes affichées pour reformatage
+    const displayedCards = [];
+    
     // Afficher les propriétés
     properties.forEach((propertyData, index) => {
       let card;
@@ -941,15 +1026,29 @@ class PropertyManager {
         card = this.visibleCards[index];
         this.updateExistingCard(card, propertyData);
         card.style.display = '';
+        displayedCards.push(card);
       } else if (this.templateCard) {
         // Cloner le template pour les résultats > 16
         card = this.createCardFromTemplate(propertyData);
         if (card) {
           container.appendChild(card);
           this.clonedCards.push(card);
+          displayedCards.push(card);
         }
       }
     });
+    
+    // 🔧 FIX : Reformater toutes les adresses après affichage
+    setTimeout(() => {
+      if (window.addressFormatterManager) {
+        displayedCards.forEach(card => {
+          const addressElement = card.querySelector('.adresse');
+          if (addressElement) {
+            window.addressFormatterManager.formatAddress(addressElement);
+          }
+        });
+      }
+    }, 50);
     
     console.log(`✅ Affiché: ${Math.min(properties.length, this.visibleCards.length)} réutilisées + ${this.clonedCards.length} clonées`);
   }
@@ -965,7 +1064,10 @@ class PropertyManager {
     newCard.classList.remove('template-card');
     newCard.classList.add('cloned-card');
     
-    const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
+    // 🔧 FIX : Utiliser la map pour un accès plus fiable
+    const fullData = this.propertiesDataMap ? 
+      this.propertiesDataMap.get(propertyData.id) || propertyData : 
+      propertyData;
     
     // Lien principal
     const link = newCard.querySelector('.lien-logement');
@@ -976,14 +1078,23 @@ class PropertyManager {
     
     // Images
     const mainImage = newCard.querySelector('.image-main');
-    if (mainImage && fullData.image_url) {
-      mainImage.src = fullData.image_url;
-      mainImage.alt = fullData.name || 'Logement';
+    if (mainImage) {
+      if (fullData.image_url) {
+        mainImage.src = fullData.image_url;
+        mainImage.alt = fullData.name || 'Logement';
+      } else {
+        console.warn(`Image manquante pour ${fullData.id}`);
+      }
     }
     
     const hostImage = newCard.querySelector('.image-hote-main');
-    if (hostImage && fullData.host_image_url) {
-      hostImage.src = fullData.host_image_url;
+    if (hostImage) {
+      if (fullData.host_image_url) {
+        hostImage.src = fullData.host_image_url;
+      } else {
+        // Image par défaut pour l'hôte
+        hostImage.src = 'https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/default-host.jpg';
+      }
     }
     
     // Nom du logement
@@ -996,16 +1107,20 @@ class PropertyManager {
       nameElement.textContent = readableName;
     }
     
-    // Adresse
+    // Adresse - IMPORTANT : Formater l'adresse ici
     const addressElement = newCard.querySelector('.adresse');
     if (addressElement && fullData.address) {
       addressElement.textContent = fullData.address;
+      // 🔧 FIX : Appliquer le formatage d'adresse
+      if (window.addressFormatterManager) {
+        window.addressFormatterManager.formatAddress(addressElement);
+      }
     }
     
     // Nom de l'hôte
     const hostNameElement = newCard.querySelector('.bloc-h-te-main div:last-child');
-    if (hostNameElement && fullData.host_name) {
-      hostNameElement.textContent = fullData.host_name;
+    if (hostNameElement) {
+      hostNameElement.textContent = fullData.host_name || 'Hôte';
     }
     
     // Prix
@@ -1014,9 +1129,20 @@ class PropertyManager {
     // Données cachées
     this.updateHiddenElements(newCard, fullData);
     
-    // Distance si applicable
-    if (propertyData.distance !== undefined) {
+    // Distance - FIX : Ne pas afficher si pas de recherche géo
+    if (this.searchLocation && propertyData.distance !== undefined) {
       this.updateDistanceDisplay(newCard, propertyData.distance);
+    } else {
+      // Masquer la distance si pas de recherche
+      const distanceElement = newCard.querySelector('.distance');
+      const separateurElement = newCard.querySelector('.separateur');
+      if (distanceElement) {
+        distanceElement.style.display = 'none';
+        distanceElement.classList.remove('visible');
+      }
+      if (separateurElement) {
+        separateurElement.style.display = 'none';
+      }
     }
     
     return newCard;
@@ -1433,24 +1559,60 @@ class PropertyManager {
   // ================================
 
   resetFilters() {
+    console.log('🔄 Réinitialisation complète des filtres...');
+    
+    // Réinitialiser les variables
     this.currentFilters = {};
     this.searchLocation = null;
+    this.startDate = null;
+    this.endDate = null;
+    this.currentPage = 1;
     
+    // Masquer TOUTES les distances et séparateurs
     document.querySelectorAll('.distance').forEach(element => {
       element.classList.remove('visible');
       element.style.display = 'none';
+      element.textContent = '';
     });
     
     document.querySelectorAll('.separateur').forEach(element => {
       element.style.display = 'none';
     });
     
-    this.currentPage = 1;
-    this.applyInitialPagination();
+    // Masquer les messages d'erreur
     this.showNoResults(false);
     this.showError(false);
     
-    console.log('🔄 Filtres réinitialisés');
+    // 🔧 FIX : Réinitialiser le texte des dates
+    if (this.textDatesSearch) {
+      this.textDatesSearch.textContent = 'Dates';
+      this.textDatesSearch.style.color = '';
+    }
+    
+    // 🔧 FIX : Afficher toutes les propriétés sans filtres
+    if (this.allPropertiesData && this.allPropertiesData.length > 0) {
+      const startIndex = 0;
+      const endIndex = this.pageSize;
+      const firstPageProperties = this.allPropertiesData.slice(startIndex, endIndex);
+      
+      this.totalResults = this.allPropertiesData.length;
+      this.totalPages = Math.ceil(this.totalResults / this.pageSize);
+      
+      this.displayFilteredProperties(firstPageProperties);
+      this.renderPagination();
+      
+      // 🔧 FIX : Reformater toutes les adresses après reset
+      setTimeout(() => {
+        if (window.addressFormatterManager) {
+          window.addressFormatterManager.formatAllAddresses();
+        }
+      }, 100);
+    } else {
+      // Si pas de données, afficher un message approprié
+      this.showError(true);
+    }
+    
+    console.log('✅ Filtres réinitialisés complètement');
   }
 
   // ================================
