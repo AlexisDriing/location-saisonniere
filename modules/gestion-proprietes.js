@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE AVEC CHARGEMENT AUTOMATIQUE
+// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE AVEC CHARGEMENT AUTOMATIQUEv2
 class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
