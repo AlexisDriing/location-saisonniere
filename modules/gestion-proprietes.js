@@ -160,19 +160,14 @@ class PropertyManager {
         this.propertiesRegistered = true;
         this.registeredCount = data.count;
         
-        // Dans registerAllProperties, après la ligne 226
-if (data.properties && data.properties.length > 0) {
-  this.allPropertiesData = data.properties;
-  console.log(`✅ ${data.properties.length} propriétés complètes reçues du serveur`);
-  
-  // DEBUG : Vérifier la structure
-  console.log('🔍 Structure des données reçues:');
-  console.log('- Premier élément:', this.allPropertiesData[0]);
-  console.log('- IDs disponibles:', this.allPropertiesData.slice(0, 5).map(p => p.id));
-  
-  // Précharger quelques images
-  this.preloadImages();
-} else {
+        // 🆕 CRUCIAL : Stocker TOUTES les propriétés
+        if (data.properties && data.properties.length > 0) {
+          this.allPropertiesData = data.properties;
+          console.log(`✅ ${data.properties.length} propriétés complètes reçues du serveur`);
+          
+          // Précharger quelques images
+          this.preloadImages();
+        } else {
           console.error('❌ Aucune propriété reçue du serveur');
         }
         
@@ -916,83 +911,68 @@ if (data.properties && data.properties.length > 0) {
   }
 
   displayFilteredProperties(properties) {
-  const container = document.querySelector('.collection-grid, .collection-list');
-  if (!container) {
-    console.error('❌ Conteneur de collection non trouvé');
-    return;
-  }
-  
-  // DEBUG : Logger pour comprendre la structure
-  if (properties.length > 0) {
-    console.log('🔍 Structure première propriété:', properties[0]);
-    console.log('🔍 allPropertiesData sample:', this.allPropertiesData[0]);
-  }
-  
-  // Nettoyer les cartes clonées précédentes
-  this.cleanupClonedCards();
-  
-  // Cacher toutes les cartes existantes
-  this.visibleCards.forEach(card => {
-    card.style.display = 'none';
-  });
-  
-  if (properties.length === 0) {
-    this.showNoResults(true);
-    return;
-  }
-  
-  this.showNoResults(false);
-  
-  // Afficher les propriétés
-  properties.forEach((propertyData, index) => {
-    let card;
-    
-    if (index < this.visibleCards.length) {
-      // Réutiliser une carte Webflow existante
-      card = this.visibleCards[index];
-      this.updateExistingCard(card, propertyData);
-      card.style.display = '';
-    } else if (this.templateCard) {
-      // Cloner le template pour les résultats > 16
-      card = this.createCardFromTemplate(propertyData);
-      if (card) {
-        container.appendChild(card);
-        this.clonedCards.push(card);
-      }
+    const container = document.querySelector('.collection-grid, .collection-list');
+    if (!container) {
+      console.error('❌ Conteneur de collection non trouvé');
+      return;
     }
-  });
-  
-  console.log(`✅ Affiché: ${Math.min(properties.length, this.visibleCards.length)} réutilisées + ${this.clonedCards.length} clonées`);
-}
+    
+    // Nettoyer les cartes clonées précédentes
+    this.cleanupClonedCards();
+    
+    // Cacher toutes les cartes existantes
+    this.visibleCards.forEach(card => {
+      card.style.display = 'none';
+    });
+    
+    if (properties.length === 0) {
+      this.showNoResults(true);
+      return;
+    }
+    
+    this.showNoResults(false);
+    
+    // Afficher les propriétés
+    properties.forEach((propertyData, index) => {
+      let card;
+      
+      if (index < this.visibleCards.length) {
+        // Réutiliser une carte Webflow existante
+        card = this.visibleCards[index];
+        this.updateExistingCard(card, propertyData);
+        card.style.display = '';
+      } else if (this.templateCard) {
+        // Cloner le template pour les résultats > 16
+        card = this.createCardFromTemplate(propertyData);
+        if (card) {
+          container.appendChild(card);
+          this.clonedCards.push(card);
+        }
+      }
+    });
+    
+    console.log(`✅ Affiché: ${Math.min(properties.length, this.visibleCards.length)} réutilisées + ${this.clonedCards.length} clonées`);
+  }
 
   createCardFromTemplate(propertyData) {
-  if (!this.templateCard) {
-    console.error('❌ Pas de template disponible');
-    return null;
-  }
-  
-  const newCard = this.templateCard.cloneNode(true);
-  newCard.style.display = '';
-  newCard.classList.remove('template-card');
-  newCard.classList.add('cloned-card');
-  
-  // IMPORTANT : Utiliser l'ID cohérent (slug)
-  const propertyId = propertyData.id || propertyData.slug;
-  
-  // DEBUG
-  console.log('🔍 createCardFromTemplate - propertyId:', propertyId);
-  console.log('🔍 Recherche dans allPropertiesData avec id:', propertyId);
-  
-  // Chercher les données complètes avec le bon ID
-  const fullData = this.allPropertiesData.find(p => {
-    // Comparer avec id ET slug pour être sûr
-    return p.id === propertyId || p.slug === propertyId;
-  }) || propertyData;
-  
-  console.log('🔍 fullData trouvée:', fullData ? 'OUI' : 'NON');
-  if (fullData) {
-    console.log('🔍 Image URL:', fullData.image_url);
-  }
+    if (!this.templateCard) {
+      console.error('❌ Pas de template disponible');
+      return null;
+    }
+    
+    const newCard = this.templateCard.cloneNode(true);
+    newCard.style.display = '';
+    newCard.classList.remove('template-card');
+    newCard.classList.add('cloned-card');
+
+    // 🆕 LOGS DE DEBUG
+  console.log('🔍 createCardFromTemplate - propertyData:', propertyData);
+  console.log('🔍 Recherche dans allPropertiesData avec id:', propertyData.id);
+    
+    const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
+
+  console.log('🔍 fullData trouvée:', fullData);
+  console.log('🔍 Image URL:', fullData.image_url);
     
     // Lien principal
     const link = newCard.querySelector('.lien-logement');
