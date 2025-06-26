@@ -478,21 +478,62 @@ class PropertyManager {
   }
 
   updateExistingCard(card, propertyData) {
-    const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
-    
-    const link = card.querySelector('.lien-logement');
-    if (link) {
-      link.href = `/locations-saisonnieres/${fullData.id}`;
-      link.setAttribute('data-property-id', fullData.id);
-    }
-    
-    // Réutiliser les mêmes méthodes
-    this.updateCardPrice(card, fullData);
-    
-    if (propertyData.distance !== undefined) {
-      this.updateDistanceDisplay(card, propertyData.distance);
-    }
+  const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
+  
+  // Lien principal
+  const link = card.querySelector('.lien-logement');
+  if (link) {
+    link.href = `/locations-saisonnieres/${fullData.id}`;
+    link.setAttribute('data-property-id', fullData.id);
   }
+  
+  // 🆕 METTRE À JOUR TOUTES LES DONNÉES (pas seulement le prix)
+  
+  // Images
+  const mainImage = card.querySelector('.image-main');
+  if (mainImage && fullData.image_url) {
+    mainImage.src = fullData.image_url;
+    mainImage.alt = fullData.name || 'Logement';
+  }
+  
+  const hostImage = card.querySelector('.image-hote-main');
+  if (hostImage && fullData.host_image_url) {
+    hostImage.src = fullData.host_image_url;
+  }
+  
+  // Nom du logement
+  const nameElement = card.querySelector('.text-nom-logement-card');
+  if (nameElement && fullData.name) {
+    const readableName = fullData.name
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    nameElement.textContent = readableName;
+  }
+  
+  // Adresse
+  const addressElement = card.querySelector('.adresse');
+  if (addressElement && fullData.address) {
+    addressElement.textContent = fullData.address;
+  }
+  
+  // Nom de l'hôte
+  const hostNameElement = card.querySelector('.bloc-h-te-main div:last-child');
+  if (hostNameElement && fullData.host_name) {
+    hostNameElement.textContent = fullData.host_name;
+  }
+  
+  // Prix
+  this.updateCardPrice(card, fullData);
+  
+  // Données cachées
+  this.updateHiddenElements(card, fullData);
+  
+  // Distance si applicable
+  if (propertyData.distance !== undefined) {
+    this.updateDistanceDisplay(card, propertyData.distance);
+  }
+}
 
   resetPriceDisplay() {
     console.log('🔄 Réinitialisation des prix...');
