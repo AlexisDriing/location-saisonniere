@@ -964,8 +964,15 @@ class PropertyManager {
     newCard.style.display = '';
     newCard.classList.remove('template-card');
     newCard.classList.add('cloned-card');
+
+    // 🆕 LOGS DE DEBUG
+  console.log('🔍 createCardFromTemplate - propertyData:', propertyData);
+  console.log('🔍 Recherche dans allPropertiesData avec id:', propertyData.id);
     
     const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
+
+  console.log('🔍 fullData trouvée:', fullData);
+  console.log('🔍 Image URL:', fullData.image_url);
     
     // Lien principal
     const link = newCard.querySelector('.lien-logement');
