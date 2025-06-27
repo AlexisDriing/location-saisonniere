@@ -50,19 +50,16 @@ class PropertyManager {
     console.log('🏠 Initialisation PropertyManager...');
     const startTime = performance.now();
     
-    // 1. D'abord, récupérer TOUTES les données du serveur
+    // 1. D'abord, récupérer et afficher la première page
     await this.registerAllProperties();
     
     // 2. Ensuite, configurer les cartes et template
     this.setupCardsAndTemplate();
     
-    // 3. 🆕 Afficher la première page avec pagination
-    await this.displayInitialPage();
-    
-    // 4. Initialiser les écouteurs d'événements
+    // 3. Initialiser les écouteurs d'événements
     this.setupFilterListeners();
     
-    // 5. Marquer comme chargé
+    // 4. Marquer comme chargé
     this.initialLoadComplete = true;
     
     const initTime = Math.round(performance.now() - startTime);
@@ -73,7 +70,7 @@ class PropertyManager {
     
     // Nettoyage automatique du cache
     this.setupCacheCleanup();
-  }
+}
 
   setupCardsAndTemplate() {
     // Récupérer toutes les cartes visibles créées par Webflow
