@@ -844,202 +844,133 @@ class PropertyManager {
   }
 
   displayFilteredProperties(properties) {
-    const container = document.querySelector('.collection-grid, .collection-list');
-    if (!container) {
-      console.error('❌ Conteneur de collection non trouvé');
-      return;
-    }
-    
-    // Nettoyer les cartes clonées précédentes
-    this.cleanupClonedCards();
-    
-    // Cacher toutes les cartes existantes
-    this.visibleCards.forEach(card => {
-      card.style.display = 'none';
-    });
-    
-    if (properties.length === 0) {
-      this.showNoResults(true);
-      return;
-    }
-    
-    this.showNoResults(false);
-    
-    // Afficher les propriétés
-    properties.forEach((propertyData, index) => {
-      let card;
-      
-      if (index < this.visibleCards.length) {
-        // Réutiliser une carte Webflow existante
-        card = this.visibleCards[index];
-        this.updateExistingCard(card, propertyData);
-        card.style.display = '';
-      } else if (this.templateCard) {
-        // Cloner le template pour les résultats > 16
-        card = this.createCardFromTemplate(propertyData);
-        if (card) {
-          container.appendChild(card);
-          this.clonedCards.push(card);
-        }
-      }
-    });
-    
-    console.log(`✅ Affiché: ${Math.min(properties.length, this.visibleCards.length)} réutilisées + ${this.clonedCards.length} clonées`);
+  const container = document.querySelector('.collection-grid, .collection-list');
+  if (!container) {
+    console.error('❌ Conteneur de collection non trouvé');
+    return;
   }
-
-  createCardFromTemplate(propertyData) {
-    if (!this.templateCard) {
-      console.error('❌ Pas de template disponible');
-      return null;
-    }
-    
-    const newCard = this.templateCard.cloneNode(true);
-    newCard.style.display = '';
-    newCard.classList.remove('template-card');
-    newCard.classList.add('cloned-card');
-
-    // 🆕 LOGS DE DEBUG
-  console.log('🔍 createCardFromTemplate - propertyData:', propertyData);
-  console.log('🔍 Recherche dans allPropertiesData avec id:', propertyData.id);
-    
-    const fullData = propertyData;
-
-  console.log('🔍 fullData trouvée:', fullData);
-  console.log('🔍 Image URL:', fullData.image_url);
-    
-    // Lien principal
-    const link = newCard.querySelector('.lien-logement');
-    if (link) {
-      link.href = `/locations-saisonnieres/${fullData.id}`;
-      link.setAttribute('data-property-id', fullData.id);
-    }
-    
-    // Images
-    const mainImage = newCard.querySelector('.image-main');
-    if (mainImage && fullData.image_url) {
-      mainImage.src = fullData.image_url;
-      mainImage.alt = fullData.name || 'Logement';
-    }
-    
-    const hostImage = newCard.querySelector('.image-hote-main');
-    if (hostImage && fullData.host_image_url) {
-      hostImage.src = fullData.host_image_url;
-    }
-    
-    // Nom du logement
-    const nameElement = newCard.querySelector('.text-nom-logement-card');
-    if (nameElement && fullData.name) {
-      const readableName = fullData.name
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-      nameElement.textContent = readableName;
-    }
-    
-    // Adresse
-    const addressElement = newCard.querySelector('.adresse');
-    if (addressElement && fullData.address) {
-      addressElement.textContent = fullData.address;
-    }
-    
-    // Nom de l'hôte
-    const hostNameElement = newCard.querySelector('.bloc-h-te-main div:last-child');
-    if (hostNameElement && fullData.host_name) {
-      hostNameElement.textContent = fullData.host_name;
-    }
-    
-    // Prix
-    this.updateCardPrice(newCard, fullData);
-    
-    // Données cachées
-    this.updateHiddenElements(newCard, fullData);
-    
-    // Distance si applicable
-    if (propertyData.distance !== undefined) {
-      this.updateDistanceDisplay(newCard, propertyData.distance);
-    }
-    
-    return newCard;
+  
+  // Nettoyer les cartes clonées précédentes
+  this.cleanupClonedCards();
+  
+  // Cacher toutes les cartes existantes
+  this.visibleCards.forEach(card => {
+    card.style.display = 'none';
+  });
+  
+  if (properties.length === 0) {
+    this.showNoResults(true);
+    return;
   }
-
-  updateCardPrice(card, propertyData) {
-    const priceElement = card.querySelector('.texte-prix');
-    const percentageElement = card.querySelector('.pourcentage');
+  
+  this.showNoResults(false);
+  
+  // Afficher les propriétés
+  properties.forEach((propertyData, index) => {
+    let card;
     
-    if (!priceElement) return;
-    
-    if (propertyData.pricing_data && propertyData.pricing_data.seasons) {
-      let minPrice = Infinity;
-      let platformPrice = 0;
-      
-      propertyData.pricing_data.seasons.forEach(season => {
-        if (season.price < minPrice) {
-          minPrice = season.price;
-          if (season.platformPrices) {
-            const prices = Object.values(season.platformPrices);
-            platformPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-          }
-        }
-      });
-      
-      if (platformPrice > minPrice) {
-        priceElement.innerHTML = `Dès <del>${Math.round(platformPrice)}€</del> <strong>${Math.round(minPrice)}€ / nuit</strong>`;
-        
-        if (percentageElement) {
-          const discount = Math.round((platformPrice - minPrice) / platformPrice * 100);
-          percentageElement.textContent = `-${discount}%`;
-          percentageElement.style.display = 'block';
-        }
-      } else {
-        priceElement.innerHTML = `Dès <strong>${Math.round(minPrice)}€ / nuit</strong>`;
-        if (percentageElement) {
-          percentageElement.style.display = 'none';
-        }
-      }
-    } else if (propertyData.price) {
-      priceElement.innerHTML = `Dès <strong>${propertyData.price}€ / nuit</strong>`;
-      if (percentageElement) {
-        percentageElement.style.display = 'none';
+    if (index < this.visibleCards.length) {
+      // Réutiliser une carte Webflow existante
+      card = this.visibleCards[index];
+      this.updateExistingCard(card, propertyData);
+      card.style.display = '';
+    } else if (this.templateCard) {
+      // Cloner le template pour les résultats > 16
+      card = this.createCardFromTemplate(propertyData);
+      if (card) {
+        container.appendChild(card);
+        this.clonedCards.push(card);
       }
     }
-  }
+  });
+  
+  console.log(`✅ Affiché: ${Math.min(properties.length, this.visibleCards.length)} réutilisées + ${this.clonedCards.length} clonées`);
+}
 
-  updateHiddenElements(card, propertyData) {
-    // Options d'accueil
-    const optionElement = card.querySelector('[data-option-accueil]');
-    if (optionElement && propertyData.options && propertyData.options.length > 0) {
-      optionElement.setAttribute('data-option-accueil', propertyData.options.join(', '));
-      optionElement.textContent = propertyData.options.join(', ');
-    }
-    
-    // Mode de location
-    const modeElement = card.querySelector('[data-mode-location]');
-    if (modeElement && propertyData.type) {
-      modeElement.setAttribute('data-mode-location', propertyData.type);
-      modeElement.textContent = propertyData.type;
-    }
-    
-    // Capacité
-    const capacityElement = card.querySelector('[data-voyageurs]');
-    if (capacityElement && propertyData.capacity) {
-      capacityElement.setAttribute('data-voyageurs', propertyData.capacity);
-      capacityElement.textContent = propertyData.capacity;
-    }
-    
-    // Équipements
-    const equipmentElement = card.querySelector('[data-equipements]');
-    if (equipmentElement && propertyData.amenities) {
-      const amenitiesText = propertyData.amenities.join(', ');
-      equipmentElement.setAttribute('data-equipements', amenitiesText);
-      equipmentElement.textContent = amenitiesText;
-    }
-    
-    // JSON tarifs
-    const jsonElement = card.querySelector('[data-json-tarifs-line]');
-    if (jsonElement && propertyData.pricing_data) {
-      jsonElement.setAttribute('data-json-tarifs-line', JSON.stringify(propertyData.pricing_data));
+updateExistingCard(card, propertyData) {
+  // Lien principal
+  const link = card.querySelector('.lien-logement');
+  if (link) {
+    link.href = `/locations-saisonnieres/${propertyData.id}`;
+    link.setAttribute('data-property-id', propertyData.id);
+  }
+  
+  // Image principale
+  const mainImage = card.querySelector('.image-main');
+  if (mainImage && propertyData.image_url) {
+    mainImage.src = propertyData.image_url;
+    mainImage.alt = propertyData.name || 'Logement';
+  }
+  
+  // Image de l'hôte
+  const hostImage = card.querySelector('.image-hote-main');
+  if (hostImage && propertyData.host_image_url) {
+    hostImage.src = propertyData.host_image_url;
+  }
+  
+  // Nom du logement
+  const nameElement = card.querySelector('.text-nom-logement-card');
+  if (nameElement && propertyData.name) {
+    nameElement.textContent = propertyData.name;
+  }
+  
+  // Adresse
+  const addressElement = card.querySelector('.adresse');
+  if (addressElement && propertyData.address) {
+    addressElement.textContent = propertyData.address;
+  }
+  
+  // Prix
+  this.updateCardPrice(card, propertyData);
+  
+  // Données cachées pour les filtres
+  this.updateHiddenElements(card, propertyData);
+  
+  // Distance si applicable
+  if (propertyData.distance !== undefined) {
+    this.updateDistanceDisplay(card, propertyData.distance);
+  }
+}
+
+updateHiddenElements(card, propertyData) {
+  // URLs iCal (important pour le calendrier)
+  for (let i = 1; i <= 4; i++) {
+    const icalElement = card.querySelector(`[data-ical-${i}]`);
+    if (icalElement && propertyData.ical_urls && propertyData.ical_urls[i-1]) {
+      icalElement.setAttribute(`data-ical-${i}`, propertyData.ical_urls[i-1]);
     }
   }
+  
+  // Équipements
+  const equipmentElement = card.querySelector('[data-equipements]');
+  if (equipmentElement && propertyData.amenities) {
+    equipmentElement.setAttribute('data-equipements', propertyData.amenities.join(', '));
+  }
+  
+  // Options
+  const optionElement = card.querySelector('[data-option-accueil]');
+  if (optionElement && propertyData.options) {
+    optionElement.setAttribute('data-option-accueil', propertyData.options.join(', '));
+  }
+  
+  // Mode de location
+  const modeElement = card.querySelector('[data-mode-location]');
+  if (modeElement && propertyData.type) {
+    modeElement.setAttribute('data-mode-location', propertyData.type);
+  }
+  
+  // Capacité
+  const capacityElement = card.querySelector('[data-voyageurs]');
+  if (capacityElement && propertyData.capacity) {
+    capacityElement.setAttribute('data-voyageurs', propertyData.capacity);
+  }
+  
+  // JSON tarifs
+  const jsonElement = card.querySelector('[data-json-tarifs-line]');
+  if (jsonElement && propertyData.pricing_data) {
+    jsonElement.setAttribute('data-json-tarifs-line', JSON.stringify(propertyData.pricing_data));
+  }
+}
 
   updateDistanceDisplay(housingItem, distance) {
     const distanceElement = housingItem.querySelector('.distance');
