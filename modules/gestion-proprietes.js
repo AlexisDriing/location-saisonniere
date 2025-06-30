@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - VERSION OPTIMISÉE AVEC CHARGEMENT AUTOMATIQUE
+// Gestionnaire principal des propriétés pour la page liste
 class PropertyManager {
   constructor() {
     this.propertiesRegistered = false;
@@ -36,13 +36,6 @@ class PropertyManager {
       responseTimes: []
     };
     
-    // 🆕 NOUVEAU : Propriétés pour la pagination dynamique
-    this.allPropertiesData = [];     // Données complètes du serveur
-    this.templateCard = null;        // Template pour clonage
-    this.visibleCards = [];          // Cartes Webflow existantes
-    this.clonedCards = [];           // Track des cartes clonées
-    this.initialLoadComplete = false; // État de chargement initial
-    
     this.init();
   }
 
@@ -50,61 +43,28 @@ class PropertyManager {
     console.log('🏠 Initialisation PropertyManager...');
     const startTime = performance.now();
     
-    // 1. D'abord, récupérer et afficher la première page
+    // Enregistrer toutes les propriétés
     await this.registerAllProperties();
     
-    // 2. Ensuite, configurer les cartes et template
-    this.setupCardsAndTemplate();
+    // Stocker l'état initial des prix
+    this.storeInitialPriceStates();
     
-    // 3. Initialiser les écouteurs d'événements
+    // Initialiser les écouteurs d'événements pour les filtres
     this.setupFilterListeners();
     
-    // 4. Marquer comme chargé
-    this.initialLoadComplete = true;
-    
     const initTime = Math.round(performance.now() - startTime);
-    console.log(`✅ PropertyManager initialisé en ${initTime}ms avec pagination`);
+    console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
     
+    // Initialiser la pagination après un court délai
+    setTimeout(() => {
+      this.applyInitialPagination();
+    }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
+
     // Export global
     window.propertyManager = this;
     
     // Nettoyage automatique du cache
     this.setupCacheCleanup();
-}
-
-  setupCardsAndTemplate() {
-    // Récupérer toutes les cartes visibles créées par Webflow
-    this.visibleCards = Array.from(document.querySelectorAll('.housing-item'));
-    console.log(`📦 ${this.visibleCards.length} cartes Webflow trouvées`);
-    
-    // Prendre la première carte comme template
-    if (this.visibleCards.length > 0) {
-      this.templateCard = this.visibleCards[0].cloneNode(true);
-      this.cleanTemplate(this.templateCard);
-      console.log('✅ Template de carte créé');
-    }
-  }
-
-  cleanTemplate(template) {
-    // Nettoyer le template pour réutilisation
-    template.style.display = 'none';
-    template.classList.add('template-card');
-    
-    const link = template.querySelector('.lien-logement');
-    if (link) {
-      link.href = '#';
-      link.removeAttribute('data-property-id');
-    }
-  }
-
-  cleanupClonedCards() {
-    // Supprimer toutes les cartes clonées précédentes
-    this.clonedCards.forEach(card => {
-      if (card && card.parentNode) {
-        card.parentNode.removeChild(card);
-      }
-    });
-    this.clonedCards = [];
   }
 
   // Configuration du nettoyage automatique du cache
@@ -125,38 +85,53 @@ class PropertyManager {
   // ================================
 
   async registerAllProperties() {
-  console.log('📝 Synchronisation initiale des propriétés...');
-  
-  try {
-    // 🆕 CHANGEMENT : Charger seulement la première page
-    const response = await fetch(`${window.CONFIG.API_URL}/sync-webflow-properties?page=1&limit=${this.pageSize}`);
-    const data = await response.json();
+    console.log('📝 Enregistrement des propriétés...');
+    const allMetadata = [];
     
-    if (data.success) {
+    // NOUVEAU : Collecter toutes les données d'abord
+    this.propertyElements.forEach(element => {
+      const href = element.getAttribute('href');
+      const propertyId = href.split('/').pop();
+      
+      if (propertyId) {
+        const metadata = this.extractPropertyMetadata(element);
+        element.setAttribute('data-property-id', propertyId);
+        
+        // Au lieu d'envoyer directement, on stocke
+        allMetadata.push({
+          property_id: propertyId,
+          ...metadata
+        });
+      }
+    });
+    
+    // NOUVEAU : Envoyer TOUT en UNE SEULE fois
+    try {
+      console.log(`📤 Envoi de ${allMetadata.length} propriétés en une requête...`);
+      
+      const response = await fetch(`${window.CONFIG.API_URL}/register-bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: allMetadata })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
       this.propertiesRegistered = true;
-      this.totalResults = data.total;
-      this.totalPages = data.total_pages;
-      this.currentPage = data.page;
+      this.registeredCount = data.count;
+      console.log(`✅ ${data.count} propriétés enregistrées en une fois !`);
       
-      // 🆕 CHANGEMENT : Ne plus stocker toutes les propriétés
-      // this.allPropertiesData = data.properties; // SUPPRIMER
+    } catch (error) {
+      console.error('❌ Erreur bulk registration:', error);
+      console.log('Fallback sur méthode individuelle...');
       
-      console.log(`✅ Page ${data.page}/${data.total_pages} chargée (${data.properties.length}/${data.total} propriétés)`);
-      
-      // Afficher directement la première page
-      this.displayFilteredProperties(data.properties);
-      this.renderPagination();
-      
-      // Scanner le DOM pour les éléments visibles
-      this.scanVisibleProperties();
-    } else {
-      throw new Error(data.error || 'Erreur de synchronisation');
+      // Si ça échoue, on revient à l'ancienne méthode
+      await this.registerAllPropertiesOldWay();
     }
-    
-  } catch (error) {
-    console.error('❌ Erreur sync Webflow:', error);
   }
-}
 
   // Nouvelle fonction avec l'ancienne méthode en cas de fallback
   async registerAllPropertiesOldWay() {
@@ -184,17 +159,6 @@ class PropertyManager {
     }
   }
 
-  // 🆕 Nouvelle méthode pour scanner les éléments visibles
-  scanVisibleProperties() {
-    // Juste pour marquer les éléments visibles avec leur ID
-    this.propertyElements.forEach(element => {
-      const href = element.getAttribute('href');
-      const propertyId = href.split('/').pop();
-      element.setAttribute('data-property-id', propertyId);
-    });
-    console.log(`✅ ${this.propertyElements.length} éléments DOM marqués`);
-  }
-  
   extractPropertyMetadata(element) {
     // Récupérer les URLs iCal
     const icalUrls = [];
@@ -436,64 +400,6 @@ class PropertyManager {
     }
   }
 
-  updateExistingCard(card, propertyData) {
-  const fullData = this.allPropertiesData.find(p => p.id === propertyData.id) || propertyData;
-  
-  // Lien principal
-  const link = card.querySelector('.lien-logement');
-  if (link) {
-    link.href = `/locations-saisonnieres/${fullData.id}`;
-    link.setAttribute('data-property-id', fullData.id);
-  }
-  
-  // 🆕 METTRE À JOUR TOUTES LES DONNÉES (pas seulement le prix)
-  
-  // Images
-  const mainImage = card.querySelector('.image-main');
-  if (mainImage && fullData.image_url) {
-    mainImage.src = fullData.image_url;
-    mainImage.alt = fullData.name || 'Logement';
-  }
-  
-  const hostImage = card.querySelector('.image-hote-main');
-  if (hostImage && fullData.host_image_url) {
-    hostImage.src = fullData.host_image_url;
-  }
-  
-  // Nom du logement
-  const nameElement = card.querySelector('.text-nom-logement-card');
-  if (nameElement && fullData.name) {
-    const readableName = fullData.name
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    nameElement.textContent = readableName;
-  }
-  
-  // Adresse
-  const addressElement = card.querySelector('.adresse');
-  if (addressElement && fullData.address) {
-    addressElement.textContent = fullData.address;
-  }
-  
-  // Nom de l'hôte
-  const hostNameElement = card.querySelector('.bloc-h-te-main div:last-child');
-  if (hostNameElement && fullData.host_name) {
-    hostNameElement.textContent = fullData.host_name;
-  }
-  
-  // Prix
-  this.updateCardPrice(card, fullData);
-  
-  // Données cachées
-  this.updateHiddenElements(card, fullData);
-  
-  // Distance si applicable
-  if (propertyData.distance !== undefined) {
-    this.updateDistanceDisplay(card, propertyData.distance);
-  }
-}
-
   resetPriceDisplay() {
     console.log('🔄 Réinitialisation des prix...');
     
@@ -527,23 +433,22 @@ class PropertyManager {
   // ================================
 
   buildCacheKey(filters) {
-  // 🆕 Ajouter la page dans la clé
-  const keyParts = [
-    filters.start || 'no-start',
-    filters.end || 'no-end',
-    filters.capacity || 'no-capacity',
-    filters.price_max || 'no-price',
-    filters.latitude || 'no-lat',
-    filters.longitude || 'no-lng',
-    (filters.amenities || []).sort().join(',') || 'no-amenities',
-    (filters.options || []).sort().join(',') || 'no-options',
-    (filters.types || []).sort().join(',') || 'no-types',
-    this.currentPage, // 🆕 Important pour le cache
-    this.pageSize
-  ];
-  
-  return keyParts.join('|');
-}
+    const keyParts = [
+      filters.start || 'no-start',
+      filters.end || 'no-end',
+      filters.capacity || 'no-capacity',
+      filters.price_max || 'no-price',
+      filters.latitude || 'no-lat',
+      filters.longitude || 'no-lng',
+      (filters.amenities || []).sort().join(',') || 'no-amenities',
+      (filters.options || []).sort().join(',') || 'no-options',
+      (filters.types || []).sort().join(',') || 'no-types',
+      this.currentPage,
+      this.pageSize
+    ];
+    
+    return keyParts.join('|');
+  }
 
   setInCache(key, data) {
     const maxCacheSize = window.CONFIG?.PERFORMANCE?.cacheSize || 100;
@@ -711,13 +616,6 @@ class PropertyManager {
   }
 
   async applyFilters(resetPage = true) {
-    // 🆕 TEMPORAIRE : Debug
-    console.log('🔍 Debug applyFilters:');
-    console.log('- propertiesRegistered:', this.propertiesRegistered);
-    console.log('- registeredCount:', this.registeredCount);
-    console.log('- totalResults:', this.totalResults);
-    console.log('- DOM elements:', document.querySelectorAll('.housing-item').length);
-    
     if (this.isFiltering || !this.propertiesRegistered) return;
 
     if (this.filterTimeout) {
@@ -735,7 +633,6 @@ class PropertyManager {
     }
     
     const filters = this.getFilterValues();
-  
     this.updateCurrentFilters(filters);
     
     try {
@@ -844,133 +741,44 @@ class PropertyManager {
   }
 
   displayFilteredProperties(properties) {
-  const container = document.querySelector('.collection-grid, .collection-list');
-  if (!container) {
-    console.error('❌ Conteneur de collection non trouvé');
-    return;
-  }
-  
-  // Nettoyer les cartes clonées précédentes
-  this.cleanupClonedCards();
-  
-  // Cacher toutes les cartes existantes
-  this.visibleCards.forEach(card => {
-    card.style.display = 'none';
-  });
-  
-  if (properties.length === 0) {
-    this.showNoResults(true);
-    return;
-  }
-  
-  this.showNoResults(false);
-  
-  // Afficher les propriétés
-  properties.forEach((propertyData, index) => {
-    let card;
+    if (properties.length === 0) {
+      document.querySelectorAll('.housing-item').forEach(item => {
+        item.style.display = 'none';
+      });
+      this.showNoResults(true);
+      return;
+    }
     
-    if (index < this.visibleCards.length) {
-      // Réutiliser une carte Webflow existante
-      card = this.visibleCards[index];
-      this.updateExistingCard(card, propertyData);
-      card.style.display = '';
-    } else if (this.templateCard) {
-      // Cloner le template pour les résultats > 16
-      card = this.createCardFromTemplate(propertyData);
-      if (card) {
-        container.appendChild(card);
-        this.clonedCards.push(card);
+    this.showNoResults(false);
+    
+    document.querySelectorAll('.housing-item').forEach(item => {
+      item.style.display = 'none';
+    });
+    
+    const housingContainer = document.querySelector('.collection-grid');
+    if (!housingContainer) {
+      console.error('❌ Conteneur de logements non trouvé');
+      return;
+    }
+    
+    properties.forEach(propData => {
+      const element = document.querySelector(`.lien-logement[data-property-id="${propData.id}"]`);
+      if (element) {
+        const housingItem = element.closest('.housing-item');
+        if (housingItem) {
+          housingItem.style.display = '';
+          
+          if (this.searchLocation && propData.distance !== undefined) {
+            this.updateDistanceDisplay(housingItem, propData.distance);
+          }
+          
+          housingContainer.appendChild(housingItem);
+        }
       }
-    }
-  });
-  
-  console.log(`✅ Affiché: ${Math.min(properties.length, this.visibleCards.length)} réutilisées + ${this.clonedCards.length} clonées`);
-}
-
-updateExistingCard(card, propertyData) {
-  // Lien principal
-  const link = card.querySelector('.lien-logement');
-  if (link) {
-    link.href = `/locations-saisonnieres/${propertyData.id}`;
-    link.setAttribute('data-property-id', propertyData.id);
+    });
+    
+    console.log(`✅ ${properties.length} propriétés affichées`);
   }
-  
-  // Image principale
-  const mainImage = card.querySelector('.image-main');
-  if (mainImage && propertyData.image_url) {
-    mainImage.src = propertyData.image_url;
-    mainImage.alt = propertyData.name || 'Logement';
-  }
-  
-  // Image de l'hôte
-  const hostImage = card.querySelector('.image-hote-main');
-  if (hostImage && propertyData.host_image_url) {
-    hostImage.src = propertyData.host_image_url;
-  }
-  
-  // Nom du logement
-  const nameElement = card.querySelector('.text-nom-logement-card');
-  if (nameElement && propertyData.name) {
-    nameElement.textContent = propertyData.name;
-  }
-  
-  // Adresse
-  const addressElement = card.querySelector('.adresse');
-  if (addressElement && propertyData.address) {
-    addressElement.textContent = propertyData.address;
-  }
-  
-  // Prix
-  this.updateCardPrice(card, propertyData);
-  
-  // Données cachées pour les filtres
-  this.updateHiddenElements(card, propertyData);
-  
-  // Distance si applicable
-  if (propertyData.distance !== undefined) {
-    this.updateDistanceDisplay(card, propertyData.distance);
-  }
-}
-
-updateHiddenElements(card, propertyData) {
-  // URLs iCal (important pour le calendrier)
-  for (let i = 1; i <= 4; i++) {
-    const icalElement = card.querySelector(`[data-ical-${i}]`);
-    if (icalElement && propertyData.ical_urls && propertyData.ical_urls[i-1]) {
-      icalElement.setAttribute(`data-ical-${i}`, propertyData.ical_urls[i-1]);
-    }
-  }
-  
-  // Équipements
-  const equipmentElement = card.querySelector('[data-equipements]');
-  if (equipmentElement && propertyData.amenities) {
-    equipmentElement.setAttribute('data-equipements', propertyData.amenities.join(', '));
-  }
-  
-  // Options
-  const optionElement = card.querySelector('[data-option-accueil]');
-  if (optionElement && propertyData.options) {
-    optionElement.setAttribute('data-option-accueil', propertyData.options.join(', '));
-  }
-  
-  // Mode de location
-  const modeElement = card.querySelector('[data-mode-location]');
-  if (modeElement && propertyData.type) {
-    modeElement.setAttribute('data-mode-location', propertyData.type);
-  }
-  
-  // Capacité
-  const capacityElement = card.querySelector('[data-voyageurs]');
-  if (capacityElement && propertyData.capacity) {
-    capacityElement.setAttribute('data-voyageurs', propertyData.capacity);
-  }
-  
-  // JSON tarifs
-  const jsonElement = card.querySelector('[data-json-tarifs-line]');
-  if (jsonElement && propertyData.pricing_data) {
-    jsonElement.setAttribute('data-json-tarifs-line', JSON.stringify(propertyData.pricing_data));
-  }
-}
 
   updateDistanceDisplay(housingItem, distance) {
     const distanceElement = housingItem.querySelector('.distance');
@@ -1071,47 +879,24 @@ updateHiddenElements(card, propertyData) {
   // PAGINATION
   // ================================
 
-  async changePage(newPage) {
-  if (newPage < 1 || newPage > this.totalPages || newPage === this.currentPage) {
-    return;
-  }
-  
-  this.currentPage = newPage;
-  
-  // 🆕 TOUJOURS faire un appel serveur
-  const hasActiveFilters = Object.keys(this.currentFilters).length > 0;
-  
-  if (!hasActiveFilters) {
-    // Pas de filtres : appeler sync-webflow-properties
-    try {
-      this.showLoading(true);
-      
-      const response = await fetch(`${window.CONFIG.API_URL}/sync-webflow-properties?page=${this.currentPage}&limit=${this.pageSize}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        this.displayFilteredProperties(data.properties);
-        this.totalResults = data.total;
-        this.totalPages = data.total_pages;
-        this.renderPagination();
-      }
-    } catch (error) {
-      console.error('❌ Erreur changement de page:', error);
-      this.showError(true);
-    } finally {
-      this.showLoading(false);
+  changePage(newPage) {
+    if (newPage < 1 || newPage > this.totalPages || newPage === this.currentPage) {
+      return;
     }
-  } else {
-    // Avec filtres : utiliser applyFilters
-    this.applyFilters(false);
+    
+    this.currentPage = newPage;
+    
+    if (Object.keys(this.currentFilters).length > 0) {
+      this.applyFilters(false);
+    } else {
+      this.applySimplePagination();
+    }
+    
+    window.scrollTo({
+      top: document.querySelector('.collection-list-wrapper')?.offsetTop - 100 || 0,
+      behavior: 'smooth'
+    });
   }
-  
-  // Scroll vers le haut
-  window.scrollTo({
-    top: document.querySelector('.collection-list-wrapper')?.offsetTop - 100 || 0,
-    behavior: 'smooth'
-  });
-}
 
   renderPagination() {
     const paginationContainer = document.querySelector('.custom-pagination');
@@ -1208,7 +993,20 @@ updateHiddenElements(card, propertyData) {
   }
 
   applyInitialPagination() {
-    console.log('📄 Pagination initiale déjà appliquée dans displayInitialPage()');
+    if (!this.propertiesRegistered) return;
+    
+    const allHousingItems = document.querySelectorAll('.housing-item');
+    this.totalResults = this.registeredCount;
+    this.totalPages = Math.ceil(this.totalResults / this.pageSize);
+    this.currentPage = 1;
+    
+    console.log(`📄 Pagination initiale: ${allHousingItems.length} visibles sur ${this.totalResults} total`);
+    
+    if (allHousingItems.length < this.totalResults) {
+      this.applyFilters(true);
+    } else {
+      this.applySimplePagination();
+    }
   }
 
   applySimplePagination() {
