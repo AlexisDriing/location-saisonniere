@@ -590,11 +590,48 @@ class PropertyManager {
       addressElement.textContent = cityCountry;
     }
     
-    // Prix
-    const priceElement = newCard.querySelector('.texte-prix');
-    if (priceElement && propData.price) {
-      priceElement.innerHTML = `Dès <strong>${propData.price}€ / nuit</strong>`;
+    // Prix avec gestion du prix barré
+const priceElement = newCard.querySelector('.texte-prix');
+const pourcentageElement = newCard.querySelector('.pourcentage');
+
+if (priceElement && propData.pricing_data) {
+  const pricingData = propData.pricing_data;
+  
+  // Récupérer le prix de base (première saison)
+  const basePrice = propData.price || (pricingData.seasons?.[0]?.price || 100);
+  
+  // Calculer le prix plateforme moyen
+  let platformPrice = basePrice;
+  if (pricingData.seasons?.[0]?.platformPrices) {
+    const prices = Object.values(pricingData.seasons[0].platformPrices);
+    if (prices.length > 0) {
+      platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
     }
+  }
+  
+  // Afficher avec prix barré si différent
+  if (platformPrice > basePrice) {
+    priceElement.innerHTML = `Dès <del>${platformPrice}€</del> <strong>${basePrice}€ / nuit</strong>`;
+    
+    // Calculer et afficher le pourcentage
+    if (pourcentageElement) {
+      const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
+      pourcentageElement.textContent = `-${discount}%`;
+      pourcentageElement.style.display = 'block';
+    }
+  } else {
+    priceElement.innerHTML = `Dès <strong>${basePrice}€ / nuit</strong>`;
+    if (pourcentageElement) {
+      pourcentageElement.style.display = 'none';
+    }
+  }
+} else if (priceElement && propData.price) {
+  // Fallback si pas de pricing_data
+  priceElement.innerHTML = `Dès <strong>${propData.price}€ / nuit</strong>`;
+  if (pourcentageElement) {
+    pourcentageElement.style.display = 'none';
+  }
+}
     
     // Capacité
     const capacityElement = newCard.querySelector('[data-voyageurs]');
