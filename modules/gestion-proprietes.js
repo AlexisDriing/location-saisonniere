@@ -574,6 +574,12 @@ class PropertyManager {
     if (nameElement) {
       nameElement.textContent = propData.name || 'Logement';
     }
+
+    // Nom de l'hôte
+    const hostNameElement = newCard.querySelector('.bloc-h-te-main div:last-child');
+    if (hostNameElement && propData.host_name) {
+      hostNameElement.textContent = propData.host_name;
+    }
     
     // Adresse (formatée ville, pays)
     const addressElement = newCard.querySelector('.adresse');
