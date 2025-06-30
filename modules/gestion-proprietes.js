@@ -1,9 +1,11 @@
-// Gestionnaire principal des propriétés pour la page liste
+// Gestionnaire principal des propriétés pour la page liste - NEW
 class PropertyManager {
   constructor() {
-    this.propertiesRegistered = false;
-    this.registeredCount = 0;
-    this.propertyElements = document.querySelectorAll('.lien-logement');
+    // Templates et containers
+    this.templateElement = null;
+    this.templateClone = null;
+    this.containerElement = null;
+    
     this.isFiltering = false;
     
     // Éléments de l'interface pour les filtres
@@ -21,8 +23,6 @@ class PropertyManager {
     this.startDate = null;
     this.endDate = null;
     this.searchLocation = null;
-    
-    this.initialPriceStates = new Map();
     
     // 🚀 Gestionnaire de performance
     this.requestQueue = [];
@@ -43,11 +43,15 @@ class PropertyManager {
     console.log('🏠 Initialisation PropertyManager...');
     const startTime = performance.now();
     
-    // Enregistrer toutes les propriétés
-    await this.registerAllProperties();
+    // Récupérer le template et le container
+    this.templateElement = document.querySelector('.housing-item');
+    this.containerElement = document.querySelector('.collection-grid');
     
-    // Stocker l'état initial des prix
-    this.storeInitialPriceStates();
+    if (this.templateElement) {
+      // Cloner le template et cacher l'original
+      this.templateClone = this.templateElement.cloneNode(true);
+      this.templateElement.style.display = 'none';
+    }
     
     // Initialiser les écouteurs d'événements pour les filtres
     this.setupFilterListeners();
@@ -55,9 +59,9 @@ class PropertyManager {
     const initTime = Math.round(performance.now() - startTime);
     console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
     
-    // Initialiser la pagination après un court délai
+    // Charger la première page de propriétés
     setTimeout(() => {
-      this.applyInitialPagination();
+      this.applyFilters(true);
     }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
 
     // Export global
@@ -81,214 +85,10 @@ class PropertyManager {
   }
 
   // ================================
-  // ENREGISTREMENT DES PROPRIÉTÉS
-  // ================================
-
-  async registerAllProperties() {
-    console.log('📝 Enregistrement des propriétés...');
-    const allMetadata = [];
-    
-    // NOUVEAU : Collecter toutes les données d'abord
-    this.propertyElements.forEach(element => {
-      const href = element.getAttribute('href');
-      const propertyId = href.split('/').pop();
-      
-      if (propertyId) {
-        const metadata = this.extractPropertyMetadata(element);
-        element.setAttribute('data-property-id', propertyId);
-        
-        // Au lieu d'envoyer directement, on stocke
-        allMetadata.push({
-          property_id: propertyId,
-          ...metadata
-        });
-      }
-    });
-    
-    // NOUVEAU : Envoyer TOUT en UNE SEULE fois
-    try {
-      console.log(`📤 Envoi de ${allMetadata.length} propriétés en une requête...`);
-      
-      const response = await fetch(`${window.CONFIG.API_URL}/register-bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties: allMetadata })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      this.propertiesRegistered = true;
-      this.registeredCount = data.count;
-      console.log(`✅ ${data.count} propriétés enregistrées en une fois !`);
-      
-    } catch (error) {
-      console.error('❌ Erreur bulk registration:', error);
-      console.log('Fallback sur méthode individuelle...');
-      
-      // Si ça échoue, on revient à l'ancienne méthode
-      await this.registerAllPropertiesOldWay();
-    }
-  }
-
-  // Nouvelle fonction avec l'ancienne méthode en cas de fallback
-  async registerAllPropertiesOldWay() {
-    // Votre ancien code de registerAllProperties
-    let promises = [];
-    
-    this.propertyElements.forEach(element => {
-      const href = element.getAttribute('href');
-      const propertyId = href.split('/').pop();
-      
-      if (propertyId) {
-        const metadata = this.extractPropertyMetadata(element);
-        element.setAttribute('data-property-id', propertyId);
-        const promise = this.registerProperty(propertyId, metadata);
-        promises.push(promise);
-      }
-    });
-    
-    try {
-      await Promise.all(promises);
-      this.propertiesRegistered = true;
-      console.log(`✅ ${this.registeredCount} propriétés enregistrées (méthode classique)`);
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'enregistrement des propriétés:', error);
-    }
-  }
-
-  extractPropertyMetadata(element) {
-    // Récupérer les URLs iCal
-    const icalUrls = [];
-    for (let i = 1; i <= 4; i++) {
-      const icalElement = element.querySelector(`[data-ical-${i}]`);
-      if (icalElement) {
-        const icalAttr = icalElement.getAttribute(`data-ical-${i}`);
-        if (icalAttr && icalAttr.trim() !== '') {
-          icalUrls.push(icalAttr.trim());
-        }
-      }
-    }
-
-    // Capacité
-    const capacityElement = element.querySelector('[data-voyageurs]');
-    const capacity = capacityElement ? parseInt(capacityElement.getAttribute('data-voyageurs'), 10) : 1;
-    
-    // Prix
-    const priceElement = element.querySelector('.texte-prix');
-    let price = 0;
-    if (priceElement) {
-      const priceText = priceElement.textContent;
-      const matches = priceText.match(/\d+/g);
-      if (matches && matches.length > 0) {
-        price = parseInt(matches[matches.length - 1], 10);
-      }
-    }
-    
-    // Équipements
-    const amenitiesElement = element.querySelector('[data-equipements]');
-    const amenities = amenitiesElement ? 
-      amenitiesElement.getAttribute('data-equipements').split(',').map(item => item.trim()) : [];
-    
-    // Options
-    const optionsElement = element.querySelector('[data-option-accueil]');
-    const options = optionsElement ? 
-      optionsElement.getAttribute('data-option-accueil').split(',').map(item => item.trim()) : [];
-    
-    // Type de logement
-    const typeElement = element.querySelector('[data-mode-location]');
-    const type = typeElement ? typeElement.getAttribute('data-mode-location') : '';
-    
-    // Adresse
-    const housingItem = element.closest('.housing-item');
-    let address = '';
-    if (housingItem) {
-      const addressElement = housingItem.querySelector('.adresse');
-      if (addressElement) {
-        address = addressElement.textContent.trim();
-      }
-    }
-    
-    // Données de tarification
-    let pricingData = null;
-    if (housingItem) {
-      const jsonElement = housingItem.querySelector('[data-json-tarifs-line], [data-json-tarifs]');
-      if (jsonElement) {
-        const jsonAttr = jsonElement.getAttribute('data-json-tarifs-line') || 
-                        jsonElement.getAttribute('data-json-tarifs');
-        if (jsonAttr) {
-          try {
-            pricingData = JSON.parse(jsonAttr);
-          } catch (error) {
-            console.error(`Erreur parsing tarification pour ${propertyId}:`, error);
-          }
-        }
-      }
-    }
-
-    return {
-      ical_urls: icalUrls,
-      capacity,
-      price,
-      amenities,
-      options,
-      type,
-      address,
-      pricing_data: pricingData
-    };
-  }
-
-  async registerProperty(propertyId, metadata) {
-    try {
-      const response = await fetch(`${window.CONFIG.API_URL}/register-property`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          property_id: propertyId,
-          ...metadata
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        this.registeredCount++;
-        return true;
-      } else {
-        console.error(`❌ Erreur enregistrement ${propertyId}:`, data.error);
-        return false;
-      }
-    } catch (error) {
-      console.error(`❌ Erreur enregistrement ${propertyId}:`, error);
-      return false;
-    }
-  }
-
-  // ================================
   // GESTION DES PRIX
   // ================================
 
-  storeInitialPriceStates() {
-    document.querySelectorAll('.housing-item').forEach(item => {
-      const propertyId = item.querySelector('.lien-logement')?.getAttribute('data-property-id');
-      if (propertyId) {
-        const textePrix = item.querySelector('.texte-prix')?.innerHTML || '';
-        const pourcentage = item.querySelector('.pourcentage');
-        
-        this.initialPriceStates.set(propertyId, {
-          textePrix,
-          pourcentage: pourcentage?.textContent || '',
-          pourcentageDisplay: pourcentage?.style.display || 'none'
-        });
-      }
-    });
-  }
-
   async updatePricesForDates(startDate, endDate) {
-    if (!this.propertiesRegistered) return;
-    
     try {
       console.log('💰 Mise à jour des prix pour:', startDate, 'à', endDate);
       
@@ -403,29 +203,17 @@ class PropertyManager {
   resetPriceDisplay() {
     console.log('🔄 Réinitialisation des prix...');
     
-    document.querySelectorAll('.housing-item').forEach(item => {
-      const propertyId = item.querySelector('.lien-logement')?.getAttribute('data-property-id');
-      const texteTotal = item.querySelector('.text-total');
-      const textePrix = item.querySelector('.texte-prix');
-      const pourcentage = item.querySelector('.pourcentage');
-      
-      if (texteTotal) {
-        texteTotal.style.display = 'none';
-      }
-      
-      if (propertyId && this.initialPriceStates.has(propertyId)) {
-        const initialState = this.initialPriceStates.get(propertyId);
-        
-        if (textePrix) {
-          textePrix.innerHTML = initialState.textePrix;
-        }
-        
-        if (pourcentage) {
-          pourcentage.textContent = initialState.pourcentage;
-          pourcentage.style.display = initialState.pourcentageDisplay;
-        }
-      }
+    // Masquer tous les totaux
+    document.querySelectorAll('.text-total').forEach(element => {
+      element.style.display = 'none';
     });
+    
+    // Si des dates étaient sélectionnées, les effacer et recharger
+    if (this.startDate || this.endDate) {
+      this.startDate = null;
+      this.endDate = null;
+      this.applyFilters(true);
+    }
   }
 
   // ================================
@@ -616,7 +404,7 @@ class PropertyManager {
   }
 
   async applyFilters(resetPage = true) {
-    if (this.isFiltering || !this.propertiesRegistered) return;
+    if (this.isFiltering) return;
 
     if (this.filterTimeout) {
         clearTimeout(this.filterTimeout);
@@ -741,43 +529,123 @@ class PropertyManager {
   }
 
   displayFilteredProperties(properties) {
+    if (!this.containerElement || !this.templateClone) {
+      console.error('❌ Template ou conteneur non trouvé');
+      return;
+    }
+    
+    // Vider le conteneur (sauf le template caché)
+    const existingItems = this.containerElement.querySelectorAll('.housing-item:not([style*="display: none"])');
+    existingItems.forEach(item => item.remove());
+    
     if (properties.length === 0) {
-      document.querySelectorAll('.housing-item').forEach(item => {
-        item.style.display = 'none';
-      });
       this.showNoResults(true);
       return;
     }
     
     this.showNoResults(false);
     
-    document.querySelectorAll('.housing-item').forEach(item => {
-      item.style.display = 'none';
-    });
-    
-    const housingContainer = document.querySelector('.collection-grid');
-    if (!housingContainer) {
-      console.error('❌ Conteneur de logements non trouvé');
-      return;
-    }
-    
+    // Créer les nouvelles cards
     properties.forEach(propData => {
-      const element = document.querySelector(`.lien-logement[data-property-id="${propData.id}"]`);
-      if (element) {
-        const housingItem = element.closest('.housing-item');
-        if (housingItem) {
-          housingItem.style.display = '';
-          
-          if (this.searchLocation && propData.distance !== undefined) {
-            this.updateDistanceDisplay(housingItem, propData.distance);
-          }
-          
-          housingContainer.appendChild(housingItem);
-        }
+      const newCard = this.createPropertyCard(propData);
+      if (newCard) {
+        this.containerElement.appendChild(newCard);
       }
     });
     
     console.log(`✅ ${properties.length} propriétés affichées`);
+  }
+
+  createPropertyCard(propData) {
+    if (!this.templateClone) return null;
+    
+    const newCard = this.templateClone.cloneNode(true);
+    newCard.style.display = '';
+    
+    // Lien principal
+    const linkElement = newCard.querySelector('.lien-logement');
+    if (linkElement) {
+      linkElement.href = `/locations-saisonnieres/${propData.slug || propData.id}`;
+      linkElement.setAttribute('data-property-id', propData.id);
+    }
+    
+    // Nom du logement  
+    const nameElement = newCard.querySelector('.nom-logement');
+    if (nameElement) {
+      nameElement.textContent = propData.name || 'Logement';
+    }
+    
+    // Adresse (formatée ville, pays)
+    const addressElement = newCard.querySelector('.adresse');
+    if (addressElement && propData.address) {
+      const addressParts = propData.address.split(',').map(part => part.trim());
+      const cityCountry = addressParts.length >= 2 ? 
+        addressParts.slice(-2).join(', ') : propData.address;
+      addressElement.textContent = cityCountry;
+    }
+    
+    // Prix
+    const priceElement = newCard.querySelector('.texte-prix');
+    if (priceElement && propData.price) {
+      priceElement.innerHTML = `Dès <strong>${propData.price}€ / nuit</strong>`;
+    }
+    
+    // Capacité
+    const capacityElement = newCard.querySelector('[data-voyageurs]');
+    if (capacityElement && propData.capacity) {
+      capacityElement.setAttribute('data-voyageurs', propData.capacity);
+      const capacityText = propData.capacity > 1 ? 
+        `${propData.capacity} voyageurs` : '1 voyageur';
+      capacityElement.textContent = capacityText;
+    }
+    
+    // Distance (si recherche géographique)
+    if (this.searchLocation && propData.distance !== undefined) {
+      const distanceElement = newCard.querySelector('.distance');
+      const separatorElement = newCard.querySelector('.separateur');
+      
+      if (distanceElement) {
+        distanceElement.textContent = `${Math.round(propData.distance)} km`;
+        distanceElement.style.display = 'inline';
+      }
+      if (separatorElement) {
+        separatorElement.style.display = 'inline';
+      }
+    }
+    
+    // Image principale
+    if (propData.image) {
+      const imageElement = newCard.querySelector('.image-main');
+      if (imageElement) {
+        imageElement.style.backgroundImage = `url(${propData.image})`;
+      }
+    }
+    
+    // Type de logement
+    const typeElement = newCard.querySelector('[data-mode-location]');
+    if (typeElement && propData.type) {
+      typeElement.setAttribute('data-mode-location', propData.type);
+    }
+    
+    // Équipements
+    const amenitiesElement = newCard.querySelector('[data-equipements]');
+    if (amenitiesElement && propData.amenities) {
+      amenitiesElement.setAttribute('data-equipements', propData.amenities.join(', '));
+    }
+    
+    // Options
+    const optionsElement = newCard.querySelector('[data-option-accueil]');
+    if (optionsElement && propData.options) {
+      optionsElement.setAttribute('data-option-accueil', propData.options.join(', '));
+    }
+    
+    // JSON tarifs pour le calcul des prix
+    const tarifElement = newCard.querySelector('[data-json-tarifs-line]');
+    if (tarifElement && propData.pricing_data) {
+      tarifElement.setAttribute('data-json-tarifs-line', JSON.stringify(propData.pricing_data));
+    }
+    
+    return newCard;
   }
 
   updateDistanceDisplay(housingItem, distance) {
@@ -889,7 +757,7 @@ class PropertyManager {
     if (Object.keys(this.currentFilters).length > 0) {
       this.applyFilters(false);
     } else {
-      this.applySimplePagination();
+      this.applyFilters(false);
     }
     
     window.scrollTo({
@@ -990,35 +858,6 @@ class PropertyManager {
     
     pageItem.appendChild(pageLink);
     paginationList.appendChild(pageItem);
-  }
-
-  applyInitialPagination() {
-    if (!this.propertiesRegistered) return;
-    
-    const allHousingItems = document.querySelectorAll('.housing-item');
-    this.totalResults = this.registeredCount;
-    this.totalPages = Math.ceil(this.totalResults / this.pageSize);
-    this.currentPage = 1;
-    
-    console.log(`📄 Pagination initiale: ${allHousingItems.length} visibles sur ${this.totalResults} total`);
-    
-    if (allHousingItems.length < this.totalResults) {
-      this.applyFilters(true);
-    } else {
-      this.applySimplePagination();
-    }
-  }
-
-  applySimplePagination() {
-    const allHousingItems = document.querySelectorAll('.housing-item');
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
-    
-    allHousingItems.forEach((item, index) => {
-      item.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
-    });
-    
-    this.renderPagination();
   }
 
   // ================================
@@ -1127,7 +966,7 @@ class PropertyManager {
     });
     
     this.currentPage = 1;
-    this.applyInitialPagination();
+    this.applyFilters(true);
     this.showNoResults(false);
     this.showError(false);
     
@@ -1199,7 +1038,6 @@ class PropertyManager {
       endDate: this.endDate,
       searchLocation: this.searchLocation,
       isFiltering: this.isFiltering,
-      propertiesRegistered: this.propertiesRegistered,
       performanceStats: this.getPerformanceStats()
     };
   }
