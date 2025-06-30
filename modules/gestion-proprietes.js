@@ -569,8 +569,8 @@ class PropertyManager {
       linkElement.setAttribute('data-property-id', propData.id);
     }
     
-    // Nom du logement  
-    const nameElement = newCard.querySelector('.nom-logement');
+    // Nom du logement - CORRECTION du sélecteur
+    const nameElement = newCard.querySelector('.text-nom-logement-card');
     if (nameElement) {
       nameElement.textContent = propData.name || 'Logement';
     }
