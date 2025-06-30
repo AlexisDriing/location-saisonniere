@@ -613,13 +613,24 @@ class PropertyManager {
       }
     }
     
-    // Image principale
-    if (propData.image) {
-      const imageElement = newCard.querySelector('.image-main');
-      if (imageElement) {
-        imageElement.style.backgroundImage = `url(${propData.image})`;
-      }
-    }
+    // Image principale - Webflow utilise img + background-image
+if (propData.image) {
+  const imageElement = newCard.querySelector('.image-main');
+  if (imageElement) {
+    // Mettre à jour le src de l'img
+    imageElement.src = propData.image;
+    // ET aussi le background-image
+    imageElement.style.backgroundImage = `url(${propData.image})`;
+  }
+}
+
+// Image de l'hôte
+if (propData.host_image) {
+  const hostImageElement = newCard.querySelector('.image-hote-main');
+  if (hostImageElement) {
+    hostImageElement.src = propData.host_image;
+  }
+}
     
     // Type de logement
     const typeElement = newCard.querySelector('[data-mode-location]');
