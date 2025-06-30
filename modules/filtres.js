@@ -804,24 +804,17 @@ updateMobileFilterIndicator() {
   // INTÉGRATION AVEC PROPERTYMANAGER
   // ================================
 
-  async triggerPropertyManagerFilter() {
-    // Attendre que PropertyManager soit disponible
-    let attempts = 0;
-    while (!window.propertyManager && attempts < 20) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
+  triggerPropertyManagerFilter() {
     if (window.propertyManager) {
-        // Mettre à jour les filtres de prix si défini
-        if (this.state.prixMax !== null) {
-            window.propertyManager.currentFilters.price_max = this.state.prixMax;
-        }
-        window.propertyManager.applyFilters();
+      // Mettre à jour les filtres de prix si défini
+      if (this.state.prixMax !== null) {
+        window.propertyManager.currentFilters.price_max = this.state.prixMax;
+      }
+      window.propertyManager.applyFilters();
     } else {
-        console.error("PropertyManager non disponible après 2 secondes");
+      console.warn("PropertyManager non initialisé...");
     }
-}
+  }
 
   updatePricesIfDatesSelected() {
     if (window.propertyManager && window.propertyManager.startDate && window.propertyManager.endDate) {
