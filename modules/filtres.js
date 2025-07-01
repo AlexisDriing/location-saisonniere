@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - VERSION CORRIGÉE
+// Gestionnaire complet des filtres - VERSION CORRIGÉE V2
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -188,6 +188,8 @@ class FiltersManager {
     // Équipements
     if (this.elements.boutonValiderEquipements) {
       this.elements.boutonValiderEquipements.addEventListener('click', () => {
+        // IMPORTANT : Mettre à jour l'état temporaire avant de confirmer
+        this.updateTempEquipements();
         this.confirmEquipementsChanges();
         this.triggerPropertyManagerFilter();
         this.closeDropdown(this.elements.boutonFiltreEquipements);
@@ -204,6 +206,8 @@ class FiltersManager {
     // Préférences
     if (this.elements.boutonValiderPreferences) {
       this.elements.boutonValiderPreferences.addEventListener('click', () => {
+        // IMPORTANT : Mettre à jour l'état temporaire avant de confirmer
+        this.updateTempPreferences();
         this.confirmPreferencesChanges();
         this.triggerPropertyManagerFilter();
         this.closeDropdown(this.elements.boutonFiltrePreferences);
@@ -272,18 +276,13 @@ class FiltersManager {
       if (e.target.id === 'bouton-valider-mobile') {
         e.preventDefault();
         
-        // Confirmer les changements temporaires
-        if (this.tempState.equipements.length > 0 || 
-            this.state.equipements.length !== this.tempState.equipements.length) {
-          this.confirmEquipementsChanges();
-        }
+        // IMPORTANT : Toujours confirmer les changements basés sur l'état actuel des checkboxes
+        this.updateTempEquipements();
+        this.updateTempPreferences();
         
-        if (this.tempState.optionsAccueil.length > 0 || 
-            this.tempState.modesLocation.length > 0 ||
-            this.state.optionsAccueil.length !== this.tempState.optionsAccueil.length ||
-            this.state.modesLocation.length !== this.tempState.modesLocation.length) {
-          this.confirmPreferencesChanges();
-        }
+        // Confirmer tous les changements
+        this.confirmEquipementsChanges();
+        this.confirmPreferencesChanges();
         
         // Gérer le prix
         const mobileSlider = document.querySelector('.bloc-slider.mobile-slider[fs-rangeslider-max="500"]');
@@ -323,6 +322,7 @@ class FiltersManager {
   // ================================
 
   updateTempEquipements() {
+    // IMPORTANT : Toujours réinitialiser l'état temporaire pour éviter les doublons
     this.tempState.equipements = [];
     
     this.equipementCheckboxes.forEach(container => {
@@ -330,7 +330,11 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        this.tempState.equipements.push(label.textContent.trim());
+        const equipementName = label.textContent.trim();
+        // Vérifier qu'on n'ajoute pas de doublon
+        if (!this.tempState.equipements.includes(equipementName)) {
+          this.tempState.equipements.push(equipementName);
+        }
       }
     });
     
@@ -338,6 +342,7 @@ class FiltersManager {
   }
 
   updateTempPreferences() {
+    // IMPORTANT : Toujours réinitialiser l'état temporaire pour éviter les doublons
     this.tempState.optionsAccueil = [];
     this.tempState.modesLocation = [];
     
@@ -346,7 +351,11 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        this.tempState.optionsAccueil.push(label.textContent.trim());
+        const optionName = label.textContent.trim();
+        // Vérifier qu'on n'ajoute pas de doublon
+        if (!this.tempState.optionsAccueil.includes(optionName)) {
+          this.tempState.optionsAccueil.push(optionName);
+        }
       }
     });
     
@@ -355,7 +364,11 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        this.tempState.modesLocation.push(label.textContent.trim());
+        const modeName = label.textContent.trim();
+        // Vérifier qu'on n'ajoute pas de doublon
+        if (!this.tempState.modesLocation.includes(modeName)) {
+          this.tempState.modesLocation.push(modeName);
+        }
       }
     });
     
@@ -483,9 +496,8 @@ class FiltersManager {
     if (this.elements.boutonFiltreEquipements) {
       this.elements.boutonFiltreEquipements.addEventListener('click', () => {
         setTimeout(() => {
+          // Synchroniser les checkboxes avec l'état confirmé
           this.syncCheckboxesWithState();
-          // Réinitialiser l'état temporaire après synchronisation
-          this.updateTempEquipements();
         }, 50);
       });
     }
@@ -494,9 +506,8 @@ class FiltersManager {
     if (this.elements.boutonFiltrePreferences) {
       this.elements.boutonFiltrePreferences.addEventListener('click', () => {
         setTimeout(() => {
+          // Synchroniser les checkboxes avec l'état confirmé
           this.syncCheckboxesWithState();
-          // Réinitialiser l'état temporaire après synchronisation
-          this.updateTempPreferences();
         }, 50);
       });
     }
