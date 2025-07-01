@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - SOLUTION DE L'AUTRE IA COMPLÉTÉE
+// Gestionnaire complet des filtres - VERSION CORRIGÉE
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -68,71 +68,70 @@ class FiltersManager {
     window.filtersManager = this;
   }
 
-  // REMPLACEZ votre méthode updateMobileFilterIndicator() par celle-ci :
+  updateMobileFilterIndicator() {
+    // Compter les filtres actifs individuellement (sans dates ni localisation)
+    let count = 0;
+    
+    // Compter CHAQUE équipement sélectionné
+    count += this.state.equipements.length;
+    
+    // Compter CHAQUE option d'accueil sélectionnée
+    count += this.state.optionsAccueil.length;
+    
+    // Compter CHAQUE mode de location sélectionné
+    count += this.state.modesLocation.length;
+    
+    // Compter prix max comme 1 filtre (1 si défini)
+    if (this.state.prixMax !== null) {
+      count++;
+    }
+    
+    // Compter voyageurs comme 1 filtre (1 si différent du défaut)
+    if (this.state.adultes !== 1 || this.state.enfants !== 0) {
+      count++;
+    }
+    
+    // Mettre à jour l'interface mobile
+    const numberFilter = document.querySelector('.number-filter');
+    const buttonFilterMobile = document.querySelector('.button-filter-mobile');
+    const textFiltre = document.querySelector('.text-filtre');
+    
+    if (count > 0) {
+      // Afficher le bloc number-filter
+      if (numberFilter) {
+        numberFilter.style.display = 'flex'; // ou 'block' selon votre layout
+      }
+      
+      // Changer la couleur de la bordure du bouton
+      if (buttonFilterMobile) {
+        buttonFilterMobile.style.borderColor = '#235B59';
+        buttonFilterMobile.style.borderWidth = '1px';
+        buttonFilterMobile.style.borderStyle = 'solid';
+      }
+      
+      // Mettre à jour le texte avec le nombre total de filtres
+      if (textFiltre) {
+        textFiltre.textContent = count.toString();
+      }
+    } else {
+      // Masquer si aucun filtre
+      if (numberFilter) {
+        numberFilter.style.display = 'none';
+      }
+      
+      if (buttonFilterMobile) {
+        // Réinitialiser le style du bouton
+        buttonFilterMobile.style.borderColor = '';
+        buttonFilterMobile.style.borderWidth = '';
+        buttonFilterMobile.style.borderStyle = '';
+      }
+      
+      if (textFiltre) {
+        textFiltre.textContent = '0';
+      }
+    }
+  }
 
-updateMobileFilterIndicator() {
-  // Compter les filtres actifs individuellement (sans dates ni localisation)
-  let count = 0;
-  
-  // Compter CHAQUE équipement sélectionné
-  count += this.state.equipements.length;
-  
-  // Compter CHAQUE option d'accueil sélectionnée
-  count += this.state.optionsAccueil.length;
-  
-  // Compter CHAQUE mode de location sélectionné
-  count += this.state.modesLocation.length;
-  
-  // Compter prix max comme 1 filtre (1 si défini)
-  if (this.state.prixMax !== null) {
-    count++;
-  }
-  
-  // Compter voyageurs comme 1 filtre (1 si différent du défaut)
-  if (this.state.adultes !== 1 || this.state.enfants !== 0) {
-    count++;
-  }
-  
-  // Mettre à jour l'interface mobile
-  const numberFilter = document.querySelector('.number-filter');
-  const buttonFilterMobile = document.querySelector('.button-filter-mobile');
-  const textFiltre = document.querySelector('.text-filtre');
-  
-  if (count > 0) {
-    // Afficher le bloc number-filter
-    if (numberFilter) {
-      numberFilter.style.display = 'flex'; // ou 'block' selon votre layout
-    }
-    
-    // Changer la couleur de la bordure du bouton
-    if (buttonFilterMobile) {
-      buttonFilterMobile.style.borderColor = '#235B59';
-      buttonFilterMobile.style.borderWidth = '1px';
-      buttonFilterMobile.style.borderStyle = 'solid';
-    }
-    
-    // Mettre à jour le texte avec le nombre total de filtres
-    if (textFiltre) {
-      textFiltre.textContent = count.toString();
-    }
-  } else {
-    // Masquer si aucun filtre
-    if (numberFilter) {
-      numberFilter.style.display = 'none';
-    }
-    
-    if (buttonFilterMobile) {
-      // Réinitialiser le style du bouton
-      buttonFilterMobile.style.borderColor = '';
-      buttonFilterMobile.style.borderWidth = '';
-      buttonFilterMobile.style.borderStyle = '';
-    }
-    
-    if (textFiltre) {
-      textFiltre.textContent = '0';
-    }
-  }
-}
   // ================================
   // CONFIGURATION INITIALE
   // ================================
@@ -142,27 +141,25 @@ updateMobileFilterIndicator() {
   }
 
   // ================================
-  // GESTION DES ÉVÉNEMENTS - MODIFIÉ
+  // GESTION DES ÉVÉNEMENTS
   // ================================
 
   setupEventListeners() {
-    // Équipements - Ne plus mettre à jour le bouton immédiatement
+    // Équipements - Mise à jour de l'état temporaire seulement
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
         checkbox.addEventListener('change', () => {
-          // MODIFIÉ : Mettre à jour seulement l'état temporaire
           this.updateTempEquipements();
         });
       }
     });
 
-    // Options et modes - Ne plus mettre à jour le bouton immédiatement
+    // Options et modes - Mise à jour de l'état temporaire seulement
     this.optionAccueilCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
         checkbox.addEventListener('change', () => {
-          // MODIFIÉ : Mettre à jour seulement l'état temporaire
           this.updateTempPreferences();
         });
       }
@@ -172,7 +169,6 @@ updateMobileFilterIndicator() {
       const checkbox = container.querySelector('input[type="checkbox"]');
       if (checkbox) {
         checkbox.addEventListener('change', () => {
-          // MODIFIÉ : Mettre à jour seulement l'état temporaire
           this.updateTempPreferences();
         });
       }
@@ -189,10 +185,9 @@ updateMobileFilterIndicator() {
   }
 
   setupActionButtons() {
-    // Équipements - MODIFIÉ
+    // Équipements
     if (this.elements.boutonValiderEquipements) {
       this.elements.boutonValiderEquipements.addEventListener('click', () => {
-        // NOUVEAU : Confirmer les changements
         this.confirmEquipementsChanges();
         this.triggerPropertyManagerFilter();
         this.closeDropdown(this.elements.boutonFiltreEquipements);
@@ -206,10 +201,9 @@ updateMobileFilterIndicator() {
       });
     }
 
-    // Préférences - MODIFIÉ
+    // Préférences
     if (this.elements.boutonValiderPreferences) {
       this.elements.boutonValiderPreferences.addEventListener('click', () => {
-        // NOUVEAU : Confirmer les changements
         this.confirmPreferencesChanges();
         this.triggerPropertyManagerFilter();
         this.closeDropdown(this.elements.boutonFiltrePreferences);
@@ -274,59 +268,58 @@ updateMobileFilterIndicator() {
   }
 
   setupMobileButtons() {
-  document.body.addEventListener('click', (e) => {
-    if (e.target.id === 'bouton-valider-mobile') {
-      e.preventDefault();
-      
-      // NOUVEAU : Confirmer les équipements SI modifiés
-      if (this.tempState.equipements.length > 0) {
-        this.confirmEquipementsChanges();
-      }
-      
-      // NOUVEAU : Confirmer les préférences SI modifiées
-      if (this.tempState.optionsAccueil.length > 0 || this.tempState.modesLocation.length > 0) {
-        this.confirmPreferencesChanges();
-      }
-      
-      // MODIFIÉ : Ne mettre à jour le prix QUE s'il a été changé
-      // On vérifie d'abord si le slider a une valeur différente de 500 (max par défaut)
-      const mobileSlider = document.querySelector('.bloc-slider.mobile-slider[fs-rangeslider-max="500"]');
-      if (mobileSlider) {
-        const displayElement = mobileSlider.querySelector('[fs-rangeslider-element="display-value"]');
-        if (displayElement) {
-          const match = displayElement.textContent.match(/(\d+)/);
-          if (match) {
-            const sliderValue = parseInt(match[1], 10);
-            // Ne mettre à jour QUE si différent de 500 (valeur max/défaut)
-            if (sliderValue < 500) {
-              this.updatePriceFromSlider(true);
+    document.body.addEventListener('click', (e) => {
+      if (e.target.id === 'bouton-valider-mobile') {
+        e.preventDefault();
+        
+        // Confirmer les changements temporaires
+        if (this.tempState.equipements.length > 0 || 
+            this.state.equipements.length !== this.tempState.equipements.length) {
+          this.confirmEquipementsChanges();
+        }
+        
+        if (this.tempState.optionsAccueil.length > 0 || 
+            this.tempState.modesLocation.length > 0 ||
+            this.state.optionsAccueil.length !== this.tempState.optionsAccueil.length ||
+            this.state.modesLocation.length !== this.tempState.modesLocation.length) {
+          this.confirmPreferencesChanges();
+        }
+        
+        // Gérer le prix
+        const mobileSlider = document.querySelector('.bloc-slider.mobile-slider[fs-rangeslider-max="500"]');
+        if (mobileSlider) {
+          const displayElement = mobileSlider.querySelector('[fs-rangeslider-element="display-value"]');
+          if (displayElement) {
+            const match = displayElement.textContent.match(/(\d+)/);
+            if (match) {
+              const sliderValue = parseInt(match[1], 10);
+              if (sliderValue < 500) {
+                this.updatePriceFromSlider(true);
+              }
             }
           }
         }
+        
+        // Gérer les voyageurs
+        if (this.state.adultes !== 1 || this.state.enfants !== 0) {
+          this.updateVoyageursFilter();
+        }
+        
+        this.triggerPropertyManagerFilter();
+        this.closeMobilePopup();
+        this.updateMobileFilterIndicator();
       }
       
-      // MODIFIÉ : Ne mettre à jour les voyageurs QUE s'ils ont changé
-      if (this.state.adultes !== 1 || this.state.enfants !== 0) {
-        this.updateVoyageursFilter();
+      if (e.target.id === 'bouton-effacer-mobile') {
+        e.preventDefault();
+        this.clearAllFilters();
+        this.triggerPropertyManagerFilter();
       }
-      
-      this.triggerPropertyManagerFilter();
-      this.closeMobilePopup();
-      
-      // IMPORTANT : Toujours mettre à jour l'indicateur à la fin
-      this.updateMobileFilterIndicator();
-    }
-    
-    if (e.target.id === 'bouton-effacer-mobile') {
-      e.preventDefault();
-      this.clearAllFilters();
-      this.triggerPropertyManagerFilter();
-    }
-  });
-}
+    });
+  }
 
   // ================================
-  // NOUVELLES MÉTHODES POUR L'ÉTAT TEMPORAIRE
+  // ÉTAT TEMPORAIRE
   // ================================
 
   updateTempEquipements() {
@@ -341,7 +334,6 @@ updateMobileFilterIndicator() {
       }
     });
     
-    // Ne PAS mettre à jour le bouton ici
     console.log('État temporaire équipements:', this.tempState.equipements);
   }
 
@@ -367,7 +359,6 @@ updateMobileFilterIndicator() {
       }
     });
     
-    // Ne PAS mettre à jour le bouton ici
     console.log('État temporaire préférences:', {
       options: this.tempState.optionsAccueil,
       modes: this.tempState.modesLocation
@@ -382,10 +373,8 @@ updateMobileFilterIndicator() {
     // Copier l'état temporaire vers l'état confirmé
     this.state.equipements = [...this.tempState.equipements];
     
-    // Maintenant on peut mettre à jour le bouton
+    // Mettre à jour le bouton
     this.updateEquipementsButton(this.state.equipements.length);
-
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
     
     console.log('✅ Équipements confirmés:', this.state.equipements);
@@ -396,11 +385,9 @@ updateMobileFilterIndicator() {
     this.state.optionsAccueil = [...this.tempState.optionsAccueil];
     this.state.modesLocation = [...this.tempState.modesLocation];
     
-    // Maintenant on peut mettre à jour le bouton
+    // Mettre à jour le bouton
     const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
     this.updatePreferencesButton(totalPreferences);
-
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
     
     console.log('✅ Préférences confirmées:', {
@@ -410,21 +397,29 @@ updateMobileFilterIndicator() {
   }
 
   // ================================
-  // SYNCHRONISATION À L'OUVERTURE
+  // SYNCHRONISATION À L'OUVERTURE - CORRIGÉ
   // ================================
 
-  // Méthode pour synchroniser les checkboxes avec l'état confirmé
   syncCheckboxesWithState() {
-    // Synchroniser équipements
+    // IMPORTANT : D'abord copier l'état confirmé vers l'état temporaire
+    this.tempState.equipements = [...this.state.equipements];
+    this.tempState.optionsAccueil = [...this.state.optionsAccueil];
+    this.tempState.modesLocation = [...this.state.modesLocation];
+    
+    // Puis synchroniser les checkboxes avec l'état temporaire
+    this.syncEquipementCheckboxes();
+    this.syncPreferenceCheckboxes();
+  }
+
+  syncEquipementCheckboxes() {
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.state.equipements.includes(label.textContent.trim());
+        const isChecked = this.tempState.equipements.includes(label.textContent.trim());
         checkbox.checked = isChecked;
         
-        // Mettre à jour l'apparence Webflow
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
         if (webflowCheckbox) {
           if (isChecked) {
@@ -435,14 +430,16 @@ updateMobileFilterIndicator() {
         }
       }
     });
-    
-    // Synchroniser options d'accueil
+  }
+
+  syncPreferenceCheckboxes() {
+    // Options d'accueil
     this.optionAccueilCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.state.optionsAccueil.includes(label.textContent.trim());
+        const isChecked = this.tempState.optionsAccueil.includes(label.textContent.trim());
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -456,13 +453,13 @@ updateMobileFilterIndicator() {
       }
     });
     
-    // Synchroniser modes de location
+    // Modes de location
     this.modeLocationCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.state.modesLocation.includes(label.textContent.trim());
+        const isChecked = this.tempState.modesLocation.includes(label.textContent.trim());
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -475,24 +472,20 @@ updateMobileFilterIndicator() {
         }
       }
     });
-    
-    // Synchroniser l'état temporaire avec l'état confirmé
-    this.tempState.equipements = [...this.state.equipements];
-    this.tempState.optionsAccueil = [...this.state.optionsAccueil];
-    this.tempState.modesLocation = [...this.state.modesLocation];
   }
 
   // ================================
-  // AJOUT D'ÉCOUTEURS POUR L'OUVERTURE DES DROPDOWNS
+  // ÉCOUTEURS DROPDOWN - CORRIGÉ
   // ================================
 
   setupDropdownListeners() {
     // Écouter l'ouverture du dropdown équipements
     if (this.elements.boutonFiltreEquipements) {
       this.elements.boutonFiltreEquipements.addEventListener('click', () => {
-        // Petit délai pour laisser le dropdown s'ouvrir
         setTimeout(() => {
           this.syncCheckboxesWithState();
+          // Réinitialiser l'état temporaire après synchronisation
+          this.updateTempEquipements();
         }, 50);
       });
     }
@@ -500,9 +493,10 @@ updateMobileFilterIndicator() {
     // Écouter l'ouverture du dropdown préférences
     if (this.elements.boutonFiltrePreferences) {
       this.elements.boutonFiltrePreferences.addEventListener('click', () => {
-        // Petit délai pour laisser le dropdown s'ouvrir
         setTimeout(() => {
           this.syncCheckboxesWithState();
+          // Réinitialiser l'état temporaire après synchronisation
+          this.updateTempPreferences();
         }, 50);
       });
     }
@@ -540,8 +534,6 @@ updateMobileFilterIndicator() {
     
     // Mettre à jour le bouton
     this.updateEquipementsButton(0);
-
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
   }
 
@@ -579,8 +571,6 @@ updateMobileFilterIndicator() {
     
     // Mettre à jour le bouton
     this.updatePreferencesButton(0);
-
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
   }
 
@@ -603,11 +593,9 @@ updateMobileFilterIndicator() {
           this.state.prixMax = prix;
           this.updatePriceButton(prix);
           
-          // Mettre à jour le texte mobile si c'est mobile
           if (isMobile && this.elements.texteFiltrePrice_mobile) {
             this.elements.texteFiltrePrice_mobile.textContent = `${prix}€ / nuit maximum`;
           }
-          // NOUVEAU : Mettre à jour l'indicateur mobile
           this.updateMobileFilterIndicator();
         }
       }
@@ -638,11 +626,9 @@ updateMobileFilterIndicator() {
     
     this.resetSliders();
     
-    // Nettoyer le filtre dans PropertyManager
     if (window.propertyManager && window.propertyManager.currentFilters) {
       delete window.propertyManager.currentFilters.price_max;
     }
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
   }
 
@@ -655,7 +641,6 @@ updateMobileFilterIndicator() {
       
       const slider = document.querySelector(sliderSelector);
       if (slider) {
-        // Réinitialiser les éléments du slider
         const fillLine = slider.querySelector('[fs-rangeslider-element="fill"]');
         if (fillLine) fillLine.style.width = '100%';
         
@@ -710,7 +695,6 @@ updateMobileFilterIndicator() {
   }
 
   updateTravelersUI() {
-    // Mettre à jour les chiffres
     ['chiffres-adultes', 'chiffres-adultes-mobile'].forEach(id => {
       const element = document.getElementById(id);
       if (element) element.textContent = this.state.adultes;
@@ -721,7 +705,6 @@ updateMobileFilterIndicator() {
       if (element) element.textContent = this.state.enfants;
     });
 
-    // Mettre à jour les opacités des boutons
     this.updateButtonOpacities();
   }
 
@@ -759,7 +742,6 @@ updateMobileFilterIndicator() {
       }
       this.setActiveButtonStyle(this.elements.boutonFiltreVoyageurs);
     }
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
   }
 
@@ -772,7 +754,6 @@ updateMobileFilterIndicator() {
       this.elements.texteFiltreVoyageurs.textContent = "Voyageurs";
       this.resetButtonStyle(this.elements.boutonFiltreVoyageurs);
     }
-    // NOUVEAU : Mettre à jour l'indicateur mobile
     this.updateMobileFilterIndicator();
   }
 
@@ -788,15 +769,12 @@ updateMobileFilterIndicator() {
   }
 
   updateAllUI() {
-    // Mettre à jour selon l'état CONFIRMÉ seulement
     this.updateEquipementsButton(this.state.equipements.length);
     this.updatePreferencesButton(this.state.optionsAccueil.length + this.state.modesLocation.length);
     this.updateTravelersUI();
     
     // Synchroniser les checkboxes avec l'état confirmé au démarrage
     this.syncCheckboxesWithState();
-
-    // NOUVEAU : Initialiser l'indicateur mobile
     this.updateMobileFilterIndicator();
   }
 
@@ -806,7 +784,6 @@ updateMobileFilterIndicator() {
 
   triggerPropertyManagerFilter() {
     if (window.propertyManager) {
-      // Mettre à jour les filtres de prix si défini
       if (this.state.prixMax !== null) {
         window.propertyManager.currentFilters.price_max = this.state.prixMax;
       }
