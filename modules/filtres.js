@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - VERSION CORRIGÉE V2
+// Gestionnaire complet des filtres - VERSION CORRIGÉE V3
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -645,29 +645,14 @@ class FiltersManager {
 
   resetSliders() {
     try {
-      const isMobile = window.innerWidth < 768;
-      const sliderSelector = isMobile 
-        ? '.bloc-slider.mobile-slider[fs-rangeslider-max="500"]'
-        : '.bloc-slider:not(.mobile-slider)[fs-rangeslider-max="500"]';
-      
-      const slider = document.querySelector(sliderSelector);
-      if (slider) {
-        const fillLine = slider.querySelector('[fs-rangeslider-element="fill"]');
-        if (fillLine) fillLine.style.width = '100%';
-        
-        const handle = slider.querySelector('[fs-rangeslider-element="handle"]');
-        if (handle) handle.style.left = '100%';
-        
-        const display = slider.querySelector('[fs-rangeslider-element="display-value"]');
-        if (display) display.textContent = '500';
-        
+      // Réinitialiser tous les sliders d'un coup
+      document.querySelectorAll('.bloc-slider[fs-rangeslider-max="500"]').forEach(slider => {
         const input = slider.querySelector('input[fs-rangeslider-element="input"]');
         if (input) {
           input.value = 500;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
         }
-      }
+      });
     } catch (err) {
       console.error('Erreur réinitialisation slider:', err);
     }
