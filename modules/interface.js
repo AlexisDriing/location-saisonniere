@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, horaires
+// Gestion des interfaces : popins, logos, extras, horaires, téléphone
 class InterfaceManager {
   constructor() {
     this.init();
@@ -11,6 +11,7 @@ class InterfaceManager {
     this.setupOptionsAccueil();
     this.setupHoraires();
     this.setupReductions();
+    this.setupTelephone();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -360,6 +361,50 @@ class InterfaceManager {
     textReducElement.textContent = texteActuel;
     
     console.log(`✅ Réduction mise à jour: ${texteActuel}`);
+  }
+
+  // Gestion du téléphone cliquable
+  setupTelephone() {
+    console.log('📞 Configuration du téléphone...');
+    
+    // Chercher l'élément qui contient le numéro de téléphone
+    const telephoneElement = document.querySelector('[data-telephone]');
+    
+    if (!telephoneElement) {
+      console.warn('⚠️ Élément data-telephone non trouvé');
+      return;
+    }
+    
+    // Récupérer le numéro de téléphone
+    const numeroTelephone = telephoneElement.getAttribute('data-telephone');
+    
+    if (!numeroTelephone || numeroTelephone.trim() === '') {
+      console.log('📋 Aucun numéro de téléphone défini');
+      return;
+    }
+    
+    // Chercher le bouton téléphone et l'élément texte
+    const boutonTel = document.querySelector('.bouton.tel');
+    const numeroHoteElement = document.getElementById('numero-hote');
+    
+    if (!boutonTel || !numeroHoteElement) {
+      console.warn('⚠️ Bouton .bouton.tel ou élément #numero-hote non trouvé');
+      return;
+    }
+    
+    // Ajouter le style cursor pointer
+    boutonTel.style.cursor = 'pointer';
+    
+    // Ajouter l'événement de clic
+    boutonTel.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Révéler le numéro
+      numeroHoteElement.textContent = numeroTelephone;
+      console.log('📞 Numéro révélé:', numeroTelephone);
+    });
+    
+    console.log('✅ Bouton téléphone configuré');
   }
 
   // Gestion des liens vers plateformes
