@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, equipement, options accueil
+// Gestion des interfaces : popins, logos, extras, équipement, options d'accueil, horaires
 class InterfaceManager {
   constructor() {
     this.init();
@@ -9,6 +9,7 @@ class InterfaceManager {
     this.setupExtras();
     this.setupEquipements();
     this.setupOptionsAccueil();
+    this.setupHoraires();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -222,6 +223,61 @@ class InterfaceManager {
     });
     
     console.log(`✅ ${optionsAffichees} options d'accueil affichées`);
+  }
+
+  // Gestion des horaires d'arrivée et de départ
+  setupHoraires() {
+    console.log('🕐 Configuration des horaires...');
+    
+    // Chercher l'élément qui contient les horaires
+    const horairesElement = document.querySelector('[data-heure-arrivee-depart]');
+    
+    if (!horairesElement) {
+      console.warn('⚠️ Élément data-heure-arrivee-depart non trouvé');
+      return;
+    }
+    
+    // Récupérer la valeur du champ
+    const horairesString = horairesElement.getAttribute('data-heure-arrivee-depart');
+    
+    if (!horairesString || horairesString.trim() === '') {
+      console.log('📋 Aucun horaire personnalisé défini');
+      return;
+    }
+    
+    // Parser les horaires (séparés par une virgule)
+    const horaires = horairesString.split(',').map(h => h.trim());
+    
+    if (horaires.length !== 2) {
+      console.warn('⚠️ Format d\'horaires incorrect. Attendu: "heureArrivée,heureDépart"');
+      return;
+    }
+    
+    const [heureArrivee, heureDepart] = horaires;
+    console.log(`📋 Horaires trouvés: Arrivée ${heureArrivee}, Départ ${heureDepart}`);
+    
+    // Chercher l'élément texte à modifier
+    const textHorairesElement = document.querySelector('.text-horaires');
+    
+    if (!textHorairesElement) {
+      console.warn('⚠️ Élément .text-horaires non trouvé');
+      return;
+    }
+    
+    // Remplacer les horaires dans le texte
+    // Pattern pour trouver les heures entre guillemets
+    let texteActuel = textHorairesElement.textContent;
+    
+    // Remplacer la première heure entre guillemets (arrivée)
+    texteActuel = texteActuel.replace(/"[^"]*"/, `"${heureArrivee}"`);
+    
+    // Remplacer la deuxième heure entre guillemets (départ)
+    texteActuel = texteActuel.replace(/"[^"]*"/, `"${heureDepart}"`);
+    
+    // Mettre à jour le texte
+    textHorairesElement.textContent = texteActuel;
+    
+    console.log(`✅ Horaires mis à jour: ${texteActuel}`);
   }
 
   // Gestion des liens vers plateformes
