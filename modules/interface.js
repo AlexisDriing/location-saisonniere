@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, equipement, option, horaires
+// Gestion des interfaces : popins, logos, extras, horaires
 class InterfaceManager {
   constructor() {
     this.init();
@@ -10,6 +10,7 @@ class InterfaceManager {
     this.setupEquipements();
     this.setupOptionsAccueil();
     this.setupHoraires();
+    this.setupReductions();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -305,6 +306,60 @@ class InterfaceManager {
     textHorairesElement.textContent = texteActuel;
     
     console.log(`✅ Horaires mis à jour: ${texteActuel}`);
+  }
+
+  // Gestion des réductions
+  setupReductions() {
+    console.log('💰 Configuration des réductions...');
+    
+    // Chercher l'élément qui contient les réductions
+    const reductionElement = document.querySelector('[data-reduction]');
+    
+    if (!reductionElement) {
+      console.warn('⚠️ Élément data-reduction non trouvé');
+      return;
+    }
+    
+    // Récupérer la valeur du champ
+    const reductionString = reductionElement.getAttribute('data-reduction');
+    
+    if (!reductionString || reductionString.trim() === '') {
+      console.log('📋 Aucune réduction personnalisée définie');
+      return;
+    }
+    
+    // Parser les valeurs (séparées par une virgule)
+    const valeurs = reductionString.split(',').map(v => v.trim());
+    
+    if (valeurs.length !== 2) {
+      console.warn('⚠️ Format de réduction incorrect. Attendu: "nombreJours,pourcentage"');
+      return;
+    }
+    
+    const [nombreJours, pourcentage] = valeurs;
+    console.log(`📋 Réduction trouvée: ${nombreJours} nuits, ${pourcentage}%`);
+    
+    // Chercher l'élément texte à modifier
+    const textReducElement = document.querySelector('.text-reduc');
+    
+    if (!textReducElement) {
+      console.warn('⚠️ Élément .text-reduc non trouvé');
+      return;
+    }
+    
+    // Remplacer les valeurs dans le texte
+    let texteActuel = textReducElement.textContent;
+    
+    // Remplacer le nombre de nuits (premier nombre suivi de "nuits")
+    texteActuel = texteActuel.replace(/\d+\s*nuits?/, `${nombreJours} nuits`);
+    
+    // Remplacer le pourcentage (nombre suivi de %)
+    texteActuel = texteActuel.replace(/\d+%/, `${pourcentage}%`);
+    
+    // Mettre à jour le texte
+    textReducElement.textContent = texteActuel;
+    
+    console.log(`✅ Réduction mise à jour: ${texteActuel}`);
   }
 
   // Gestion des liens vers plateformes
