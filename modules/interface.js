@@ -384,11 +384,11 @@ class InterfaceManager {
     }
     
     // Chercher le bouton téléphone et l'élément texte
-    const boutonTel = document.querySelector('.bouton.tel');
+    const boutonTel = document.querySelector('.bouton-tel');
     const numeroHoteElement = document.getElementById('numero-hote');
     
     if (!boutonTel || !numeroHoteElement) {
-      console.warn('⚠️ Bouton .bouton.tel ou élément #numero-hote non trouvé');
+      console.warn('⚠️ Bouton .bouton-tel ou élément #numero-hote non trouvé');
       return;
     }
     
