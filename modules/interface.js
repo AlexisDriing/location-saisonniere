@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, equipements
+// Gestion des interfaces : popins, logos, extras, equipement, options accueil
 class InterfaceManager {
   constructor() {
     this.init();
@@ -8,6 +8,7 @@ class InterfaceManager {
     this.setupPlatformLogos();
     this.setupExtras();
     this.setupEquipements();
+    this.setupOptionsAccueil();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -160,6 +161,67 @@ class InterfaceManager {
     });
     
     console.log(`✅ ${equipementsAffiches} équipements affichés`);
+  }
+
+  // Gestion des options d'accueil
+  setupOptionsAccueil() {
+    console.log('🏠 Configuration des options d\'accueil...');
+    
+    // Mapping entre les noms d'options et leurs IDs
+    const optionsMapping = {
+      'Animaux autorisés': 'animaux',
+      'Accès PMR': 'pmr',
+      'Fumeurs autorisés': 'fumeurs'
+    };
+    
+    // Masquer toutes les options au départ
+    Object.values(optionsMapping).forEach(elementId => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.style.display = 'none';
+      }
+    });
+    
+    // Chercher l'élément qui contient les options
+    const optionsElement = document.querySelector('[data-option-accueil]');
+    
+    if (!optionsElement) {
+      console.warn('⚠️ Élément data-option-accueil non trouvé');
+      return;
+    }
+    
+    // Récupérer la valeur du champ
+    const optionsString = optionsElement.getAttribute('data-option-accueil');
+    
+    if (!optionsString || optionsString.trim() === '') {
+      console.log('📋 Aucune option d\'accueil définie pour ce logement');
+      return;
+    }
+    
+    // Parser les options (séparées par des virgules)
+    const options = optionsString.split(',').map(opt => opt.trim());
+    console.log('📋 Options d\'accueil trouvées:', options);
+    
+    // Afficher chaque option trouvée
+    let optionsAffichees = 0;
+    options.forEach(option => {
+      const elementId = optionsMapping[option];
+      
+      if (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.style.display = ''; // Utiliser le display par défaut
+          optionsAffichees++;
+          console.log(`✅ Affichage de l'option: ${option} (ID: ${elementId})`);
+        } else {
+          console.warn(`⚠️ Élément non trouvé pour l'ID: ${elementId}`);
+        }
+      } else {
+        console.warn(`⚠️ Option non reconnue: "${option}"`);
+      }
+    });
+    
+    console.log(`✅ ${optionsAffichees} options d'accueil affichées`);
   }
 
   // Gestion des liens vers plateformes
