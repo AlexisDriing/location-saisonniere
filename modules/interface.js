@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, equip, horaires, téléphone bouton etc
+// Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
