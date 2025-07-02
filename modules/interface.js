@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, équipement, options d'accueil, horaires
+// Gestion des interfaces : popins, logos, extras, equipement, option, horaires
 class InterfaceManager {
   constructor() {
     this.init();
@@ -253,8 +253,28 @@ class InterfaceManager {
       return;
     }
     
-    const [heureArrivee, heureDepart] = horaires;
-    console.log(`📋 Horaires trouvés: Arrivée ${heureArrivee}, Départ ${heureDepart}`);
+    // Formater les horaires
+    const formatHeure = (heure) => {
+      // Si c'est juste un nombre, ajouter h00
+      if (/^\d+$/.test(heure)) {
+        return `${heure}h00`;
+      }
+      // Si c'est au format XXh sans minutes, ajouter 00
+      if (/^\d+h$/.test(heure)) {
+        return `${heure}00`;
+      }
+      // Si c'est au format XXhYY, le garder tel quel
+      if (/^\d+h\d+$/.test(heure)) {
+        return heure;
+      }
+      // Sinon retourner tel quel
+      return heure;
+    };
+    
+    const heureArrivee = formatHeure(horaires[0]);
+    const heureDepart = formatHeure(horaires[1]);
+    
+    console.log(`📋 Horaires formatés: Arrivée ${heureArrivee}, Départ ${heureDepart}`);
     
     // Chercher l'élément texte à modifier
     const textHorairesElement = document.querySelector('.text-horaires');
@@ -265,14 +285,21 @@ class InterfaceManager {
     }
     
     // Remplacer les horaires dans le texte
-    // Pattern pour trouver les heures entre guillemets
+    // Pattern pour trouver les heures (format XXhXX ou XXh00)
     let texteActuel = textHorairesElement.textContent;
     
-    // Remplacer la première heure entre guillemets (arrivée)
-    texteActuel = texteActuel.replace(/"[^"]*"/, `"${heureArrivee}"`);
+    // Remplacer toutes les occurrences d'heures
+    const heuresExistantes = texteActuel.match(/\d+h\d+/g) || [];
     
-    // Remplacer la deuxième heure entre guillemets (départ)
-    texteActuel = texteActuel.replace(/"[^"]*"/, `"${heureDepart}"`);
+    if (heuresExistantes.length >= 2) {
+      // Remplacer la première heure (arrivée)
+      texteActuel = texteActuel.replace(heuresExistantes[0], heureArrivee);
+      // Remplacer la deuxième heure (départ)
+      texteActuel = texteActuel.replace(heuresExistantes[1], heureDepart);
+    } else {
+      console.warn('⚠️ Impossible de trouver 2 horaires dans le texte');
+      return;
+    }
     
     // Mettre à jour le texte
     textHorairesElement.textContent = texteActuel;
