@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras
+// Gestion des interfaces : popins, logos, extras, equipements
 class InterfaceManager {
   constructor() {
     this.init();
@@ -7,6 +7,7 @@ class InterfaceManager {
   init() {
     this.setupPlatformLogos();
     this.setupExtras();
+    this.setupEquipements();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -95,6 +96,70 @@ class InterfaceManager {
         console.error("Erreur lors du traitement de l'extra :", extra, error);
       }
     });
+  }
+
+  // Gestion des équipements
+  setupEquipements() {
+    console.log('🏊 Configuration des équipements...');
+    
+    // Mapping entre les noms d'équipements et leurs IDs
+    const equipementMapping = {
+      'Piscine': 'piscine',
+      'Jacuzzi': 'jacuzzi',
+      'Climatisation': 'climatisation',
+      'Barbecue': 'barbecue',
+      'Équipement Bébé': 'baby',
+      'Parking gratuit': 'parking'
+    };
+    
+    // Masquer tous les équipements au départ
+    Object.values(equipementMapping).forEach(elementId => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.style.display = 'none';
+      }
+    });
+    
+    // Chercher l'élément qui contient les équipements
+    const equipementsElement = document.querySelector('[data-equipements-principaux]');
+    
+    if (!equipementsElement) {
+      console.warn('⚠️ Élément data-equipements-principaux non trouvé');
+      return;
+    }
+    
+    // Récupérer la valeur du champ
+    const equipementsString = equipementsElement.getAttribute('data-equipements-principaux');
+    
+    if (!equipementsString || equipementsString.trim() === '') {
+      console.log('📋 Aucun équipement défini pour ce logement');
+      return;
+    }
+    
+    // Parser les équipements (séparés par des virgules)
+    const equipements = equipementsString.split(',').map(eq => eq.trim());
+    console.log('📋 Équipements trouvés:', equipements);
+    
+    // Afficher chaque équipement trouvé
+    let equipementsAffiches = 0;
+    equipements.forEach(equipement => {
+      const elementId = equipementMapping[equipement];
+      
+      if (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.style.display = ''; // Utiliser le display par défaut
+          equipementsAffiches++;
+          console.log(`✅ Affichage de l'équipement: ${equipement} (ID: ${elementId})`);
+        } else {
+          console.warn(`⚠️ Élément non trouvé pour l'ID: ${elementId}`);
+        }
+      } else {
+        console.warn(`⚠️ Équipement non reconnu: "${equipement}"`);
+      }
+    });
+    
+    console.log(`✅ ${equipementsAffiches} équipements affichés`);
   }
 
   // Gestion des liens vers plateformes
