@@ -399,7 +399,7 @@ class InterfaceManager {
     boutonTel.addEventListener('click', function(e) {
       e.preventDefault();
       
-      // Révéler le numéro
+      // Révéler le numéro de téléphone
       numeroHoteElement.textContent = numeroTelephone;
       console.log('📞 Numéro révélé:', numeroTelephone);
     });
@@ -427,7 +427,6 @@ class InterfaceManager {
       }
     });
   }
-
   // Gestion des popins
   setupPopins() {
     this.setupPopin(".pop-up.photos", ".bloc-link-images", ".button-card, .app, .second, .profile, .conciergerie, .logements");
@@ -459,6 +458,5 @@ class InterfaceManager {
     });
   }
 }
-
 // Export global
 window.InterfaceManager = InterfaceManager;
