@@ -257,7 +257,7 @@ class ProfileManager {
 // Auto-initialisation (comme vos autres modules)
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    if (window.location.pathname.includes('/profil') || window.location.pathname.includes('/profile')) {
+    if (window.location.pathname.includes('/mon-espace')) {
       new ProfileManager();
     }
   }, 100);
