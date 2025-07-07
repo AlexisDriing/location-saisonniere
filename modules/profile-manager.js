@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré
+// Gestionnaire de profil - gestion de boutons intégré V2
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -244,8 +244,8 @@ class ProfileManager {
     const linkPlans = document.getElementById('link-plans');
     const addProperty = document.getElementById('add-property');
     
-    if (emptyState) emptyState.style.display = 'block';
-    if (emptyButton) emptyButton.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'flex';
+    if (emptyButton) emptyButton.style.display = 'flex';
     if (linkPlans) linkPlans.style.display = 'none';
     if (addProperty) addProperty.style.display = 'none';
   }
@@ -262,20 +262,20 @@ class ProfileManager {
   // Bouton link-plans : visible seulement si published
   const linkPlans = document.getElementById('link-plans');
   if (linkPlans) {
-    linkPlans.style.display = status === 'published' ? 'block' : 'none';
+    linkPlans.style.display = status === 'published' ? 'flex' : 'none';
   }
   
   // Bouton add-property : toujours visible, mais ACTIVÉ seulement si published
   const addProperty = document.getElementById('add-property');
   if (addProperty) {
-    addProperty.style.display = 'block';
+    addProperty.style.display = 'flex';
     
     if (status === 'published') {
       addProperty.style.opacity = '1';
       addProperty.style.pointerEvents = 'auto';
       addProperty.style.cursor = 'pointer';
     } else {
-      addProperty.style.opacity = '0.3';
+      addProperty.style.opacity = '0.5';
       addProperty.style.pointerEvents = 'none';
       addProperty.style.cursor = 'not-allowed';
     }
