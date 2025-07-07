@@ -1,4 +1,4 @@
-// Gestionnaire de profil - Intégré à votre architecture existante
+// Gestionnaire de profil - gestion de boutons intégré
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -99,6 +99,8 @@ class ProfileManager {
     // Pour commencer, afficher le premier logement
     const property = this.userProperties[0];
     this.displayProperty(property);
+
+    this.updateButtonsVisibility(property);
   }
 
   displayProperty(property) {
@@ -235,8 +237,51 @@ class ProfileManager {
         block.style.display = 'none';
       }
     });
+    
+    // 🆕 NOUVEAU : Gérer l'état vide
+    const emptyState = document.getElementById('empty-state');
+    const emptyButton = document.getElementById('empty-button');
+    const linkPlans = document.getElementById('link-plans');
+    const addProperty = document.getElementById('add-property');
+    
+    if (emptyState) emptyState.style.display = 'block';
+    if (emptyButton) emptyButton.style.display = 'block';
+    if (linkPlans) linkPlans.style.display = 'none';
+    if (addProperty) addProperty.style.display = 'none';
   }
 
+  updateButtonsVisibility(property) {
+  const status = property.verification_status || 'pending-none';
+  
+  // Masquer les éléments vides
+  const emptyState = document.getElementById('empty-state');
+  const emptyButton = document.getElementById('empty-button');
+  if (emptyState) emptyState.style.display = 'none';
+  if (emptyButton) emptyButton.style.display = 'none';
+  
+  // Bouton link-plans : visible seulement si published
+  const linkPlans = document.getElementById('link-plans');
+  if (linkPlans) {
+    linkPlans.style.display = status === 'published' ? 'block' : 'none';
+  }
+  
+  // Bouton add-property : toujours visible, mais ACTIVÉ seulement si published
+  const addProperty = document.getElementById('add-property');
+  if (addProperty) {
+    addProperty.style.display = 'block';
+    
+    if (status === 'published') {
+      addProperty.style.opacity = '1';
+      addProperty.style.pointerEvents = 'auto';
+      addProperty.style.cursor = 'pointer';
+    } else {
+      addProperty.style.opacity = '0.3';
+      addProperty.style.pointerEvents = 'none';
+      addProperty.style.cursor = 'not-allowed';
+    }
+  }
+}
+  
   // Méthodes publiques pour debug et interaction
   debug() {
     return {
