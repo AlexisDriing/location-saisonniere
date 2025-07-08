@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré V2
+// Gestionnaire de profil - gestion de boutons intégré et création de logement
 class ProfileManager {
   constructor() {
     this.currentUser = null;
