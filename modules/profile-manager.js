@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V2
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V3
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -356,7 +356,8 @@ class ProfileManager {
       submitButton.disabled = false;
       submitButton.value = originalText;
     }
-  });
+    });
+  }
 }
 
 // Auto-initialisation (comme vos autres modules)
