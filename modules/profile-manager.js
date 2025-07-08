@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V2
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -303,52 +303,60 @@ class ProfileManager {
 
   // NOUVELLE MÉTHODE À AJOUTER ICI
   setupCreatePropertyForm() {
-    const form = document.getElementById('form-create-logement');
-    if (!form) return;
-    
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      if (!this.currentUser || !this.currentUser.id) {
-        return;
-      }
-      
-      const submitButton = form.querySelector('[type="submit"]');
-      const originalText = submitButton.value;
-      
-      // Récupérer les valeurs
-      const formData = new FormData(form);
-      const nomLogement = formData.get('nom-logement');
-      const adresse = formData.get('adresse');
-      
-      // Désactiver le bouton
-      submitButton.disabled = true;
-      submitButton.value = 'Création...';
-      
-      try {
-        const response = await fetch(`${window.CONFIG.API_URL}/create-property`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: nomLogement,
-            address: adresse,
-            memberId: this.currentUser.id
-          })
-        });
-        
-        if (response.ok) {
-          // Recharger pour afficher le nouveau logement
-          window.location.reload();
-        }
-        
-      } catch (error) {
-        console.error('Erreur:', error);
-      } finally {
-        submitButton.disabled = false;
-        submitButton.value = originalText;
-      }
-    });
+  // L'ID est sur le div wrapper, pas le form
+  const formWrapper = document.getElementById('form-create-logement');
+  if (!formWrapper) return;
+  
+  // Le vrai formulaire est à l'intérieur
+  const form = formWrapper.querySelector('form');
+  if (!form) {
+    console.error('Formulaire non trouvé dans le wrapper');
+    return;
   }
+  
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // Empêche la soumission Webflow
+    
+    if (!this.currentUser || !this.currentUser.id) {
+      return;
+    }
+    
+    const submitButton = form.querySelector('[type="submit"]');
+    const originalText = submitButton.value;
+    
+    // Maintenant FormData fonctionnera
+    const formData = new FormData(form);
+    const nomLogement = formData.get('nom-logement');
+    const adresse = formData.get('adresse');
+    
+    console.log('Données récupérées:', { nomLogement, adresse }); // Debug
+    
+    // Désactiver le bouton
+    submitButton.disabled = true;
+    submitButton.value = 'Création...';
+    
+    try {
+      const response = await fetch(`${window.CONFIG.API_URL}/create-property`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: nomLogement,
+          address: adresse,
+          memberId: this.currentUser.id
+        })
+      });
+      
+      if (response.ok) {
+        window.location.reload();
+      }
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.value = originalText;
+    }
+  });
 }
 
 // Auto-initialisation (comme vos autres modules)
