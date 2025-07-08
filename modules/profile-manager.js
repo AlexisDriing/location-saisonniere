@@ -27,6 +27,9 @@ class ProfileManager {
     
     // Afficher les logements
     this.displayProperties();
+
+    // NOUVEAU : Configurer le formulaire de création
+    this.setupCreatePropertyForm();
     
     console.log('✅ ProfileManager initialisé');
     
@@ -296,6 +299,55 @@ class ProfileManager {
   async reload() {
     await this.loadUserProperties();
     this.displayProperties();
+  }
+
+  // NOUVELLE MÉTHODE À AJOUTER ICI
+  setupCreatePropertyForm() {
+    const form = document.getElementById('form-create-logement');
+    if (!form) return;
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!this.currentUser || !this.currentUser.id) {
+        return;
+      }
+      
+      const submitButton = form.querySelector('[type="submit"]');
+      const originalText = submitButton.value;
+      
+      // Récupérer les valeurs
+      const formData = new FormData(form);
+      const nomLogement = formData.get('nom-logement');
+      const adresse = formData.get('adresse');
+      
+      // Désactiver le bouton
+      submitButton.disabled = true;
+      submitButton.value = 'Création...';
+      
+      try {
+        const response = await fetch(`${window.CONFIG.API_URL}/create-property`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: nomLogement,
+            address: adresse,
+            memberId: this.currentUser.id
+          })
+        });
+        
+        if (response.ok) {
+          // Recharger pour afficher le nouveau logement
+          window.location.reload();
+        }
+        
+      } catch (error) {
+        console.error('Erreur:', error);
+      } finally {
+        submitButton.disabled = false;
+        submitButton.value = originalText;
+      }
+    });
   }
 }
 
