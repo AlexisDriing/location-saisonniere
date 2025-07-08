@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V3
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V4
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -315,7 +315,8 @@ class ProfileManager {
   }
   
   form.addEventListener('submit', async (e) => {
-    e.preventDefault(); // Empêche la soumission Webflow
+    e.preventDefault();
+    e.stopPropagation(); // Empêche la soumission Webflow
     
     if (!this.currentUser || !this.currentUser.id) {
       return;
