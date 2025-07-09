@@ -1,8 +1,9 @@
-// Gestionnaire de la page de modification de logement
+// Gestionnaire de la page de modification de logement V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
+    this.initialAddress = null; // Pour le bouton annuler
     this.init();
   }
 
@@ -52,7 +53,6 @@ class PropertyEditor {
       
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
-      this.showError('Impossible de charger les données du logement');
     }
   }
 
@@ -63,58 +63,166 @@ class PropertyEditor {
     const titleElement = document.getElementById('logement-name-edit');
     if (titleElement && this.propertyData.name) {
       titleElement.textContent = this.propertyData.name;
-      console.log('✅ Nom affiché:', this.propertyData.name);
     }
     
-    // 2. Pré-remplir le champ adresse (TEST)
+    // 2. Pré-remplir le champ adresse
     const addressInput = document.getElementById('adresse-input');
     if (addressInput && this.propertyData.address) {
       addressInput.value = this.propertyData.address;
-      console.log('✅ Adresse pré-remplie:', this.propertyData.address);
-    } else {
-      console.warn('⚠️ Champ adresse non trouvé ou données manquantes');
+      
+      // Sauvegarder la valeur initiale (pour le bouton annuler)
+      this.initialAddress = this.propertyData.address;
+    }
+    
+    // 3. Écouter les changements
+    this.setupFieldListeners();
+  }
+
+  setupFieldListeners() {
+    const addressInput = document.getElementById('adresse-input');
+    
+    if (addressInput) {
+      // Dès qu'on tape = activer les boutons
+      addressInput.addEventListener('input', () => {
+        this.enableButtons();
+      });
+    }
+  }
+
+  enableButtons() {
+    const saveButton = document.getElementById('button-save-modifications');
+    const cancelButton = document.getElementById('annulation');
+    
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.style.opacity = '1';
+      saveButton.style.cursor = 'pointer';
+    }
+    
+    if (cancelButton) {
+      cancelButton.style.display = 'block'; // ou 'flex' selon votre CSS
+    }
+  }
+
+  disableButtons() {
+    const saveButton = document.getElementById('button-save-modifications');
+    const cancelButton = document.getElementById('annulation');
+    
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.style.opacity = '0.5';
+      saveButton.style.cursor = 'not-allowed';
+    }
+    
+    if (cancelButton) {
+      cancelButton.style.display = 'none';
     }
   }
 
   setupSaveButton() {
-    console.log('💾 Configuration du bouton Enregistrer...');
+    console.log('💾 Configuration des boutons...');
     
     const saveButton = document.getElementById('button-save-modifications');
-    if (!saveButton) {
-      console.error('❌ Bouton enregistrer non trouvé');
-      return;
+    const cancelButton = document.getElementById('annulation');
+    
+    // Désactiver par défaut
+    this.disableButtons();
+    
+    // Bouton Enregistrer
+    if (saveButton) {
+      saveButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await this.saveModifications();
+      });
     }
     
-    saveButton.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await this.saveModifications();
-    });
+    // Bouton Annuler
+    if (cancelButton) {
+      cancelButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.cancelModifications();
+      });
+    }
     
-    console.log('✅ Bouton configuré');
+    console.log('✅ Boutons configurés');
+  }
+
+  cancelModifications() {
+    console.log('❌ Annulation des modifications');
+    
+    // Remettre la valeur initiale
+    const addressInput = document.getElementById('adresse-input');
+    if (addressInput && this.initialAddress !== undefined) {
+      addressInput.value = this.initialAddress;
+    }
+    
+    // Désactiver les boutons
+    this.disableButtons();
   }
 
   async saveModifications() {
     console.log('💾 Sauvegarde des modifications...');
     
-    // Pour le test, on récupère juste l'adresse
+    // Récupérer la nouvelle adresse
     const addressInput = document.getElementById('adresse-input');
-    const newAddress = addressInput ? addressInput.value : '';
+    const newAddress = addressInput ? addressInput.value.trim() : '';
     
     if (!newAddress) {
       alert('Veuillez remplir l\'adresse');
       return;
     }
     
-    console.log('📤 Nouvelle adresse:', newAddress);
+    // Désactiver le bouton pendant la sauvegarde
+    const saveButton = document.getElementById('button-save-modifications');
+    const originalText = saveButton.textContent;
+    saveButton.disabled = true;
+    saveButton.textContent = 'Enregistrement...';
     
-    // TODO: Implémenter l'appel API pour sauvegarder
-    alert(`Test réussi !\n\nNouvelle adresse : ${newAddress}\n\n(La sauvegarde réelle sera implémentée à l'étape suivante)`);
-  }
-
-  showError(message) {
-  // Juste un log console, pas d'affichage
-  console.error('❌', message);
+    try {
+      // Préparer les données à envoyer
+      const updates = {
+        address: newAddress
+      };
+      
+      console.log('📤 Envoi des modifications:', updates);
+      
+      // Appeler la route de mise à jour
+      const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        console.log('✅ Sauvegarde réussie');
+        
+        // Mettre à jour la valeur initiale
+        this.initialAddress = newAddress;
+        
+        // Désactiver les boutons
+        this.disableButtons();
+        
+        // Afficher un message de succès
+        alert('Modifications enregistrées avec succès !');
+        
+      } else {
+        throw new Error(result.error || 'Erreur lors de la sauvegarde');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde : ' + error.message);
+    } finally {
+      // Réactiver le bouton
+      saveButton.disabled = false;
+      saveButton.textContent = originalText;
+    }
   }
 }
+
 // Export global
 window.PropertyEditor = PropertyEditor;
