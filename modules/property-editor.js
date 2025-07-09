@@ -115,6 +115,6 @@ class PropertyEditor {
   // Juste un log console, pas d'affichage
   console.error('❌', message);
   }
-
+}
 // Export global
 window.PropertyEditor = PropertyEditor;
