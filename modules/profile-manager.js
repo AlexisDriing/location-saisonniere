@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V4
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V5
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -107,17 +107,48 @@ class ProfileManager {
   }
 
   displayProperty(property) {
-    console.log('🏠 Affichage du logement:', property);
+  console.log('🏠 Affichage du logement:', property);
+  
+  // 1. Afficher le bon bloc selon le statut
+  this.showCorrectStatusBlock(property);
+  
+  // 2. Remplir les informations du logement
+  this.fillPropertyInfo(property);
+  
+  // 3. Remplir les images
+  this.fillPropertyImages(property);
+  
+  // 4. 🆕 NOUVEAU : Configurer le bouton modifier
+  this.setupModifyButton(property);
+}
+
+// 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
+setupModifyButton(property) {
+  // Le statut détermine quel bloc est visible (pending-none, pending, verified, published)
+  const status = this.getPropertyStatus(property);
+  
+  // Chercher le bouton .brouillon-modifier dans le bloc visible
+  const modifyButton = document.querySelector(`#${status} .brouillon-modifier`);
+  
+  if (modifyButton) {
+    const itemId = property.id || property.property_id; // property_id est l'ID dans vos métadonnées
+    const modifyUrl = `/mon-espace/modification-logement?id=${itemId}`;
     
-    // 1. Afficher le bon bloc selon le statut
-    this.showCorrectStatusBlock(property);
+    // Si c'est un lien <a>
+    if (modifyButton.tagName === 'A') {
+      modifyButton.href = modifyUrl;
+    } else {
+      // Si c'est un bouton, ajouter un événement click
+      modifyButton.addEventListener('click', () => {
+        window.location.href = modifyUrl;
+      });
+    }
     
-    // 2. Remplir les informations du logement
-    this.fillPropertyInfo(property);
-    
-    // 3. Remplir les images
-    this.fillPropertyImages(property);
+    console.log(`✅ Bouton modifier configuré pour ${property.slug}`);
+  } else {
+    console.warn(`❌ Bouton .brouillon-modifier non trouvé dans le bloc ${status}`);
   }
+}
 
   showCorrectStatusBlock(property) {
     // Masquer tous les blocs d'état (vos IDs réels)
