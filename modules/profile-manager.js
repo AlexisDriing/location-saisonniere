@@ -124,27 +124,29 @@ class ProfileManager {
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
 setupModifyButton(property) {
-  // Le statut détermine quel bloc est visible (pending-none, pending, verified, published)
   const status = this.getPropertyStatus(property);
-  
-  // Chercher le bouton .brouillon-modifier dans le bloc visible
   const modifyButton = document.querySelector(`#${status} .brouillon-modifier`);
   
   if (modifyButton) {
-    const itemId = property.id || property.property_id; // property_id est l'ID dans vos métadonnées
-    const modifyUrl = `/mon-espace/modification-logement?id=${itemId}`;
+    // 🆕 MODIFIÉ : Utiliser l'ID Webflow
+    const webflowId = property.webflow_item_id;
     
-    // Si c'est un lien <a>
+    if (!webflowId) {
+      console.error('❌ ID Webflow manquant pour', property.name);
+      return;
+    }
+    
+    const modifyUrl = `/mon-espace/modification-logement?id=${webflowId}`;
+    
     if (modifyButton.tagName === 'A') {
       modifyButton.href = modifyUrl;
     } else {
-      // Si c'est un bouton, ajouter un événement click
       modifyButton.addEventListener('click', () => {
         window.location.href = modifyUrl;
       });
     }
     
-    console.log(`✅ Bouton modifier configuré pour ${property.slug}`);
+    console.log(`✅ Bouton modifier configuré avec ID Webflow: ${webflowId}`);
   } else {
     console.warn(`❌ Bouton .brouillon-modifier non trouvé dans le bloc ${status}`);
   }
@@ -200,7 +202,13 @@ setupModifyButton(property) {
   fillPropertyInfo(property) {
     // Déterminer le statut pour construire les IDs corrects
     const status = this.getPropertyStatus(property);
-    
+  
+    // 🆕 AJOUTER : Afficher l'ID Webflow pour debug
+    console.log('🔍 Property data:', {
+      webflow_item_id: property.webflow_item_id,
+      name: property.name,
+      status: status
+    });
     // Remplir le nom du logement avec l'ID spécifique au bloc
     const nameElement = document.getElementById(`property-name-${status}`);
     if (nameElement) {
