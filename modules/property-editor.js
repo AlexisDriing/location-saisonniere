@@ -1,9 +1,9 @@
-// Gestionnaire de la page de modification de logement V2
+// Gestionnaire de la page de modification de logement - Version optimisée
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
-    this.initialAddress = null; // Pour le bouton annuler
+    this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
     this.init();
   }
 
@@ -65,28 +65,42 @@ class PropertyEditor {
       titleElement.textContent = this.propertyData.name;
     }
     
-    // 2. Pré-remplir le champ adresse
-    const addressInput = document.getElementById('adresse-input');
-    if (addressInput && this.propertyData.address) {
-      addressInput.value = this.propertyData.address;
-      
-      // Sauvegarder la valeur initiale (pour le bouton annuler)
-      this.initialAddress = this.propertyData.address;
-    }
+    // 2. Configuration des champs (facilement extensible)
+    const fields = [
+      { id: 'adresse-input', dataKey: 'address' },
+      { id: 'cadeaux-input', dataKey: 'cadeaux' }
+    ];
     
-    // 3. Écouter les changements
+    // 3. Pré-remplir et sauvegarder les valeurs initiales
+    fields.forEach(field => {
+      const input = document.getElementById(field.id);
+      if (input) {
+        const value = this.propertyData[field.dataKey] || '';
+        input.value = value;
+        this.initialValues[field.dataKey] = value;
+        console.log(`✅ Champ ${field.id} pré-rempli:`, value || '(vide)');
+      }
+    });
+    
+    // 4. Écouter les changements
     this.setupFieldListeners();
   }
 
   setupFieldListeners() {
-    const addressInput = document.getElementById('adresse-input');
+    const fields = [
+      { id: 'adresse-input' },
+      { id: 'cadeaux-input' }
+    ];
     
-    if (addressInput) {
-      // Dès qu'on tape = activer les boutons
-      addressInput.addEventListener('input', () => {
-        this.enableButtons();
-      });
-    }
+    fields.forEach(field => {
+      const input = document.getElementById(field.id);
+      if (input) {
+        // Dès qu'on tape = activer les boutons (logique simple)
+        input.addEventListener('input', () => {
+          this.enableButtons();
+        });
+      }
+    });
   }
 
   enableButtons() {
@@ -100,7 +114,7 @@ class PropertyEditor {
     }
     
     if (cancelButton) {
-      cancelButton.style.display = 'block'; // ou 'flex' selon votre CSS
+      cancelButton.style.display = 'block';
     }
   }
 
@@ -150,11 +164,19 @@ class PropertyEditor {
   cancelModifications() {
     console.log('❌ Annulation des modifications');
     
-    // Remettre la valeur initiale
-    const addressInput = document.getElementById('adresse-input');
-    if (addressInput && this.initialAddress !== undefined) {
-      addressInput.value = this.initialAddress;
-    }
+    // Configuration des champs à réinitialiser
+    const fields = [
+      { id: 'adresse-input', dataKey: 'address' },
+      { id: 'cadeaux-input', dataKey: 'cadeaux' }
+    ];
+    
+    // Remettre les valeurs initiales
+    fields.forEach(field => {
+      const input = document.getElementById(field.id);
+      if (input) {
+        input.value = this.initialValues[field.dataKey] || '';
+      }
+    });
     
     // Désactiver les boutons
     this.disableButtons();
@@ -163,14 +185,36 @@ class PropertyEditor {
   async saveModifications() {
     console.log('💾 Sauvegarde des modifications...');
     
-    // Récupérer la nouvelle adresse
-    const addressInput = document.getElementById('adresse-input');
-    const newAddress = addressInput ? addressInput.value.trim() : '';
+    // Configuration du mapping des champs
+    const fieldMapping = [
+      { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
+      { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' }
+    ];
     
-    if (!newAddress) {
-      alert('Veuillez remplir l\'adresse');
+    // Collecter les valeurs actuelles
+    const currentValues = {};
+    fieldMapping.forEach(field => {
+      const input = document.getElementById(field.id);
+      if (input) {
+        currentValues[field.dataKey] = input.value.trim();
+      }
+    });
+    
+    // 🎯 OPTIMISATION : Ne prendre que les champs modifiés
+    const updates = {};
+    Object.keys(currentValues).forEach(key => {
+      if (currentValues[key] !== this.initialValues[key]) {
+        updates[key] = currentValues[key];
+      }
+    });
+    
+    // Si aucune modification
+    if (Object.keys(updates).length === 0) {
+      alert('Aucune modification détectée');
       return;
     }
+    
+    console.log(`📤 Envoi de ${Object.keys(updates).length} champ(s) modifié(s):`, updates);
     
     // Désactiver le bouton pendant la sauvegarde
     const saveButton = document.getElementById('button-save-modifications');
@@ -179,13 +223,6 @@ class PropertyEditor {
     saveButton.textContent = 'Enregistrement...';
     
     try {
-      // Préparer les données à envoyer
-      const updates = {
-        address: newAddress
-      };
-      
-      console.log('📤 Envoi des modifications:', updates);
-      
       // Appeler la route de mise à jour
       const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
         method: 'PUT',
@@ -200,14 +237,17 @@ class PropertyEditor {
       if (response.ok && result.success) {
         console.log('✅ Sauvegarde réussie');
         
-        // Mettre à jour la valeur initiale
-        this.initialAddress = newAddress;
+        // Mettre à jour les valeurs initiales avec les nouvelles valeurs
+        Object.keys(updates).forEach(key => {
+          this.initialValues[key] = updates[key];
+        });
         
         // Désactiver les boutons
         this.disableButtons();
         
-        // Afficher un message de succès
+        // Message de succès
         alert('Modifications enregistrées avec succès !');
+        
         
       } else {
         throw new Error(result.error || 'Erreur lors de la sauvegarde');
