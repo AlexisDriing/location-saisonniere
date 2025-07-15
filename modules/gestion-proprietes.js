@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - NEW
+// Gestionnaire principal des propriétés pour la page liste - V2
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -597,8 +597,9 @@ const pourcentageElement = newCard.querySelector('.pourcentage');
 if (priceElement && propData.pricing_data) {
   const pricingData = propData.pricing_data;
   
-  // Récupérer le prix de base (première saison)
-  const basePrice = propData.price || (pricingData.seasons?.[0]?.price || 100);
+  // Récupérer le prix de base (défaut ou première saison)
+  const defaultPrice = pricingData.defaultPricing?.price;
+  const basePrice = propData.price || defaultPrice || (pricingData.seasons?.[0]?.price || 100);
   
   // Calculer le prix plateforme moyen
   let platformPrice = basePrice;
