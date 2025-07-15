@@ -1,4 +1,4 @@
-// Calculateur de prix principal
+// Calculateur de prix principal V2
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -179,6 +179,14 @@ class PriceCalculator {
       let platformPrice = 0;
       let bestSeason = null;
       
+      // Commencer par vérifier le prix par défaut
+      if (this.pricingData && this.pricingData.defaultPricing) {
+        minPrice = this.pricingData.defaultPricing.price;
+        bestSeason = this.pricingData.defaultPricing;
+        platformPrice = this.getPlatformPrice(bestSeason);
+      }
+      
+      // Puis vérifier les saisons pour un prix potentiellement plus bas
       if (this.pricingData && this.pricingData.seasons) {
         for (const season of this.pricingData.seasons) {
           if (season.price < minPrice) {
@@ -374,7 +382,11 @@ class PriceCalculator {
       }
     }
     
-    // Si aucune saison ne correspond, retourner la première par défaut
+    // Si aucune saison ne correspond, utiliser defaultPricing
+    if (this.pricingData.defaultPricing) {
+      return this.pricingData.defaultPricing;
+    }
+    // Fallback sur première saison pour rétrocompatibilité
     return this.pricingData.seasons[0];
   }
 
@@ -394,8 +406,14 @@ class PriceCalculator {
       return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
     }
     
-    return season.price;
+  // Sinon utiliser la réduction par défaut de 17%
+  if (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) {
+    const discount = this.pricingData.platformPricing.defaultDiscount;
+    return season.price * (100 / (100 - discount));
   }
+  
+  return season.price;
+}
 
   updateUI(details) {
     // Afficher les blocs de calcul
