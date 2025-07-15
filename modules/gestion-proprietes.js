@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V2
+// Gestionnaire principal des propriétés pour la page liste - V3
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -591,22 +591,62 @@ class PropertyManager {
     }
     
     // Prix avec gestion du prix barré
+// Prix avec gestion du prix barré
 const priceElement = newCard.querySelector('.texte-prix');
 const pourcentageElement = newCard.querySelector('.pourcentage');
 
 if (priceElement && propData.pricing_data) {
   const pricingData = propData.pricing_data;
   
-  // Récupérer le prix de base (défaut ou première saison)
-  const defaultPrice = pricingData.defaultPricing?.price;
-  const basePrice = propData.price || defaultPrice || (pricingData.seasons?.[0]?.price || 100);
+  // 🆕 Trouver le prix le plus bas (défaut ou saisons)
+  let basePrice = propData.price;
+  let lowestSeason = null;
   
-  // Calculer le prix plateforme moyen
+  if (!basePrice) {
+    // Commencer par le prix par défaut
+    if (pricingData.defaultPricing) {
+      basePrice = pricingData.defaultPricing.price;
+      lowestSeason = pricingData.defaultPricing;
+    }
+    
+    // Vérifier si une saison a un prix plus bas
+    if (pricingData.seasons) {
+      for (const season of pricingData.seasons) {
+        if (!basePrice || season.price < basePrice) {
+          basePrice = season.price;
+          lowestSeason = season;
+        }
+      }
+    }
+    
+    // Fallback
+    if (!basePrice) basePrice = 100;
+  }
+  
+  // 🆕 Calculer le prix plateforme selon la saison/défaut trouvée
   let platformPrice = basePrice;
-  if (pricingData.seasons?.[0]?.platformPrices) {
-    const prices = Object.values(pricingData.seasons[0].platformPrices);
-    if (prices.length > 0) {
-      platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+  
+  if (lowestSeason) {
+    // Si la saison a des prix plateformes
+    if (lowestSeason.platformPrices) {
+      const prices = Object.values(lowestSeason.platformPrices);
+      if (prices.length > 0) {
+        platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+      }
+    } 
+    // Sinon, si defaultPricing existe et qu'on est sur une saison sans prix
+    else if (pricingData.defaultPricing && pricingData.defaultPricing.platformPrices && lowestSeason !== pricingData.defaultPricing) {
+      const prices = Object.values(pricingData.defaultPricing.platformPrices);
+      if (prices.length > 0) {
+        platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+      }
+    }
+    // Sinon utiliser le markup ou 17%
+    else if (pricingData.platformMarkup?.percentage) {
+      platformPrice = Math.round(basePrice * (1 + pricingData.platformMarkup.percentage / 100));
+    } else if (pricingData.platformPricing?.defaultDiscount) {
+      const discount = pricingData.platformPricing.defaultDiscount;
+      platformPrice = Math.round(basePrice * (100 / (100 - discount)));
     }
   }
   
