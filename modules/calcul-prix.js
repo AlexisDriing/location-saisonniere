@@ -1,4 +1,4 @@
-// Calculateur de prix principal V2
+// Calculateur de prix principal V3
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -269,7 +269,14 @@ class PriceCalculator {
       // Vérifier les nuits minimum
       const firstNight = moment(this.startDate).startOf("day");
       const firstSeason = this.getSeason(firstNight);
-      if (firstSeason && firstSeason.minNights && details.nights < firstSeason.minNights) {
+      
+      // 🆕 Gestion spéciale si pas de firstSeason
+      if (!firstSeason) {
+        console.error("Aucune saison trouvée pour la date de début");
+        return null;
+      }
+      
+      if (firstSeason.minNights && details.nights < firstSeason.minNights) {
         return null;
       }
       
@@ -362,6 +369,8 @@ class PriceCalculator {
     const day = date.date();
     
     for (const season of this.pricingData.seasons) {
+         // 🆕 Vérifier que periods existe
+    if (!season.periods || !Array.isArray(season.periods)) continue;
       for (const period of season.periods) {
         const [startDay, startMonth] = period.start.split("-").map(Number);
         const [endDay, endMonth] = period.end.split("-").map(Number);
@@ -394,6 +403,14 @@ class PriceCalculator {
     if (!season) return 0;
     
     const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
+
+    // 🆕 Si c'est defaultPricing ET qu'il a des prix plateformes
+      if (season === this.pricingData.defaultPricing && season.platformPrices) {
+        const prices = Object.values(season.platformPrices);
+        if (prices.length > 0) {
+          return prices.reduce((a, b) => a + b, 0) / prices.length;
+        }
+      }
     
     if (!usePercentage && season.platformPrices) {
       const prices = Object.values(season.platformPrices);
