@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison
+// Gestion de l'affichage des tarifs par saison v2
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -77,7 +77,24 @@ class TariffsDisplayManager {
     // Pourcentage de réduction
     const percentageElement = seasonElement.querySelector("#text-pourcentage-season");
     if (percentageElement) {
-      const discount = this.calculatePlatformDiscount(season.price, season.platformPrices);
+      let discount = 0;
+      
+      // D'abord essayer de calculer avec les prix plateformes
+      if (season.platformPrices) {
+        discount = this.calculatePlatformDiscount(season.price, season.platformPrices);
+      } 
+      // 🆕 Si pas de prix plateformes, utiliser 17%
+      else if (discounts && Array.isArray(discounts) && discounts.length > 0) {
+        // On a accès à pricingData via le parent
+        const pricingDataElement = document.querySelector("[data-json-tarifs-line], [data-json-tarifs]");
+        if (pricingDataElement) {
+          const jsonData = JSON.parse(pricingDataElement.getAttribute("data-json-tarifs-line") || pricingDataElement.getAttribute("data-json-tarifs"));
+          if (jsonData.platformPricing && jsonData.platformPricing.defaultDiscount) {
+            discount = jsonData.platformPricing.defaultDiscount;
+          }
+        }
+      }
+      
       percentageElement.textContent = discount > 0 ? `-${discount}%` : "";
     }
     
