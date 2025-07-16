@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V5 modifié
+// Gestionnaire de la page de modification de logement - V5 plusieurs saisons
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -283,24 +283,29 @@ setupTimeFormatters() {
   }
   
   displaySeasonBlock(season, index) {
-    const seasonBlock = document.getElementById(`season-${index + 1}`);
-    if (!seasonBlock) return;
+    const seasonNum = index + 1;
+    const seasonBlock = document.getElementById(`season-${seasonNum}`);
+    
+    if (!seasonBlock) {
+      console.log(`❌ Bloc season-${seasonNum} non trouvé`);
+      return;
+    }
     
     seasonBlock.style.display = 'flex'; // ou 'block' selon votre CSS
     
-    // Utiliser la même logique que gestion-tarifs.js
-    const nameElement = seasonBlock.querySelector("#name-season");
+    // Utiliser des IDs uniques avec le numéro
+    const nameElement = document.getElementById(`name-season-${seasonNum}`);
     if (nameElement) {
       nameElement.textContent = season.name;
     }
     
-    const priceElement = seasonBlock.querySelector("#prix-nuit-season");
+    const priceElement = document.getElementById(`prix-nuit-season-${seasonNum}`);
     if (priceElement) {
       priceElement.textContent = season.price;
     }
     
     // Dates
-    const datesElement = seasonBlock.querySelector("#dates-season");
+    const datesElement = document.getElementById(`dates-season-${seasonNum}`);
     if (datesElement && season.periods && season.periods.length > 0) {
       const dateRanges = season.periods.map(period => 
         this.formatDateRange(period.start, period.end)
@@ -309,7 +314,7 @@ setupTimeFormatters() {
     }
     
     // Nuits minimum
-    const minNightsElement = seasonBlock.querySelector("#nuit-minimum");
+    const minNightsElement = document.getElementById(`nuit-minimum-${seasonNum}`);
     if (minNightsElement) {
       minNightsElement.textContent = season.minNights || 1;
     }
