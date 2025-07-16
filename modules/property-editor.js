@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V5
+// Gestionnaire de la page de modification de logement - V5 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -247,23 +247,23 @@ setupTimeFormatters() {
   }
   
   loadPricingData() {
-  // Charger le JSON existant ou créer une structure vide
-  if (this.propertyData.pricing_data) {
-    // IMPORTANT : Créer une copie pour ne pas modifier l'original
-    this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data));
-  } else {
-    this.pricingData = {
-      seasons: [],
-      cleaning: { included: true },
-      discounts: [],
-      capacity: 4,
-      caution: 0,
-      acompte: 30
-    };
+    // Charger le JSON existant ou créer une structure vide
+    if (this.propertyData.pricing_data) {
+      // 🔧 COPIE PROFONDE (pas une référence)
+      this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data));
+    } else {
+      this.pricingData = {
+        seasons: [],
+        cleaning: { included: true },
+        discounts: [],
+        capacity: 4,
+        caution: 0,
+        acompte: 30
+      };
+    }
+    
+    console.log('📊 Données tarifaires chargées:', this.pricingData);
   }
-  
-  console.log('📊 Données tarifaires chargées:', this.pricingData);
-}
   
   hideAllSeasonBlocks() {
     for (let i = 1; i <= 4; i++) {
@@ -537,14 +537,25 @@ closeSeasonModal() {
       }
     });
 
-    // 🆕 Restaurer les saisons d'origine
+    // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
-    this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data)); // Clone profond
+      // 🔧 COPIE PROFONDE pour éviter les références
+      this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data));
+    } else {
+      // Si pas de données d'origine, réinitialiser à vide
+      this.pricingData = {
+        seasons: [],
+        cleaning: { included: true },
+        discounts: [],
+        capacity: 4,
+        caution: 0,
+        acompte: 30
+      };
+    }
     
     // Réafficher les saisons
     this.hideAllSeasonBlocks();
     this.displayExistingSeasons();
-  }
     
     // Désactiver les boutons
     this.disableButtons();
