@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V3 modifié
+// Gestionnaire de la page de modification de logement - V4
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -83,13 +83,33 @@ class PropertyEditor {
         numericOnly: true
       });
       
-      input.addEventListener('blur', () => {
-        if (input.value) {
-          input.setAttribute('data-date-value', input.value);
+      // 🆕 Ajouter la conversion en texte au blur
+    input.addEventListener('blur', function() {
+      const value = this.value;
+      if (value && value.includes('/')) {
+        const [jour, mois] = value.split('/');
+        const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        
+        const moisNum = parseInt(mois);
+        if (moisNum >= 1 && moisNum <= 12) {
+          // Stocker la valeur originale
+          this.setAttribute('data-date-value', value);
+          // Afficher en format texte
+          this.value = `${parseInt(jour)} ${moisNoms[moisNum]}`;
         }
-      });
+      }
     });
-  }
+    
+    // 🆕 Restaurer le format au focus
+    input.addEventListener('focus', function() {
+      const originalValue = this.getAttribute('data-date-value');
+      if (originalValue) {
+        this.value = originalValue;
+      }
+    });
+  });
+}
   
   setupSuffixFormatters() {
     // Euros
@@ -352,9 +372,6 @@ validateAndAddSeason() {
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
-  
-  // Sauvegarder automatiquement
-  this.savePricingData();
 }
 
 getSeasonFormData() {
@@ -502,36 +519,54 @@ async savePricingData() {
         input.value = this.initialValues[field.dataKey] || '';
       }
     });
+
+    // 🆕 Restaurer les saisons d'origine
+    if (this.propertyData.pricing_data) {
+    this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data)); // Clone profond
+    
+    // Réafficher les saisons
+    this.hideAllSeasonBlocks();
+    this.displayExistingSeasons();
+  }
     
     // Désactiver les boutons
     this.disableButtons();
   }
 
   async saveModifications() {
-    console.log('💾 Sauvegarde des modifications...');
-    
-    // Configuration du mapping des champs
-    const fieldMapping = [
-      { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
-      { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' }
-    ];
-    
-    // Collecter les valeurs actuelles
-    const currentValues = {};
-    fieldMapping.forEach(field => {
-      const input = document.getElementById(field.id);
-      if (input) {
-        currentValues[field.dataKey] = input.value.trim();
-      }
-    });
-    
-    // 🎯 OPTIMISATION : Ne prendre que les champs modifiés
-    const updates = {};
-    Object.keys(currentValues).forEach(key => {
-      if (currentValues[key] !== this.initialValues[key]) {
-        updates[key] = currentValues[key];
-      }
-    });
+  console.log('💾 Sauvegarde des modifications...');
+  
+  // Configuration du mapping des champs
+  const fieldMapping = [
+    { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
+    { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' }
+  ];
+  
+  // Collecter les valeurs actuelles
+  const currentValues = {};
+  fieldMapping.forEach(field => {
+    const input = document.getElementById(field.id);
+    if (input) {
+      currentValues[field.dataKey] = input.value.trim();
+    }
+  });
+  
+  // 🎯 OPTIMISATION : Ne prendre que les champs modifiés
+  const updates = {};
+  Object.keys(currentValues).forEach(key => {
+    if (currentValues[key] !== this.initialValues[key]) {
+      updates[key] = currentValues[key];
+    }
+  });
+  
+  // 🆕 AJOUTER ICI : Vérifier si les données tarifaires ont changé
+  const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
+  const currentPricingJson = JSON.stringify(this.pricingData);
+  
+  if (originalPricingJson !== currentPricingJson) {
+    updates.pricing_data = this.pricingData;
+    console.log('📊 Données tarifaires modifiées');
+  }
     
     // Si aucune modification
     if (Object.keys(updates).length === 0) {
@@ -564,9 +599,16 @@ async savePricingData() {
         
         // Mettre à jour les valeurs initiales avec les nouvelles valeurs
         Object.keys(updates).forEach(key => {
-          this.initialValues[key] = updates[key];
+          if (key !== 'pricing_data') { // Pour les champs normaux
+            this.initialValues[key] = updates[key];
+          }
         });
         
+        // 🆕 AJOUTER : Mettre à jour les données pricing d'origine
+        if (updates.pricing_data) {
+          this.propertyData.pricing_data = JSON.parse(JSON.stringify(this.pricingData));
+        }
+              
         // Désactiver les boutons
         this.disableButtons();
         
