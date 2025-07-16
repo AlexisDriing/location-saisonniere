@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V4
+// Gestionnaire de la page de modification de logement - V4 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -68,6 +68,7 @@ class PropertyEditor {
     }
     
     this.setupDateFormatters();
+    this.setupTimeFormatters();
     this.setupSuffixFormatters();
   }
   
@@ -106,6 +107,57 @@ class PropertyEditor {
       const originalValue = this.getAttribute('data-date-value');
       if (originalValue) {
         this.value = originalValue;
+      }
+    });
+  });
+}
+setupTimeFormatters() {
+  const heureInputs = document.querySelectorAll('[data-format="heure-minute"]');
+  
+  heureInputs.forEach(input => {
+    new Cleave(input, {
+      blocks: [2, 2],
+      delimiter: ':',
+      numericOnly: true,
+      delimiterLazyShow: true, // Affiche : automatiquement
+      onValueChanged: function(e) {
+        // Validation des heures (0-23)
+        const value = e.target.value;
+        if (value.length >= 2) {
+          const heures = parseInt(value.substring(0, 2));
+          if (heures > 23) {
+            e.target.value = '23' + value.substring(2);
+          }
+        }
+        
+        // Validation des minutes (0-59)
+        if (value.length >= 5) {
+          const minutes = parseInt(value.substring(3, 5));
+          if (minutes > 59) {
+            e.target.value = value.substring(0, 3) + '59';
+          }
+        }
+      }
+    });
+    
+    // Placeholder explicite
+    input.placeholder = '00:00';
+    
+    // Ajouter zéros automatiquement au blur si nécessaire
+    input.addEventListener('blur', function() {
+      let value = this.value;
+      if (value) {
+        // Si seulement l'heure est entrée (ex: "14"), ajouter ":00"
+        if (value.length === 2 && !value.includes(':')) {
+          this.value = value + ':00';
+        }
+        // Si format incomplet (ex: "14:5"), ajouter le zéro
+        else if (value.includes(':')) {
+          const parts = value.split(':');
+          const heures = parts[0].padStart(2, '0');
+          const minutes = (parts[1] || '00').padStart(2, '0');
+          this.value = heures + ':' + minutes;
+        }
       }
     });
   });
