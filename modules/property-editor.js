@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Version optimisée
+// Gestionnaire de la page de modification de logement - V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -56,6 +56,74 @@ class PropertyEditor {
     }
   }
 
+  initFormFormatters() {
+    console.log('📝 Initialisation des formatters...');
+    
+    // Attendre que Cleave soit chargé
+    if (typeof Cleave === 'undefined') {
+      // Le script est déjà dans Webflow, on attend juste qu'il soit prêt
+      setTimeout(() => this.initFormFormatters(), 100);
+      return;
+    }
+    
+    this.setupDateFormatters();
+    this.setupSuffixFormatters();
+  }
+  
+  setupDateFormatters() {
+    const dateInputs = document.querySelectorAll('[data-format="date-jour-mois"]');
+    
+    dateInputs.forEach(input => {
+      new Cleave(input, {
+        date: true,
+        delimiter: '/',
+        datePattern: ['d', 'm'],
+        blocks: [2, 2],
+        numericOnly: true
+      });
+      
+      input.addEventListener('blur', () => {
+        if (input.value) {
+          input.setAttribute('data-date-value', input.value);
+        }
+      });
+    });
+  }
+  
+  setupSuffixFormatters() {
+    // Euros
+    document.querySelectorAll('[data-suffix="euro"], [data-suffix="euro-nuit"]').forEach(input => {
+      input.addEventListener('blur', function() {
+        const value = this.value.replace(/[^\d]/g, '');
+        if (value) {
+          this.setAttribute('data-raw-value', value);
+          const suffix = this.getAttribute('data-suffix') === 'euro' ? ' €' : ' € / nuit';
+          this.value = value + suffix;
+        }
+      });
+      
+      input.addEventListener('focus', function() {
+        const rawValue = this.getAttribute('data-raw-value');
+        if (rawValue) {
+          this.value = rawValue;
+        }
+      });
+    });
+  }
+  
+  // Méthodes utilitaires
+  getRawValue(input) {
+    return input.getAttribute('data-raw-value') || input.value.replace(/[^\d]/g, '');
+  }
+  
+  getDateValue(input) {
+    const dateValue = input.getAttribute('data-date-value');
+    if (dateValue && dateValue.includes('/')) {
+      return dateValue.replace('/', '-'); // "15/07" → "15-07"
+    }
+    return null;
+  }
+  
   prefillForm() {
     console.log('📝 Pré-remplissage des champs...');
     
