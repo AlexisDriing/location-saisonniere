@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V3
+// Gestionnaire de la page de modification de logement - V3 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -160,7 +160,6 @@ class PropertyEditor {
     
     // Initialiser les formatters
     this.initFormFormatters();
-    this.formatters.init();
     
     // Charger ou initialiser les données tarifaires
     this.loadPricingData();
