@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V4 modifié
+// Gestionnaire de la page de modification de logement - V5
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -247,22 +247,23 @@ setupTimeFormatters() {
   }
   
   loadPricingData() {
-    // Charger le JSON existant ou créer une structure vide
-    if (this.propertyData.pricing_data) {
-      this.pricingData = this.propertyData.pricing_data;
-    } else {
-      this.pricingData = {
-        seasons: [],
-        cleaning: { included: true },
-        discounts: [],
-        capacity: 4,
-        caution: 0,
-        acompte: 30
-      };
-    }
-    
-    console.log('📊 Données tarifaires chargées:', this.pricingData);
+  // Charger le JSON existant ou créer une structure vide
+  if (this.propertyData.pricing_data) {
+    // IMPORTANT : Créer une copie pour ne pas modifier l'original
+    this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data));
+  } else {
+    this.pricingData = {
+      seasons: [],
+      cleaning: { included: true },
+      discounts: [],
+      capacity: 4,
+      caution: 0,
+      acompte: 30
+    };
   }
+  
+  console.log('📊 Données tarifaires chargées:', this.pricingData);
+}
   
   hideAllSeasonBlocks() {
     for (let i = 1; i <= 4; i++) {
@@ -442,42 +443,6 @@ closeSeasonModal() {
     modal.style.display = 'none';
   }
   this.resetSeasonModal();
-}
-
-// 🆕 IMPORTANT : Méthode pour sauvegarder le JSON
-async savePricingData() {
-  console.log('💾 Sauvegarde des données tarifaires...');
-  
-  try {
-    // Préparer les données
-    const updates = {
-      pricing_data: this.pricingData
-    };
-    
-    // Utiliser la même route que pour les autres champs
-    const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updates)
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok && result.success) {
-      console.log('✅ Données tarifaires sauvegardées');
-      
-      // Optionnel : Message de succès discret
-      // alert('Saison ajoutée avec succès !');
-    } else {
-      throw new Error(result.error || 'Erreur lors de la sauvegarde');
-    }
-    
-  } catch (error) {
-    console.error('❌ Erreur sauvegarde tarifs:', error);
-    alert('Erreur lors de la sauvegarde de la saison');
-  }
 }
   
   setupFieldListeners() {
