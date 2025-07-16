@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V5 plusieurs saisons
+// Gestionnaire de la page de modification de logement - V6
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -243,6 +243,7 @@ setupTimeFormatters() {
     this.hideAllSeasonBlocks();
     
     // Afficher les saisons existantes
+    console.log('📊 Affichage des saisons existantes:', this.pricingData.seasons);
     this.displayExistingSeasons();
   }
   
@@ -275,28 +276,42 @@ setupTimeFormatters() {
   }
   
   displayExistingSeasons() {
-    if (this.pricingData.seasons && this.pricingData.seasons.length > 0) {
+    console.log('🔍 displayExistingSeasons appelée');
+    console.log('📊 pricingData:', this.pricingData);
+    
+    if (this.pricingData && this.pricingData.seasons && this.pricingData.seasons.length > 0) {
+      console.log(`✅ ${this.pricingData.seasons.length} saison(s) trouvée(s)`);
+      
       this.pricingData.seasons.forEach((season, index) => {
+        console.log(`📅 Affichage saison ${index + 1}:`, season);
         this.displaySeasonBlock(season, index);
       });
+    } else {
+      console.log('❌ Aucune saison à afficher');
     }
   }
   
   displaySeasonBlock(season, index) {
     const seasonNum = index + 1;
+    console.log(`🎯 Tentative d'affichage du bloc season-${seasonNum}`);
+    
     const seasonBlock = document.getElementById(`season-${seasonNum}`);
     
     if (!seasonBlock) {
-      console.log(`❌ Bloc season-${seasonNum} non trouvé`);
+      console.log(`❌ Bloc season-${seasonNum} non trouvé dans le DOM`);
       return;
     }
     
+    console.log(`✅ Bloc season-${seasonNum} trouvé, affichage en cours...`);
     seasonBlock.style.display = 'flex'; // ou 'block' selon votre CSS
     
     // Utiliser des IDs uniques avec le numéro
     const nameElement = document.getElementById(`name-season-${seasonNum}`);
     if (nameElement) {
       nameElement.textContent = season.name;
+      console.log(`✅ Nom affiché: ${season.name}`);
+    } else {
+      console.log(`❌ Élément name-season-${seasonNum} non trouvé`);
     }
     
     const priceElement = document.getElementById(`prix-nuit-season-${seasonNum}`);
