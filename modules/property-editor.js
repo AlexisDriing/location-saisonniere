@@ -1,9 +1,10 @@
-// Gestionnaire de la page de modification de logement - V6
+// Gestionnaire de la page de modification de logement - V7
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
     this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
+    this.editingSeasonIndex = null;
     this.init();
   }
 
@@ -349,24 +350,44 @@ setupTimeFormatters() {
   }
   
   setupSeasonButtons() {
-    // Bouton ajouter saison
-    const addSeasonBtn = document.getElementById('button-add-season');
-    if (addSeasonBtn) {
-      addSeasonBtn.addEventListener('click', (e) => {
+  // Bouton ajouter saison
+  const addSeasonBtn = document.getElementById('button-add-season');
+  if (addSeasonBtn) {
+    addSeasonBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openAddSeasonModal();
+    });
+  }
+  
+  // Boutons dans la modal d'ajout
+  const validateAddBtn = document.getElementById('button-validate-add-season');
+  if (validateAddBtn) {
+    validateAddBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.validateAndAddSeason();
+    });
+  }
+  
+  // 🆕 Boutons modifier pour chaque saison (1 à 4)
+  for (let i = 1; i <= 4; i++) {
+    const editBtn = document.getElementById(`edit-${i}`);
+    if (editBtn) {
+      editBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        this.openAddSeasonModal();
-      });
-    }
-    
-    // Boutons dans la modal d'ajout
-    const validateAddBtn = document.getElementById('button-validate-add-season');
-    if (validateAddBtn) {
-      validateAddBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.validateAndAddSeason();
+        this.openEditSeasonModal(i - 1); // index 0-based
       });
     }
   }
+  
+  // 🆕 Bouton valider dans la modal de modification
+  const validateEditBtn = document.getElementById('button-validate-edit-season');
+  if (validateEditBtn) {
+    validateEditBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.validateAndEditSeason();
+    });
+  }
+}
 
   // Méthode pour ouvrir la modal (vous l'avez déjà, mais au cas où)
 openAddSeasonModal() {
@@ -388,6 +409,64 @@ openAddSeasonModal() {
   }
 }
 
+  // 🆕 Ouvrir la modal de modification
+openEditSeasonModal(seasonIndex) {
+  console.log('✏️ Ouverture modal modification saison', seasonIndex + 1);
+  
+  // Vérifier que la saison existe
+  if (!this.pricingData.seasons[seasonIndex]) {
+    console.error('❌ Saison non trouvée à l\'index', seasonIndex);
+    return;
+  }
+  
+  // Stocker l'index de la saison en cours de modification
+  this.editingSeasonIndex = seasonIndex;
+  const season = this.pricingData.seasons[seasonIndex];
+  
+  // Pré-remplir les champs avec les valeurs actuelles
+  const nameInput = document.getElementById('season-name-input-edit');
+  if (nameInput) nameInput.value = season.name;
+  
+  // Gérer les dates
+  if (season.periods && season.periods[0]) {
+    const startInput = document.getElementById('season-date-start-input-edit');
+    const endInput = document.getElementById('season-date-end-input-edit');
+    
+    if (startInput) {
+      // Convertir "28-07" en "28/07" pour l'input
+      const [day, month] = season.periods[0].start.split('-');
+      startInput.value = `${day}/${month}`;
+      startInput.setAttribute('data-date-value', `${day}/${month}`);
+    }
+    
+    if (endInput) {
+      const [day, month] = season.periods[0].end.split('-');
+      endInput.value = `${day}/${month}`;
+      endInput.setAttribute('data-date-value', `${day}/${month}`);
+    }
+  }
+  
+  // Prix
+  const priceInput = document.getElementById('season-price-input-edit');
+  if (priceInput) {
+    priceInput.value = season.price;
+    priceInput.setAttribute('data-raw-value', season.price);
+  }
+  
+  // Nuits minimum
+  const minNightsInput = document.getElementById('season-min-nights-input-edit');
+  if (minNightsInput) {
+    minNightsInput.value = season.minNights || 1;
+    minNightsInput.setAttribute('data-raw-value', season.minNights || 1);
+  }
+  
+  // Afficher la modal
+  const modal = document.getElementById('modal-edit-season'); // Adaptez l'ID selon votre modal
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+  
 resetSeasonModal() {
   // Réinitialiser tous les champs
   const fields = [
@@ -447,6 +526,51 @@ validateAndAddSeason() {
   this.enableButtons();
 }
 
+// 🆕 Valider et sauvegarder les modifications de la saison
+validateAndEditSeason() {
+  console.log('✅ Validation des modifications de la saison', this.editingSeasonIndex + 1);
+  
+  // Vérifier qu'on a bien un index
+  if (this.editingSeasonIndex === undefined || this.editingSeasonIndex === null) {
+    console.error('❌ Aucune saison en cours de modification');
+    return;
+  }
+  
+  // Récupérer les valeurs des champs
+  const seasonData = this.getEditSeasonFormData();
+  
+  // Validation basique
+  if (!seasonData.name || !seasonData.dateStart || !seasonData.dateEnd || !seasonData.price) {
+    alert('Veuillez remplir tous les champs obligatoires');
+    return;
+  }
+  
+  // Mettre à jour la saison existante
+  const updatedSeason = {
+    name: seasonData.name,
+    price: parseInt(seasonData.price),
+    minNights: parseInt(seasonData.minNights) || 1,
+    periods: [{
+      start: seasonData.dateStart,
+      end: seasonData.dateEnd
+    }]
+  };
+  
+  console.log('📊 Saison modifiée:', updatedSeason);
+  
+  // Remplacer la saison dans le tableau
+  this.pricingData.seasons[this.editingSeasonIndex] = updatedSeason;
+  
+  // Mettre à jour l'affichage
+  this.displaySeasonBlock(updatedSeason, this.editingSeasonIndex);
+  
+  // Fermer la modal
+  this.closeEditSeasonModal();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+  
 getSeasonFormData() {
   return {
     name: document.getElementById('season-name-input')?.value.trim(),
@@ -457,12 +581,53 @@ getSeasonFormData() {
   };
 }
 
+  // 🆕 Récupérer les données du formulaire de modification
+getEditSeasonFormData() {
+  return {
+    name: document.getElementById('season-name-input-edit')?.value.trim(),
+    dateStart: this.getDateValue(document.getElementById('season-date-start-input-edit')),
+    dateEnd: this.getDateValue(document.getElementById('season-date-end-input-edit')),
+    price: this.getRawValue(document.getElementById('season-price-input-edit')),
+    minNights: this.getRawValue(document.getElementById('season-min-nights-input-edit')) || '1'
+  };
+}
+  
 closeSeasonModal() {
   const modal = document.getElementById('modal-add-season');
   if (modal) {
     modal.style.display = 'none';
   }
   this.resetSeasonModal();
+}
+
+  // 🆕 Fermer la modal de modification
+closeEditSeasonModal() {
+  const modal = document.getElementById('modal-edit-season');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  this.resetEditSeasonModal();
+  this.editingSeasonIndex = null;
+}
+
+// 🆕 Réinitialiser les champs de la modal de modification
+resetEditSeasonModal() {
+  const fields = [
+    'season-name-input-edit',
+    'season-date-start-input-edit',
+    'season-date-end-input-edit',
+    'season-price-input-edit',
+    'season-min-nights-input-edit'
+  ];
+  
+  fields.forEach(fieldId => {
+    const input = document.getElementById(fieldId);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+      input.removeAttribute('data-date-value');
+    }
+  });
 }
   
   setupFieldListeners() {
