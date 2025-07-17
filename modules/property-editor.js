@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V7 modifié
+// Gestionnaire de la page de modification de logement - V7 debug
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -772,10 +772,22 @@ resetEditSeasonModal() {
     }
   });
   
-  // 🆕 SIMPLIFICATION : Toujours envoyer les données tarifaires si elles existent
-  if (this.pricingData) {
+  // 🆕 DEBUG : Vérifier si les données tarifaires ont changé
+  console.log('🔍 propertyData.pricing_data:', this.propertyData.pricing_data);
+  console.log('🔍 pricingData actuel:', this.pricingData);
+  
+  const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
+  const currentPricingJson = JSON.stringify(this.pricingData);
+  
+  console.log('🔍 JSON original:', originalPricingJson);
+  console.log('🔍 JSON actuel:', currentPricingJson);
+  console.log('🔍 Sont-ils différents ?', originalPricingJson !== currentPricingJson);
+  
+  if (originalPricingJson !== currentPricingJson) {
     updates.pricing_data = this.pricingData;
-    console.log('📊 Ajout des données tarifaires dans la sauvegarde');
+    console.log('📊 Données tarifaires ajoutées aux updates');
+  } else {
+    console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
   }
     
     // Si aucune modification
