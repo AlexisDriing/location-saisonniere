@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V7 debug
+// Gestionnaire de la page de modification de logement - V8
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -224,7 +224,12 @@ setupTimeFormatters() {
       }
     });
     
-    // 4. Écouter les changements
+    // NOUVEAU : Pré-remplir les champs defaultPricing
+    this.prefillDefaultPricing();
+    
+    // NOUVEAU : Pré-remplir les autres champs simples
+    this.prefillSimpleFields();
+    
     this.setupFieldListeners();
   }
 
@@ -249,23 +254,38 @@ setupTimeFormatters() {
   }
   
   loadPricingData() {
-    // Charger le JSON existant ou créer une structure vide
-    if (this.propertyData.pricing_data) {
-      // 🔧 COPIE PROFONDE (pas une référence)
-      this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data));
-    } else {
-      this.pricingData = {
-        seasons: [],
-        cleaning: { included: true },
-        discounts: [],
-        capacity: 4,
-        caution: 0,
-        acompte: 30
-      };
-    }
-    
-    console.log('📊 Données tarifaires chargées:', this.pricingData);
+  if (this.propertyData.pricing_data) {
+    this.pricingData = JSON.parse(JSON.stringify(this.propertyData.pricing_data));
+  } else {
+    // Structure complète avec les bonnes valeurs par défaut
+    this.pricingData = {
+      defaultPricing: {
+        price: 0,
+        minNights: 0,
+        platformPrices: {
+          airbnb: 0,
+          booking: 0,
+          gites: 0,
+          other: 0
+        }
+      },
+      platformPricing: {
+        usePercentage: false,
+        defaultDiscount: 17
+      },
+      seasons: [],
+      cleaning: { 
+        included: true
+      },
+      discounts: [],
+      capacity: 0,
+      caution: 0,
+      acompte: 0
+    };
   }
+  
+  console.log('📊 Données tarifaires chargées:', this.pricingData);
+}
   
   hideAllSeasonBlocks() {
     for (let i = 1; i <= 4; i++) {
@@ -629,24 +649,90 @@ resetEditSeasonModal() {
     }
   });
 }
+
+  prefillDefaultPricing() {
+  console.log('💰 Pré-remplissage defaultPricing...');
   
-  setupFieldListeners() {
-    const fields = [
-      { id: 'adresse-input' },
-      { id: 'cadeaux-input' },
-    ];
-    
-    fields.forEach(field => {
-      const input = document.getElementById(field.id);
+  // Prix par défaut
+  const defaultPriceInput = document.getElementById('default-price-input');
+  if (defaultPriceInput && this.pricingData.defaultPricing) {
+    defaultPriceInput.value = this.pricingData.defaultPricing.price || 0;
+    defaultPriceInput.setAttribute('data-raw-value', this.pricingData.defaultPricing.price || 0);
+  }
+  
+  // Nuits minimum par défaut
+  const defaultMinNightsInput = document.getElementById('default-min-nights-input');
+  if (defaultMinNightsInput && this.pricingData.defaultPricing) {
+    defaultMinNightsInput.value = this.pricingData.defaultPricing.minNights || 0;
+  }
+  
+  // Prix plateformes (optionnels)
+  if (this.pricingData.defaultPricing && this.pricingData.defaultPricing.platformPrices) {
+    const platforms = ['airbnb', 'booking', 'gites', 'other'];
+    platforms.forEach(platform => {
+      const input = document.getElementById(`default-${platform}-price-input`);
       if (input) {
-        // Dès qu'on tape = activer les boutons (logique simple)
-        input.addEventListener('input', () => {
-          this.enableButtons();
-        });
+        const value = this.pricingData.defaultPricing.platformPrices[platform] || 0;
+        input.value = value;
+        input.setAttribute('data-raw-value', value);
       }
     });
   }
+}
+  
+setupFieldListeners() {
+  // ✅ GARDER le code existant
+  const fields = [
+    { id: 'adresse-input' },
+    { id: 'cadeaux-input' },
+  ];
+  
+  fields.forEach(field => {
+    const input = document.getElementById(field.id);
+    if (input) {
+      input.addEventListener('input', () => {
+        this.enableButtons();
+      });
+    }
+  });
+  
+  // 🆕 AJOUTER cet appel
+  this.setupDefaultPricingListeners();
+}
 
+// 🆕 NOUVELLE MÉTHODE à ajouter après setupFieldListeners()
+setupDefaultPricingListeners() {
+  // Prix par défaut
+  const defaultPriceInput = document.getElementById('default-price-input');
+  if (defaultPriceInput) {
+    defaultPriceInput.addEventListener('input', () => {
+      this.updateDefaultPricing();
+      this.enableButtons();
+    });
+  }
+  
+  // Nuits minimum
+  const defaultMinNightsInput = document.getElementById('default-min-nights-input');
+  if (defaultMinNightsInput) {
+    defaultMinNightsInput.addEventListener('input', () => {
+      this.updateDefaultPricing();
+      this.enableButtons();
+    });
+  }
+  
+  // Prix plateformes
+  const platforms = ['airbnb', 'booking', 'gites', 'other'];
+  platforms.forEach(platform => {
+    const input = document.getElementById(`default-${platform}-price-input`);
+    if (input) {
+      input.addEventListener('input', () => {
+        this.updateDefaultPricing();
+        this.enableButtons();
+      });
+    }
+  });
+}
+  
   enableButtons() {
     const saveButton = document.getElementById('button-save-modifications');
     const cancelButton = document.getElementById('annulation');
@@ -677,6 +763,56 @@ resetEditSeasonModal() {
     }
   }
 
+  updateDefaultPricing() {
+  console.log('💰 Mise à jour defaultPricing...');
+  
+  // S'assurer que la structure existe
+  if (!this.pricingData.defaultPricing) {
+    this.pricingData.defaultPricing = {
+      price: 0,
+      minNights: 0,
+      platformPrices: {}
+    };
+  }
+  
+  // Prix par défaut
+  const defaultPriceInput = document.getElementById('default-price-input');
+  if (defaultPriceInput) {
+    this.pricingData.defaultPricing.price = parseInt(this.getRawValue(defaultPriceInput)) || 0;
+  }
+  
+  // Nuits minimum
+  const defaultMinNightsInput = document.getElementById('default-min-nights-input');
+  if (defaultMinNightsInput) {
+    this.pricingData.defaultPricing.minNights = parseInt(defaultMinNightsInput.value) || 0;
+  }
+  
+  // Prix plateformes
+  const platforms = ['airbnb', 'booking', 'gites', 'other'];
+  let hasPlatformPrices = false;
+  
+  platforms.forEach(platform => {
+    const input = document.getElementById(`default-${platform}-price-input`);
+    if (input) {
+      const value = parseInt(this.getRawValue(input)) || 0;
+      if (value > 0) {
+        if (!this.pricingData.defaultPricing.platformPrices) {
+          this.pricingData.defaultPricing.platformPrices = {};
+        }
+        this.pricingData.defaultPricing.platformPrices[platform] = value;
+        hasPlatformPrices = true;
+      }
+    }
+  });
+  
+  // Si aucun prix plateforme, supprimer l'objet
+  if (!hasPlatformPrices && this.pricingData.defaultPricing.platformPrices) {
+    delete this.pricingData.defaultPricing.platformPrices;
+  }
+  
+  console.log('✅ defaultPricing mis à jour:', this.pricingData.defaultPricing);
+}
+  
   setupSaveButton() {
     console.log('💾 Configuration des boutons...');
     
@@ -741,7 +877,8 @@ resetEditSeasonModal() {
     // Réafficher les saisons
     this.hideAllSeasonBlocks();
     this.displayExistingSeasons();
-    
+
+    this.prefillDefaultPricing();    
     // Désactiver les boutons
     this.disableButtons();
   }
@@ -772,16 +909,8 @@ resetEditSeasonModal() {
     }
   });
   
-  // 🆕 DEBUG : Vérifier si les données tarifaires ont changé
-  console.log('🔍 propertyData.pricing_data:', this.propertyData.pricing_data);
-  console.log('🔍 pricingData actuel:', this.pricingData);
-  
   const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
   const currentPricingJson = JSON.stringify(this.pricingData);
-  
-  console.log('🔍 JSON original:', originalPricingJson);
-  console.log('🔍 JSON actuel:', currentPricingJson);
-  console.log('🔍 Sont-ils différents ?', originalPricingJson !== currentPricingJson);
   
   if (originalPricingJson !== currentPricingJson) {
     updates.pricing_data = this.pricingData;
