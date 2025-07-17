@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V7
+// Gestionnaire de la page de modification de logement - V7 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -772,13 +772,10 @@ resetEditSeasonModal() {
     }
   });
   
-  // 🆕 AJOUTER ICI : Vérifier si les données tarifaires ont changé
-  const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
-  const currentPricingJson = JSON.stringify(this.pricingData);
-  
-  if (originalPricingJson !== currentPricingJson) {
+  // 🆕 SIMPLIFICATION : Toujours envoyer les données tarifaires si elles existent
+  if (this.pricingData) {
     updates.pricing_data = this.pricingData;
-    console.log('📊 Données tarifaires modifiées');
+    console.log('📊 Ajout des données tarifaires dans la sauvegarde');
   }
     
     // Si aucune modification
