@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V8
+// Gestionnaire de la page de modification de logement - V8 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -12,28 +12,34 @@ class PropertyEditor {
     console.log('✏️ Initialisation PropertyEditor...');
     
     // 1. Récupérer l'ID depuis l'URL
-    this.propertyId = this.getPropertyIdFromUrl();
-    
-    if (!this.propertyId) {
-      console.error('❌ Aucun ID de logement dans l\'URL');
-      return;
-    }
-    
-    console.log('🏠 ID du logement à modifier:', this.propertyId);
-    
-    // 2. Charger les données du logement
-    await this.loadPropertyData();
-    
-    // 3. Pré-remplir les champs
-    if (this.propertyData) {
-      this.prefillForm();
-      this.setupSaveButton();
-      this.initSeasonManagement();
-    }
-    
-    console.log('✅ PropertyEditor initialisé');
-    window.propertyEditor = this;
+  this.propertyId = this.getPropertyIdFromUrl();
+  
+  if (!this.propertyId) {
+    console.error('❌ Aucun ID de logement dans l\'URL');
+    return;
   }
+  
+  console.log('🏠 ID du logement à modifier:', this.propertyId);
+  
+  // 2. Charger les données du logement
+  await this.loadPropertyData();
+  
+  // 3. Si les données sont chargées
+  if (this.propertyData) {
+    // 🆕 IMPORTANT : Charger les données pricing AVANT prefillForm
+    this.loadPricingData();
+    
+    // ENSUITE seulement pré-remplir les champs
+    this.prefillForm();
+    this.setupSaveButton();
+    
+    // Et finir par l'init des saisons
+    this.initSeasonManagement();
+  }
+  
+  console.log('✅ PropertyEditor initialisé');
+  window.propertyEditor = this;
+}
 
   getPropertyIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -238,9 +244,6 @@ setupTimeFormatters() {
     
     // Initialiser les formatters
     this.initFormFormatters();
-    
-    // Charger ou initialiser les données tarifaires
-    this.loadPricingData();
     
     // Configuration des boutons
     this.setupSeasonButtons();
