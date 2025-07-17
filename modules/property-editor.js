@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V8 modifié
+// Gestionnaire de la page de modification de logement - V8 modifié en comm
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -234,7 +234,7 @@ setupTimeFormatters() {
     this.prefillDefaultPricing();
     
     // NOUVEAU : Pré-remplir les autres champs simples
-    this.prefillSimpleFields();
+    //this.prefillSimpleFields();
     
     this.setupFieldListeners();
   }
