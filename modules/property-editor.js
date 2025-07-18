@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V9 modifié
+// Gestionnaire de la page de modification de logement - V9 modifié nuits
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -858,33 +858,21 @@ setupDiscountListeners(blocElement, index) {
   if (nightsInput) {
     // SIMPLE : Directement récupérer la valeur de l'input
     nightsInput.addEventListener('input', (e) => {
-      const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
+      const value = parseInt(e.target.value) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
-    });
-    
-    // Formatage au blur
-    nightsInput.addEventListener('blur', function() {
-      const value = this.value.replace(/[^\d]/g, '');
-      if (value) {
-        this.value = value + ' nuits';
-      }
-    });
-    
-    nightsInput.addEventListener('focus', function() {
-      this.value = this.value.replace(/[^\d]/g, '');
     });
   }
   
   if (percentageInput) {
-    // SIMPLE : Directement récupérer la valeur de l'input
+    // Récupérer la valeur en enlevant le %
     percentageInput.addEventListener('input', (e) => {
       const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
       this.pricingData.discounts[index].percentage = value;
       this.enableButtons();
     });
     
-    // Formatage au blur
+    // Formatage au blur : ajouter %
     percentageInput.addEventListener('blur', function() {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
@@ -892,6 +880,7 @@ setupDiscountListeners(blocElement, index) {
       }
     });
     
+    // Retirer le % au focus
     percentageInput.addEventListener('focus', function() {
       this.value = this.value.replace(/[^\d]/g, '');
     });
