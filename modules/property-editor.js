@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V9
+// Gestionnaire de la page de modification de logement - V9 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -749,13 +749,11 @@ displayDiscounts() {
       const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
       
       if (nightsInput) {
-        nightsInput.value = discount.nights;
-        nightsInput.setAttribute('data-raw-value', discount.nights);
+        nightsInput.value = discount.nights || '';
       }
       
       if (percentageInput) {
-        percentageInput.value = discount.percentage;
-        percentageInput.setAttribute('data-raw-value', discount.percentage);
+        percentageInput.value = discount.percentage || '';
       }
       
       // Ajouter les listeners pour modifications
@@ -791,10 +789,49 @@ addDiscount() {
     percentage: 0
   };
   
+  const newIndex = this.pricingData.discounts.length;
   this.pricingData.discounts.push(newDiscount);
   
-  // Réafficher toutes les réductions
-  this.displayDiscounts();
+  // SIMPLE : Afficher juste le nouveau bloc au lieu de tout réafficher
+  let blocElement;
+  if (newIndex === 0) {
+    blocElement = document.querySelector('.bloc-reduction:not(.next)');
+  } else {
+    const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
+    blocElement = nextBlocs[newIndex - 1];
+  }
+  
+  if (blocElement) {
+    blocElement.style.display = 'flex';
+    
+    // Réinitialiser les valeurs
+    const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+    const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+    
+    if (nightsInput) {
+      nightsInput.value = '';
+      nightsInput.removeAttribute('data-raw-value');
+    }
+    if (percentageInput) {
+      percentageInput.value = '';
+      percentageInput.removeAttribute('data-raw-value');
+    }
+    
+    // Ajouter les listeners
+    this.setupDiscountListeners(blocElement, newIndex);
+    
+    // Configurer le bouton de suppression
+    const deleteButton = blocElement.querySelector('.button-delete-reduction');
+    if (deleteButton) {
+      deleteButton.onclick = (e) => {
+        e.preventDefault();
+        this.removeDiscount(newIndex);
+      };
+    }
+  }
+  
+  // Mettre à jour l'état du bouton d'ajout
+  this.updateAddButtonState();
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
@@ -819,8 +856,9 @@ setupDiscountListeners(blocElement, index) {
   const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
   
   if (nightsInput) {
-    nightsInput.addEventListener('input', () => {
-      const value = parseInt(this.getRawValue(nightsInput)) || 0;
+    // SIMPLE : Directement récupérer la valeur de l'input
+    nightsInput.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
     });
@@ -829,22 +867,19 @@ setupDiscountListeners(blocElement, index) {
     nightsInput.addEventListener('blur', function() {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
-        this.setAttribute('data-raw-value', value);
         this.value = value + ' nuits';
       }
     });
     
     nightsInput.addEventListener('focus', function() {
-      const rawValue = this.getAttribute('data-raw-value');
-      if (rawValue) {
-        this.value = rawValue;
-      }
+      this.value = this.value.replace(/[^\d]/g, '');
     });
   }
   
   if (percentageInput) {
-    percentageInput.addEventListener('input', () => {
-      const value = parseInt(this.getRawValue(percentageInput)) || 0;
+    // SIMPLE : Directement récupérer la valeur de l'input
+    percentageInput.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
       this.pricingData.discounts[index].percentage = value;
       this.enableButtons();
     });
@@ -853,16 +888,12 @@ setupDiscountListeners(blocElement, index) {
     percentageInput.addEventListener('blur', function() {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
-        this.setAttribute('data-raw-value', value);
         this.value = value + ' %';
       }
     });
     
     percentageInput.addEventListener('focus', function() {
-      const rawValue = this.getAttribute('data-raw-value');
-      if (rawValue) {
-        this.value = rawValue;
-      }
+      this.value = this.value.replace(/[^\d]/g, '');
     });
   }
 }
