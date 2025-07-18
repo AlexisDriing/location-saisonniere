@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V8 modifié en comm
+// Gestionnaire de la page de modification de logement - V9
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -35,6 +35,8 @@ class PropertyEditor {
     
     // Et finir par l'init des saisons
     this.initSeasonManagement();
+
+    this.initDiscountManagement();
   }
   
   console.log('✅ PropertyEditor initialisé');
@@ -682,6 +684,203 @@ resetEditSeasonModal() {
     });
   }
 }
+
+// ================================
+// 🎯 GESTION DES RÉDUCTIONS
+// ================================
+
+initDiscountManagement() {
+  console.log('💰 Initialisation gestion des réductions...');
+  
+  // Masquer tous les blocs de réduction au départ
+  document.querySelectorAll('.bloc-reduction').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  // Configuration du bouton d'ajout
+  const addButton = document.getElementById('button-add-reduction');
+  if (addButton) {
+    addButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addDiscount();
+    });
+  }
+  
+  // Afficher les réductions existantes
+  this.displayDiscounts();
+}
+
+displayDiscounts() {
+  console.log('📊 Affichage des réductions existantes...');
+  
+  // Masquer tous les blocs d'abord
+  document.querySelectorAll('.bloc-reduction').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  if (!this.pricingData.discounts || this.pricingData.discounts.length === 0) {
+    console.log('❌ Aucune réduction à afficher');
+    return;
+  }
+  
+  // Afficher chaque réduction
+  this.pricingData.discounts.forEach((discount, index) => {
+    console.log(`💰 Affichage réduction ${index + 1}:`, discount);
+    
+    let blocElement;
+    
+    if (index === 0) {
+      // Première réduction : bloc avec labels
+      blocElement = document.querySelector('.bloc-reduction:not(.next)');
+    } else {
+      // Réductions suivantes : blocs sans labels
+      const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
+      if (nextBlocs[index - 1]) {
+        blocElement = nextBlocs[index - 1];
+      }
+    }
+    
+    if (blocElement) {
+      // Afficher le bloc
+      blocElement.style.display = 'flex';
+      
+      // Remplir les valeurs
+      const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+      const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+      
+      if (nightsInput) {
+        nightsInput.value = discount.nights;
+        nightsInput.setAttribute('data-raw-value', discount.nights);
+      }
+      
+      if (percentageInput) {
+        percentageInput.value = discount.percentage;
+        percentageInput.setAttribute('data-raw-value', discount.percentage);
+      }
+      
+      // Ajouter les listeners pour modifications
+      this.setupDiscountListeners(blocElement, index);
+      
+      // Configurer le bouton de suppression
+      const deleteButton = blocElement.querySelector('.button-delete-reduction');
+      if (deleteButton) {
+        deleteButton.onclick = (e) => {
+          e.preventDefault();
+          this.removeDiscount(index);
+        };
+      }
+    }
+  });
+  
+  // Vérifier si on peut encore ajouter des réductions
+  this.updateAddButtonState();
+}
+
+addDiscount() {
+  console.log('➕ Ajout d\'une nouvelle réduction');
+  
+  // Vérifier la limite
+  if (this.pricingData.discounts.length >= 10) {
+    alert('Maximum 10 réductions autorisées');
+    return;
+  }
+  
+  // Ajouter une nouvelle réduction vide
+  const newDiscount = {
+    nights: 0,
+    percentage: 0
+  };
+  
+  this.pricingData.discounts.push(newDiscount);
+  
+  // Réafficher toutes les réductions
+  this.displayDiscounts();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+removeDiscount(index) {
+  console.log(`🗑️ Suppression de la réduction ${index + 1}`);
+  
+  // Supprimer du tableau
+  this.pricingData.discounts.splice(index, 1);
+  
+  // Réafficher toutes les réductions (gère automatiquement la réorganisation)
+  this.displayDiscounts();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+setupDiscountListeners(blocElement, index) {
+  // Listeners pour les modifications
+  const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+  const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+  
+  if (nightsInput) {
+    nightsInput.addEventListener('input', () => {
+      const value = parseInt(this.getRawValue(nightsInput)) || 0;
+      this.pricingData.discounts[index].nights = value;
+      this.enableButtons();
+    });
+    
+    // Formatage au blur
+    nightsInput.addEventListener('blur', function() {
+      const value = this.value.replace(/[^\d]/g, '');
+      if (value) {
+        this.setAttribute('data-raw-value', value);
+        this.value = value + ' nuits';
+      }
+    });
+    
+    nightsInput.addEventListener('focus', function() {
+      const rawValue = this.getAttribute('data-raw-value');
+      if (rawValue) {
+        this.value = rawValue;
+      }
+    });
+  }
+  
+  if (percentageInput) {
+    percentageInput.addEventListener('input', () => {
+      const value = parseInt(this.getRawValue(percentageInput)) || 0;
+      this.pricingData.discounts[index].percentage = value;
+      this.enableButtons();
+    });
+    
+    // Formatage au blur
+    percentageInput.addEventListener('blur', function() {
+      const value = this.value.replace(/[^\d]/g, '');
+      if (value) {
+        this.setAttribute('data-raw-value', value);
+        this.value = value + ' %';
+      }
+    });
+    
+    percentageInput.addEventListener('focus', function() {
+      const rawValue = this.getAttribute('data-raw-value');
+      if (rawValue) {
+        this.value = rawValue;
+      }
+    });
+  }
+}
+
+updateAddButtonState() {
+  const addButton = document.getElementById('button-add-reduction');
+  if (addButton) {
+    if (this.pricingData.discounts.length >= 10) {
+      addButton.disabled = true;
+      addButton.style.opacity = '0.5';
+      addButton.style.cursor = 'not-allowed';
+    } else {
+      addButton.disabled = false;
+      addButton.style.opacity = '1';
+      addButton.style.cursor = 'pointer';
+    }
+  }
+}
   
 setupFieldListeners() {
   // ✅ GARDER le code existant
@@ -881,6 +1080,8 @@ setupDefaultPricingListeners() {
     this.hideAllSeasonBlocks();
     this.displayExistingSeasons();
 
+    this.displayDiscounts();
+    
     this.prefillDefaultPricing();    
     // Désactiver les boutons
     this.disableButtons();
