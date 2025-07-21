@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V9 modifié nuits
+// Gestionnaire de la page de modification de logement - V10
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -232,10 +232,12 @@ setupTimeFormatters() {
       }
     });
     
-    // NOUVEAU : Pré-remplir les champs defaultPricing
     this.prefillDefaultPricing();
-    
-    // NOUVEAU : Pré-remplir les autres champs simples
+
+     // NOUVEAU : Pré-remplir les options de ménage
+    this.prefillCleaningOptions();
+
+    // Pré-remplir les autres champs simples
     //this.prefillSimpleFields();
     
     this.setupFieldListeners();
@@ -685,6 +687,48 @@ resetEditSeasonModal() {
   }
 }
 
+// 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
+prefillCleaningOptions() {
+  console.log('🧹 Pré-remplissage options de ménage...');
+  
+  // Récupérer les éléments du DOM
+  const includedRadio = document.getElementById('menage-inclus');
+  const notIncludedRadio = document.getElementById('menage-non-inclus');
+  const priceInput = document.getElementById('cleaning-price-input');
+  
+  if (!includedRadio || !notIncludedRadio || !priceInput) {
+    console.warn('⚠️ Éléments de ménage non trouvés dans le DOM');
+    return;
+  }
+  
+  // Définir l'état initial basé sur les données
+  if (this.pricingData.cleaning && this.pricingData.cleaning.included) {
+    includedRadio.checked = true;
+    notIncludedRadio.checked = false;
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+  } else {
+    includedRadio.checked = false;
+    notIncludedRadio.checked = true;
+    priceInput.style.display = 'block';
+    
+    // Afficher le prix si disponible
+    if (this.pricingData.cleaning && this.pricingData.cleaning.price) {
+      priceInput.value = this.pricingData.cleaning.price;
+      priceInput.setAttribute('data-raw-value', this.pricingData.cleaning.price);
+    }
+  }
+  
+  // Sauvegarder l'état initial
+  this.initialValues.cleaningIncluded = this.pricingData.cleaning?.included ?? true;
+  this.initialValues.cleaningPrice = this.pricingData.cleaning?.price || 0;
+  
+  console.log('✅ Options de ménage configurées:', {
+    included: this.pricingData.cleaning?.included ?? true,
+    price: this.pricingData.cleaning?.price || 0
+  });
+}
+  
 // ================================
 // 🎯 GESTION DES RÉDUCTIONS
 // ================================
@@ -920,6 +964,8 @@ setupFieldListeners() {
   
   // 🆕 AJOUTER cet appel
   this.setupDefaultPricingListeners();
+
+  this.setupCleaningListeners();
 }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après setupFieldListeners()
@@ -954,6 +1000,86 @@ setupDefaultPricingListeners() {
     }
   });
 }
+
+// 🆕 NOUVELLE MÉTHODE : Configurer les listeners pour le ménage
+setupCleaningListeners() {
+  console.log('🧹 Configuration listeners ménage...');
+  
+  const includedRadio = document.getElementById('menage-inclus');
+  const notIncludedRadio = document.getElementById('menage-non-inclus');
+  const priceInput = document.getElementById('cleaning-price-input');
+  
+  if (!includedRadio || !notIncludedRadio || !priceInput) {
+    return;
+  }
+  
+  // Listener pour "Inclus"
+  includedRadio.addEventListener('change', () => {
+    if (includedRadio.checked) {
+      console.log('✅ Ménage inclus sélectionné');
+      priceInput.style.display = 'none';
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+      
+      // Mettre à jour les données
+      if (!this.pricingData.cleaning) {
+        this.pricingData.cleaning = {};
+      }
+      this.pricingData.cleaning.included = true;
+      this.pricingData.cleaning.price = 0;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Listener pour "Non inclus"
+  notIncludedRadio.addEventListener('change', () => {
+    if (notIncludedRadio.checked) {
+      console.log('💰 Ménage non inclus sélectionné');
+      priceInput.style.display = 'block';
+      
+      // Focus sur le champ prix
+      setTimeout(() => priceInput.focus(), 100);
+      
+      // Mettre à jour les données
+      if (!this.pricingData.cleaning) {
+        this.pricingData.cleaning = {};
+      }
+      this.pricingData.cleaning.included = false;
+      
+      this.enableButtons();
+    }
+  });
+    
+    // Listener pour le prix du ménage
+    priceInput.addEventListener('input', () => {
+      const value = parseInt(this.getRawValue(priceInput)) || 0;
+      
+      if (!this.pricingData.cleaning) {
+        this.pricingData.cleaning = {};
+      }
+      this.pricingData.cleaning.price = value;
+      
+      console.log('💰 Prix ménage mis à jour:', value);
+      this.enableButtons();
+    });
+    
+    // Formatage du prix
+    priceInput.addEventListener('blur', function() {
+      const value = this.value.replace(/[^\d]/g, '');
+      if (value) {
+        this.setAttribute('data-raw-value', value);
+        this.value = value + '€';
+      }
+    });
+    
+    priceInput.addEventListener('focus', function() {
+      const rawValue = this.getAttribute('data-raw-value');
+      if (rawValue) {
+        this.value = rawValue;
+      }
+    });
+  }
   
   enableButtons() {
     const saveButton = document.getElementById('button-save-modifications');
@@ -1103,6 +1229,8 @@ setupDefaultPricingListeners() {
     this.displayDiscounts();
     
     this.prefillDefaultPricing();    
+    // 🆕 AJOUTER : Restaurer les options de ménage
+    this.prefillCleaningOptions();
     // Désactiver les boutons
     this.disableButtons();
   }
