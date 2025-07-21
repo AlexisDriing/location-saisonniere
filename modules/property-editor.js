@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V10
+// Gestionnaire de la page de modification de logement - V10 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -706,8 +706,8 @@ prefillCleaningOptions() {
   console.log('🧹 Pré-remplissage options de ménage...');
   
   // Récupérer les éléments du DOM
-  const includedRadio = document.getElementById('menage-inclus');
-  const notIncludedRadio = document.getElementById('menage-non-inclus');
+  const includedRadio = document.getElementById('inclus');
+  const notIncludedRadio = document.getElementById('non-inclus');
   const priceInput = document.getElementById('cleaning-price-input');
   
   if (!includedRadio || !notIncludedRadio || !priceInput) {
@@ -1019,8 +1019,8 @@ setupDefaultPricingListeners() {
 setupCleaningListeners() {
   console.log('🧹 Configuration listeners ménage...');
   
-  const includedRadio = document.getElementById('menage-inclus');
-  const notIncludedRadio = document.getElementById('menage-non-inclus');
+  const includedRadio = document.getElementById('inclus');
+  const notIncludedRadio = document.getElementById('non-inclus');
   const priceInput = document.getElementById('cleaning-price-input');
   
   if (!includedRadio || !notIncludedRadio || !priceInput) {
