@@ -32,6 +32,20 @@ class PropertyEditor {
     // ENSUITE seulement pré-remplir les champs
     this.prefillForm();
     this.setupSaveButton();
+
+    // Dans la méthode init(), après this.setupSaveButton();
+    setTimeout(() => {
+      console.log('🔍 DEBUG - Vérification des éléments:');
+      console.log('Inclus:', document.getElementById('menage-inclus'));
+      console.log('Non inclus:', document.getElementById('menage-non-inclus'));
+      console.log('Prix input:', document.getElementById('cleaning-price-input'));
+      
+      // Tester manuellement
+      const notIncluded = document.getElementById('menage-non-inclus');
+      if (notIncluded) {
+        console.log('État actuel non-inclus:', notIncluded.checked);
+      }
+    }, 1000);
     
     // Et finir par l'init des saisons
     this.initSeasonManagement();
