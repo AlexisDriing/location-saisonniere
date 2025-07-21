@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V11
+// Gestionnaire de la page de modification de logement - V11 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1152,65 +1152,89 @@ setupCleaningListeners() {
   }
 
   // 🆕 NOUVELLE MÉTHODE : Gérer l'opacité des blocs selon les prix
-  setupPriceOpacityHandlers() {
-    console.log('👁️ Configuration de l\'opacité des blocs tarifs...');
+setupPriceOpacityHandlers() {
+  console.log('👁️ Configuration de l\'opacité des blocs tarifs...');
+  
+  // 1. Gérer l'opacité du bloc tarifs plateformes selon le prix par défaut
+  const defaultPriceInput = document.getElementById('default-price-input');
+  const blocTarifsPlateformes = document.getElementById('bloc-tarifs-plateformes');
+  
+  if (defaultPriceInput && blocTarifsPlateformes) {
+    // Fonction pour mettre à jour l'opacité et l'état des inputs
+    const updatePlatformBlockOpacity = () => {
+      const value = this.getRawValue(defaultPriceInput);
+      const hasValue = value && parseInt(value) > 0;
+      
+      if (hasValue) {
+        blocTarifsPlateformes.style.opacity = '1';
+        // Activer tous les inputs dans le bloc
+        blocTarifsPlateformes.querySelectorAll('input').forEach(input => {
+          input.disabled = false;
+          input.style.cursor = 'text';
+        });
+      } else {
+        blocTarifsPlateformes.style.opacity = '0.5';
+        // Désactiver tous les inputs dans le bloc
+        blocTarifsPlateformes.querySelectorAll('input').forEach(input => {
+          input.disabled = true;
+          input.style.cursor = 'not-allowed';
+        });
+      }
+    };
     
-    // 1. Gérer l'opacité du bloc tarifs plateformes selon le prix par défaut
-    const defaultPriceInput = document.getElementById('default-price-input');
-    const blocTarifsPlateformes = document.getElementById('bloc-tarifs-plateformes');
+    // Appliquer l'opacité initiale
+    updatePlatformBlockOpacity();
     
-    if (defaultPriceInput && blocTarifsPlateformes) {
-      // Fonction pour mettre à jour l'opacité
-      const updatePlatformBlockOpacity = () => {
-        const value = this.getRawValue(defaultPriceInput);
-        if (value && parseInt(value) > 0) {
-          blocTarifsPlateformes.style.opacity = '1';
+    // Écouter les changements
+    defaultPriceInput.addEventListener('input', updatePlatformBlockOpacity);
+    defaultPriceInput.addEventListener('blur', updatePlatformBlockOpacity);
+  }
+  
+  // 2. Gérer l'opacité des blocs d'annonces selon les prix des plateformes
+  const platformMappings = [
+    { inputId: 'default-airbnb-price-input', blocId: 'bloc-lien-airbnb' },
+    { inputId: 'default-booking-price-input', blocId: 'bloc-lien-booking' },
+    { inputId: 'default-other-price-input', blocId: 'bloc-lien-other' }
+  ];
+  
+  platformMappings.forEach(({ inputId, blocId }) => {
+    const input = document.getElementById(inputId);
+    const bloc = document.getElementById(blocId);
+    
+    if (input && bloc) {
+      // Fonction pour mettre à jour l'opacité et l'état des inputs
+      const updateBlockOpacity = () => {
+        const value = this.getRawValue(input);
+        const hasValue = value && parseInt(value) > 0;
+        
+        if (hasValue) {
+          bloc.style.opacity = '1';
+          // Activer tous les inputs dans le bloc
+          bloc.querySelectorAll('input').forEach(input => {
+            input.disabled = false;
+            input.style.cursor = 'text';
+          });
         } else {
-          blocTarifsPlateformes.style.opacity = '0.5';
+          bloc.style.opacity = '0.5';
+          // Désactiver tous les inputs dans le bloc
+          bloc.querySelectorAll('input').forEach(input => {
+            input.disabled = true;
+            input.style.cursor = 'not-allowed';
+          });
         }
       };
       
       // Appliquer l'opacité initiale
-      updatePlatformBlockOpacity();
+      updateBlockOpacity();
       
       // Écouter les changements
-      defaultPriceInput.addEventListener('input', updatePlatformBlockOpacity);
-      defaultPriceInput.addEventListener('blur', updatePlatformBlockOpacity);
+      input.addEventListener('input', updateBlockOpacity);
+      input.addEventListener('blur', updateBlockOpacity);
     }
-    
-    // 2. Gérer l'opacité des blocs d'annonces selon les prix des plateformes
-    const platformMappings = [
-      { inputId: 'default-airbnb-price-input', blocId: 'bloc-lien-airbnb' },
-      { inputId: 'default-booking-price-input', blocId: 'bloc-lien-booking' },
-      { inputId: 'default-other-price-input', blocId: 'bloc-lien-other' }
-    ];
-    
-    platformMappings.forEach(({ inputId, blocId }) => {
-      const input = document.getElementById(inputId);
-      const bloc = document.getElementById(blocId);
-      
-      if (input && bloc) {
-        // Fonction pour mettre à jour l'opacité
-        const updateBlockOpacity = () => {
-          const value = this.getRawValue(input);
-          if (value && parseInt(value) > 0) {
-            bloc.style.opacity = '1';
-          } else {
-            bloc.style.opacity = '0.5';
-          }
-        };
-        
-        // Appliquer l'opacité initiale
-        updateBlockOpacity();
-        
-        // Écouter les changements
-        input.addEventListener('input', updateBlockOpacity);
-        input.addEventListener('blur', updateBlockOpacity);
-      }
-    });
-    
-    console.log('✅ Gestionnaires d\'opacité configurés');
-  }
+  });
+  
+  console.log('✅ Gestionnaires d\'opacité configurés');
+}
   
   enableButtons() {
     const saveButton = document.getElementById('button-save-modifications');
