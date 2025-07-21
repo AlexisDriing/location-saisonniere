@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V10 modifié button
+// Gestionnaire de la page de modification de logement - V10 suffix
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -79,6 +79,11 @@ class PropertyEditor {
     this.setupDateFormatters();
     this.setupTimeFormatters();
     this.setupSuffixFormatters();
+
+    // 🆕 NOUVEAU : Formater tous les champs au chargement
+    setTimeout(() => {
+    this.formatAllSuffixFields();
+    }, 200);
   }
   
   setupDateFormatters() {
@@ -193,10 +198,17 @@ setupTimeFormatters() {
     });
   }
   
-  // Méthodes utilitaires
   getRawValue(input) {
-    return input.getAttribute('data-raw-value') || input.value.replace(/[^\d]/g, '');
+  // D'abord vérifier data-raw-value
+  const dataValue = input.getAttribute('data-raw-value');
+  if (dataValue) {
+    return dataValue;
   }
+  
+  // Sinon extraire la valeur numérique actuelle
+  const currentValue = input.value.replace(/[^\d]/g, '');
+  return currentValue || '';
+}
   
   getDateValue(input) {
     const dateValue = input.getAttribute('data-date-value');
@@ -748,6 +760,29 @@ if (this.pricingData.cleaning && this.pricingData.cleaning.included) {
     price: this.pricingData.cleaning?.price || 0
   });
 }
+
+// 🆕 NOUVELLE MÉTHODE : Formater tous les champs avec suffixes au chargement
+formatAllSuffixFields() {
+  console.log('💰 Formatage initial des champs avec suffixes...');
+  
+  // Formater directement sans déclencher d'événements
+  document.querySelectorAll('[data-suffix="euro"], [data-suffix="euro-nuit"]').forEach(input => {
+    const value = input.value.replace(/[^\d]/g, '');
+    if (value) {
+      input.setAttribute('data-raw-value', value);
+      const suffix = input.getAttribute('data-suffix') === 'euro' ? ' €' : ' € / nuit';
+      input.value = value + suffix;
+    }
+  });
+  
+  document.querySelectorAll('[data-suffix="pourcent"]').forEach(input => {
+    const value = input.value.replace(/[^\d]/g, '');
+    if (value) {
+      input.setAttribute('data-raw-value', value);
+      input.value = value + ' %';
+    }
+  });
+}
   
 // ================================
 // 🎯 GESTION DES RÉDUCTIONS
@@ -1257,7 +1292,16 @@ setupCleaningListeners() {
 
   async saveModifications() {
   console.log('💾 Sauvegarde des modifications...');
-  
+    
+  // 🆕 NOUVEAU : Forcer le blur sur l'input actif pour capturer sa valeur
+  const activeElement = document.activeElement;
+  if (activeElement && activeElement.tagName === 'INPUT') {
+    activeElement.blur();
+    // Petit délai pour laisser le blur se terminer
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+    
+    
   // Configuration du mapping des champs
   const fieldMapping = [
     { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
