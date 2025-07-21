@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V10 suffix
+// Gestionnaire de la page de modification de logement - V10 empty
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -186,6 +186,10 @@ setupTimeFormatters() {
           this.setAttribute('data-raw-value', value);
           const suffix = this.getAttribute('data-suffix') === 'euro' ? ' €' : ' € / nuit';
           this.value = value + suffix;
+        } else {
+          // 🆕 IMPORTANT : Si le champ est vide, on supprime data-raw-value
+          this.removeAttribute('data-raw-value');
+          this.value = ''; // S'assurer que le champ reste vide
         }
       });
       
@@ -193,6 +197,9 @@ setupTimeFormatters() {
         const rawValue = this.getAttribute('data-raw-value');
         if (rawValue) {
           this.value = rawValue;
+        } else {
+          // 🆕 Si pas de data-raw-value, retirer juste le suffixe
+          this.value = this.value.replace(/[^\d]/g, '');
         }
       });
     });
@@ -1195,18 +1202,21 @@ setupCleaningListeners() {
   let hasPlatformPrices = false;
   
   platforms.forEach(platform => {
-    const input = document.getElementById(`default-${platform}-price-input`);
-    if (input) {
-      const value = parseInt(this.getRawValue(input)) || 0;
-      if (value > 0) {
-        if (!this.pricingData.defaultPricing.platformPrices) {
-          this.pricingData.defaultPricing.platformPrices = {};
-        }
-        this.pricingData.defaultPricing.platformPrices[platform] = value;
-        hasPlatformPrices = true;
+  const input = document.getElementById(`default-${platform}-price-input`);
+  if (input) {
+    const value = parseInt(this.getRawValue(input)) || 0;
+    if (value > 0) {
+      if (!this.pricingData.defaultPricing.platformPrices) {
+        this.pricingData.defaultPricing.platformPrices = {};
       }
+      this.pricingData.defaultPricing.platformPrices[platform] = value;
+      hasPlatformPrices = true;
+    } else if (this.pricingData.defaultPricing.platformPrices && this.pricingData.defaultPricing.platformPrices[platform]) {
+      // 🆕 Si la valeur est 0 ou vide, supprimer la plateforme
+      delete this.pricingData.defaultPricing.platformPrices[platform];
     }
-  });
+  }
+});
   
   // Si aucun prix plateforme, supprimer l'objet
   if (!hasPlatformPrices && this.pricingData.defaultPricing.platformPrices) {
