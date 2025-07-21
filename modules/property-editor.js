@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V10 modifié
+// Gestionnaire de la page de modification de logement - V10 modifié button
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -702,22 +702,42 @@ prefillCleaningOptions() {
   }
   
   // Définir l'état initial basé sur les données
-  if (this.pricingData.cleaning && this.pricingData.cleaning.included) {
-    includedRadio.checked = true;
-    notIncludedRadio.checked = false;
-    priceInput.style.display = 'none';
-    priceInput.value = '';
-  } else {
-    includedRadio.checked = false;
-    notIncludedRadio.checked = true;
-    priceInput.style.display = 'block';
-    
-    // Afficher le prix si disponible
-    if (this.pricingData.cleaning && this.pricingData.cleaning.price) {
-      priceInput.value = this.pricingData.cleaning.price;
-      priceInput.setAttribute('data-raw-value', this.pricingData.cleaning.price);
-    }
+if (this.pricingData.cleaning && this.pricingData.cleaning.included) {
+  // Cocher "Inclus"
+  includedRadio.checked = true;
+  notIncludedRadio.checked = false;
+  
+  // Mettre à jour le visuel Webflow pour "Inclus"
+  const includedLabel = document.getElementById('menage-inclus');
+  const notIncludedLabel = document.getElementById('menage-non-inclus');
+  if (includedLabel && notIncludedLabel) {
+    includedLabel.querySelector('.w-radio-input').classList.add('w--redirected-checked');
+    notIncludedLabel.querySelector('.w-radio-input').classList.remove('w--redirected-checked');
   }
+  
+  priceInput.style.display = 'none';
+  priceInput.value = '';
+} else {
+  // Cocher "Non inclus"
+  includedRadio.checked = false;
+  notIncludedRadio.checked = true;
+  
+  // Mettre à jour le visuel Webflow pour "Non inclus"
+  const includedLabel = document.getElementById('menage-inclus');
+  const notIncludedLabel = document.getElementById('menage-non-inclus');
+  if (includedLabel && notIncludedLabel) {
+    includedLabel.querySelector('.w-radio-input').classList.remove('w--redirected-checked');
+    notIncludedLabel.querySelector('.w-radio-input').classList.add('w--redirected-checked');
+  }
+  
+  priceInput.style.display = 'block';
+  
+  // Afficher le prix si disponible
+  if (this.pricingData.cleaning && this.pricingData.cleaning.price) {
+    priceInput.value = this.pricingData.cleaning.price;
+    priceInput.setAttribute('data-raw-value', this.pricingData.cleaning.price);
+  }
+}
   
   // Sauvegarder l'état initial
   this.initialValues.cleaningIncluded = this.pricingData.cleaning?.included ?? true;
