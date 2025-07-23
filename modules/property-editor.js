@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13 oui oui
+// Gestionnaire de la page de modification de logement - V13 oui oui pas sur
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2065,6 +2065,10 @@ setBlockState(element, isActive) {
 
     this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
+
+    setTimeout(() => {
+      this.applyInitialStates();
+    }, 100);
     // Désactiver les boutons
     this.disableButtons();
   }
