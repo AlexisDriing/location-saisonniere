@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V12 modifié
+// Gestionnaire de la page de modification de logement - V12 modifié V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1050,12 +1050,19 @@ initIcalManagement() {
 displayIcals() {
   console.log('📊 Affichage des iCals existants...');
   
-  // Masquer tous les blocs d'abord
-  document.querySelectorAll('.bloc-ical').forEach(bloc => {
-    if (!bloc.classList.contains('first')) {
+  // Le premier bloc est TOUJOURS visible
+  const firstBloc = document.getElementById('ical-1');
+  if (firstBloc) {
+    firstBloc.style.display = 'flex';
+  }
+  
+  // Masquer tous les autres blocs par défaut
+  for (let i = 2; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}`);
+    if (bloc) {
       bloc.style.display = 'none';
     }
-  });
+  }
   
   // Afficher et remplir chaque iCal
   this.icalFieldMapping.forEach((fieldName, index) => {
