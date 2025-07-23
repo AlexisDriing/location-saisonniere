@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13 modifié V3
+// Gestionnaire de la page de modification de logement - V13 Emojis
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1337,7 +1337,21 @@ displayExtras() {
       const nameInput = blocElement.querySelector('[data-extra="name"]');
       const priceInput = blocElement.querySelector('[data-extra="price"]');
       
-      if (emojiInput) emojiInput.value = extra.emoji || '';
+      if (emojiInput) {
+        emojiInput.value = extra.emoji || '';
+        
+        // 🆕 S'assurer que l'input est dans un wrapper
+        if (!emojiInput.closest('.emoji-input-wrapper')) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'emoji-input-wrapper';
+          emojiInput.parentNode.insertBefore(wrapper, emojiInput);
+          wrapper.appendChild(emojiInput);
+          
+          const pickerContainer = document.createElement('div');
+          pickerContainer.className = 'emoji-picker-container';
+          wrapper.appendChild(pickerContainer);
+        }
+      }
       if (nameInput) nameInput.value = extra.name || '';
       if (priceInput) {
         priceInput.value = extra.price || '';
@@ -1447,6 +1461,9 @@ setupExtraListeners(blocElement, index) {
       this.extras[index].emoji = e.target.value;
       this.enableButtons();
     });
+
+    // 🆕 NOUVEAU : Gérer le picker emoji
+    this.setupEmojiPicker(blocElement, emojiInput, index);
   }
   
   if (nameInput) {
@@ -1484,6 +1501,92 @@ setupExtraListeners(blocElement, index) {
   }
 }
 
+setupEmojiPicker(blocElement, emojiInput, index) {
+  // Skip sur mobile - utiliser le clavier natif
+  if (window.innerWidth < 768) return;
+  
+  const wrapper = emojiInput.closest('.emoji-input-wrapper');
+  if (!wrapper) return;
+  
+  const pickerContainer = wrapper.querySelector('.emoji-picker-container');
+  if (!pickerContainer) return;
+  
+  let picker = null;
+  let isLoading = false;
+  
+  // Gestionnaire de clic optimisé
+  emojiInput.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Si déjà ouvert, fermer
+    if (pickerContainer.classList.contains('active')) {
+      pickerContainer.classList.remove('active');
+      return;
+    }
+    
+    // Fermer tous les autres pickers
+    document.querySelectorAll('.emoji-picker-container.active').forEach(container => {
+      container.classList.remove('active');
+    });
+    
+    // Créer le picker à la demande (lazy loading)
+    if (!picker && !isLoading) {
+      isLoading = true;
+      
+      try {
+        // Utiliser le module préchargé si disponible
+        const module = await (window.emojiModulePromise || 
+                              import('https://cdn.skypack.dev/emoji-picker-element@^1'));
+        
+        picker = new module.Picker({
+          locale: 'fr',
+          dataSource: 'https://cdn.jsdelivr.net/npm/emoji-picker-element-data@^1/fr/cldr/data.json',
+          skinToneEmoji: '🖐️',
+          perLine: 8,
+          maxRecents: 20
+        });
+        
+        // Événement de sélection
+        picker.addEventListener('emoji-click', (event) => {
+          emojiInput.value = event.detail.unicode;
+          this.extras[index].emoji = event.detail.unicode;
+          this.enableButtons();
+          pickerContainer.classList.remove('active');
+        });
+        
+        pickerContainer.appendChild(picker);
+      } catch (error) {
+        console.error('Erreur chargement emoji picker:', error);
+        // Fallback : ouvrir le clavier
+        emojiInput.readOnly = false;
+        emojiInput.focus();
+      }
+      
+      isLoading = false;
+    }
+    
+    // Afficher le picker
+    if (picker) {
+      pickerContainer.classList.add('active');
+    }
+  });
+  
+  // Fermer au clic extérieur (optimisé avec passive)
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) {
+      pickerContainer.classList.remove('active');
+    }
+  }, { passive: true });
+  
+  // Fermer avec Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pickerContainer.classList.contains('active')) {
+      pickerContainer.classList.remove('active');
+    }
+  });
+}
+  
 updateAddExtraButtonState() {
   const addButton = document.getElementById('button-add-extra');
   if (addButton) {
