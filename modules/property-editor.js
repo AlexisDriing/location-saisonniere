@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V12 modifié V4
+// Gestionnaire de la page de modification de logement - V12 modifié V5
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1663,9 +1663,19 @@ setBlockState(element, isActive) {
     this.prefillDefaultPricing();    
     // 🆕 AJOUTER : Restaurer les options de ménage
     this.prefillCleaningOptions();
+
+    // Réinitialiser les iCals depuis les valeurs initiales
+    for (let i = 1; i <= 4; i++) {
+      const input = document.getElementById(`ical-url-${i}`);
+      if (input) {
+        const fieldName = this.icalFieldMapping[i - 1];
+        input.value = this.initialValues[fieldName] || '';
+      }
+    }
+    // Pour réafficher les blocs correctement
+    this.displayIcals();
     // Désactiver les boutons
     this.disableButtons();
-    this.displayIcals();
   }
 
   async saveModifications() {
