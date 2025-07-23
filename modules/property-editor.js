@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V12 modifié V3
+// Gestionnaire de la page de modification de logement - V12 modifié V4
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1064,25 +1064,29 @@ displayIcals() {
     }
   }
   
-  // Afficher et remplir chaque iCal
-  this.icalFieldMapping.forEach((fieldName, index) => {
+  // Collecter toutes les URLs non vides depuis les données
+  const allUrls = [];
+  this.icalFieldMapping.forEach((fieldName) => {
     const value = this.propertyData[fieldName] || '';
-    const input = document.getElementById(`ical-url-${index + 1}`);
-    
-    if (input) {
-      input.value = value;
-      
-      // Sauvegarder dans les valeurs initiales
-      this.initialValues[fieldName] = value;
-      
-      // Afficher le bloc si il y a une valeur (sauf le premier qui est toujours visible)
-      if (value && index > 0) {
-        const bloc = document.getElementById(`ical-${index + 1}`);
-        if (bloc) {
-          bloc.style.display = 'flex';
-        }
-      }
+    if (value) {
+      allUrls.push(value);
     }
+  });
+  
+  // Réafficher les URLs dans l'ordre (compacter les valeurs)
+  allUrls.forEach((url, index) => {
+    const input = document.getElementById(`ical-url-${index + 1}`);
+    const bloc = document.getElementById(`ical-${index + 1}`);
+    
+    if (input && bloc) {
+      input.value = url;
+      bloc.style.display = 'flex';
+    }
+  });
+  
+  // Sauvegarder l'état initial pour chaque champ
+  this.icalFieldMapping.forEach((fieldName) => {
+    this.initialValues[fieldName] = this.propertyData[fieldName] || '';
   });
   
   // Configurer les listeners
@@ -1120,48 +1124,39 @@ addIcal() {
 }
 
 removeIcal(index) {
-  console.log(`🗑️ Suppression du calendrier ${index + 1}`);
+  console.log(`🗑️ Suppression du calendrier ${index}`);
   
   // On ne peut pas supprimer le premier
-  if (index === 0) return;
+  if (index === 1) return;
   
-  // Récupérer TOUTES les valeurs actuelles dans l'ordre
-  const allValues = [];
+  // Récupérer toutes les valeurs actuelles
+  const currentValues = [];
   for (let i = 1; i <= 4; i++) {
     const input = document.getElementById(`ical-url-${i}`);
-    if (input && input.value.trim()) {
-      allValues.push({
-        position: i,
-        value: input.value.trim()
-      });
+    if (input) {
+      currentValues.push(input.value.trim());
     }
   }
   
-  // Retirer l'élément à la position demandée
-  allValues.splice(index, 1);
+  // Supprimer la valeur à l'index donné
+  currentValues.splice(index - 1, 1);
   
-  // Réaffecter les valeurs en gardant le premier fixe
+  // Ajouter une valeur vide à la fin pour maintenir 4 éléments
+  currentValues.push('');
+  
+  // Réaffecter toutes les valeurs
   for (let i = 1; i <= 4; i++) {
     const input = document.getElementById(`ical-url-${i}`);
     const bloc = document.getElementById(`ical-${i}`);
     
     if (input && bloc) {
-      if (i === 1) {
-        // Le premier garde sa valeur (ne bouge jamais)
-        // On ne touche pas à son input ni à son affichage
+      input.value = currentValues[i - 1] || '';
+      
+      // Afficher/masquer les blocs
+      if (i === 1 || (currentValues[i - 1] && currentValues[i - 1].length > 0)) {
+        bloc.style.display = 'flex';
       } else {
-        // Pour les positions 2, 3, 4 : on décale les valeurs
-        const newIndex = i - 2; // Position dans le tableau des valeurs secondaires
-        const firstValue = allValues.find(v => v.position === 1);
-        const secondaryValues = allValues.filter(v => v.position !== 1);
-        
-        if (newIndex < secondaryValues.length) {
-          input.value = secondaryValues[newIndex].value;
-          bloc.style.display = 'flex';
-        } else {
-          input.value = '';
-          bloc.style.display = 'none';
-        }
+        bloc.style.display = 'none';
       }
     }
   }
@@ -1178,7 +1173,11 @@ setupIcalListeners() {
   for (let i = 1; i <= 4; i++) {
     const input = document.getElementById(`ical-url-${i}`);
     if (input) {
-      input.addEventListener('input', () => {
+      // Retirer les anciens listeners pour éviter les doublons
+      const newInput = input.cloneNode(true);
+      input.parentNode.replaceChild(newInput, input);
+      
+      newInput.addEventListener('input', () => {
         this.enableButtons();
       });
     }
@@ -1187,9 +1186,13 @@ setupIcalListeners() {
     if (i > 1) {
       const deleteBtn = document.querySelector(`#ical-${i} .button-delete-ical`);
       if (deleteBtn) {
-        deleteBtn.onclick = (e) => {
+        // Cloner pour retirer les anciens listeners
+        const newBtn = deleteBtn.cloneNode(true);
+        deleteBtn.parentNode.replaceChild(newBtn, deleteBtn);
+        
+        newBtn.onclick = (e) => {
           e.preventDefault();
-          this.removeIcal(i - 1);
+          this.removeIcal(i);
         };
       }
     }
@@ -1700,12 +1703,20 @@ setBlockState(element, isActive) {
     }
   });
 
-  // NOUVEAU : Collecter les iCals modifiés
+  // NOUVEAU : Collecter les iCals modifiés avec la bonne logique
+  const currentIcalValues = [];
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}`);
+    currentIcalValues.push(input ? input.value.trim() : '');
+  }
+  
+  // Mapper les valeurs actuelles aux champs CMS
+  // IMPORTANT : Les valeurs dans l'ordre des inputs correspondent aux champs CMS dans l'ordre
   this.icalFieldMapping.forEach((fieldName, index) => {
-    const input = document.getElementById(`ical-url-${index + 1}`);
-    const currentValue = input ? input.value.trim() : '';
+    const currentValue = currentIcalValues[index] || '';
     const initialValue = this.initialValues[fieldName] || '';
     
+    // Toujours envoyer la valeur si elle a changé (même si vide)
     if (currentValue !== initialValue) {
       updates[fieldName] = currentValue;
     }
