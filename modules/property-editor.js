@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13 modifié
+// Gestionnaire de la page de modification de logement - V13 modifié V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -262,7 +262,8 @@ setupTimeFormatters() {
         console.log(`✅ Champ ${field.id} pré-rempli:`, value || '(vide)');
       }
     });
-    
+
+    this.initialValues.extras = this.propertyData.extras || '';    
     this.prefillDefaultPricing();
 
      // NOUVEAU : Pré-remplir les options de ménage
