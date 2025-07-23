@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V12
+// Gestionnaire de la page de modification de logement - V12 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -829,30 +829,6 @@ initDiscountManagement() {
   // Afficher les réductions existantes
   this.displayDiscounts();
 }
-
-initIcalManagement() {
-  console.log('📅 Initialisation gestion des liens iCal...');
-  
-  // Masquer tous les blocs sauf le premier
-  document.querySelectorAll('.bloc-ical.next').forEach(bloc => {
-    bloc.style.display = 'none';
-  });
-  
-  // Configuration du bouton d'ajout
-  const addButton = document.getElementById('button-add-ical');
-  if (addButton) {
-    addButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.addIcalBlock();
-    });
-  }
-  
-  // Charger et afficher les iCals existants
-  this.loadExistingIcals();
-  
-  // Configuration des listeners
-  this.setupIcalListeners();
-}
   
 displayDiscounts() {
   console.log('📊 Affichage des réductions existantes...');
@@ -1043,6 +1019,184 @@ updateAddButtonState() {
       addButton.style.opacity = '1';
       addButton.style.cursor = 'pointer';
     }
+  }
+}
+
+  // ================================
+// 🗓️ GESTION DES LIENS ICAL
+// ================================
+
+initIcalManagement() {
+  console.log('📅 Initialisation gestion des liens iCal...');
+  
+  // Masquer tous les blocs sauf le premier
+  document.querySelectorAll('.bloc-ical.next').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  // Configuration du bouton d'ajout
+  const addButton = document.getElementById('button-add-ical');
+  if (addButton) {
+    addButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addIcal();
+    });
+  }
+  
+  // Afficher les iCals existants
+  this.displayIcals();
+}
+
+displayIcals() {
+  console.log('📊 Affichage des iCals existants...');
+  
+  // Masquer tous les blocs d'abord
+  document.querySelectorAll('.bloc-ical').forEach(bloc => {
+    if (!bloc.classList.contains('first')) {
+      bloc.style.display = 'none';
+    }
+  });
+  
+  // Afficher et remplir chaque iCal
+  this.icalFieldMapping.forEach((fieldName, index) => {
+    const value = this.propertyData[fieldName] || '';
+    const input = document.getElementById(`ical-url-${index + 1}`);
+    
+    if (input) {
+      input.value = value;
+      
+      // Sauvegarder dans les valeurs initiales
+      this.initialValues[fieldName] = value;
+      
+      // Afficher le bloc si il y a une valeur (sauf le premier qui est toujours visible)
+      if (value && index > 0) {
+        const bloc = document.getElementById(`ical-${index + 1}`);
+        if (bloc) {
+          bloc.style.display = 'flex';
+        }
+      }
+    }
+  });
+  
+  // Configurer les listeners
+  this.setupIcalListeners();
+  
+  // Mettre à jour l'état du bouton d'ajout
+  this.updateAddIcalButton();
+}
+
+addIcal() {
+  console.log('➕ Ajout d\'un nouveau calendrier');
+  
+  // Trouver le premier bloc caché
+  for (let i = 2; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}`);
+    if (bloc && bloc.style.display === 'none') {
+      // Afficher ce bloc
+      bloc.style.display = 'flex';
+      
+      // Focus sur l'input
+      const input = document.getElementById(`ical-url-${i}`);
+      if (input) {
+        setTimeout(() => input.focus(), 100);
+      }
+      
+      break;
+    }
+  }
+  
+  // Mettre à jour l'état du bouton
+  this.updateAddIcalButton();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+removeIcal(index) {
+  console.log(`🗑️ Suppression du calendrier ${index + 1}`);
+  
+  // On ne peut pas supprimer le premier
+  if (index === 0) return;
+  
+  // Récupérer toutes les valeurs actuelles
+  const values = [];
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}`);
+    if (input && input.value && i !== index + 1) {
+      values.push(input.value);
+    }
+  }
+  
+  // Réaffecter les valeurs dans l'ordre
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}`);
+    const bloc = document.getElementById(`ical-${i}`);
+    
+    if (input && bloc) {
+      if (i <= values.length) {
+        input.value = values[i - 1];
+        bloc.style.display = 'flex';
+      } else {
+        input.value = '';
+        if (i > 1) {
+          bloc.style.display = 'none';
+        }
+      }
+    }
+  }
+  
+  // Mettre à jour l'état du bouton
+  this.updateAddIcalButton();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+setupIcalListeners() {
+  // Listeners pour tous les inputs
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}`);
+    if (input) {
+      input.addEventListener('input', () => {
+        this.enableButtons();
+      });
+    }
+    
+    // Boutons de suppression (sauf pour le premier)
+    if (i > 1) {
+      const deleteBtn = document.querySelector(`#ical-${i} .button-delete-ical`);
+      if (deleteBtn) {
+        deleteBtn.onclick = (e) => {
+          e.preventDefault();
+          this.removeIcal(i - 1);
+        };
+      }
+    }
+  }
+}
+
+updateAddIcalButton() {
+  const addButton = document.getElementById('button-add-ical');
+  if (!addButton) return;
+  
+  // Compter les blocs visibles
+  let visibleCount = 0;
+  for (let i = 1; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}`);
+    if (bloc && bloc.style.display !== 'none') {
+      visibleCount++;
+    }
+  }
+  
+  // Désactiver si on a atteint 4
+  if (visibleCount >= 4) {
+    addButton.disabled = true;
+    addButton.style.opacity = '0.5';
+    addButton.style.cursor = 'not-allowed';
+  } else {
+    addButton.disabled = false;
+    addButton.style.opacity = '1';
+    addButton.style.cursor = 'pointer';
   }
 }
   
@@ -1487,6 +1641,7 @@ setBlockState(element, isActive) {
     this.prefillCleaningOptions();
     // Désactiver les boutons
     this.disableButtons();
+    this.displayIcals();
   }
 
   async saveModifications() {
@@ -1524,19 +1679,17 @@ setBlockState(element, isActive) {
     }
   });
 
-  // Vérifier les modifications des iCals
-  this.updateAllIcalData(); // S'assurer qu'on a les dernières valeurs
-  
-  // Comparer chaque champ iCal
+  // NOUVEAU : Collecter les iCals modifiés
   this.icalFieldMapping.forEach((fieldName, index) => {
-    const currentValue = this.icalUrls[index] || '';
+    const input = document.getElementById(`ical-url-${index + 1}`);
+    const currentValue = input ? input.value.trim() : '';
     const initialValue = this.initialValues[fieldName] || '';
     
     if (currentValue !== initialValue) {
       updates[fieldName] = currentValue;
     }
   });
-    
+      
   const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
   const currentPricingJson = JSON.stringify(this.pricingData);
   
