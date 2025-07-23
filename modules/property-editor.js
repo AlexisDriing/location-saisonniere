@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13 Emojis
+// Gestionnaire de la page de modification de logement - V13 oui oui
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2168,25 +2168,35 @@ setBlockState(element, isActive) {
       const result = await response.json();
       
       if (response.ok && result.success) {
-        console.log('✅ Sauvegarde réussie');
-        
-        // Mettre à jour les valeurs initiales avec les nouvelles valeurs
-        Object.keys(updates).forEach(key => {
-          if (key !== 'pricing_data') { // Pour les champs normaux
-            this.initialValues[key] = updates[key];
-          }
-        });
-        
-        // 🆕 AJOUTER : Mettre à jour les données pricing d'origine
-        if (updates.pricing_data) {
-          this.propertyData.pricing_data = JSON.parse(JSON.stringify(this.pricingData));
+      console.log('✅ Sauvegarde réussie');
+      
+      // Mettre à jour les valeurs initiales avec les nouvelles valeurs
+      Object.keys(updates).forEach(key => {
+        if (key !== 'pricing_data') { // Pour les champs normaux
+          this.initialValues[key] = updates[key];
         }
-              
-        // Désactiver les boutons
-        this.disableButtons();
-        
-        // Message de succès
-        alert('Modifications enregistrées avec succès !');
+      });
+      
+      // 🆕 IMPORTANT : Mettre à jour aussi les valeurs iCal dans propertyData
+      this.icalFieldMapping.forEach((fieldName, index) => {
+        const input = document.getElementById(`ical-url-${index + 1}`);
+        if (input) {
+          const currentValue = input.value.trim();
+          this.propertyData[fieldName] = currentValue;
+          this.initialValues[fieldName] = currentValue;
+        }
+      });
+      
+      // 🆕 AJOUTER : Mettre à jour les données pricing d'origine
+      if (updates.pricing_data) {
+        this.propertyData.pricing_data = JSON.parse(JSON.stringify(this.pricingData));
+      }
+      
+      // Désactiver les boutons
+      this.disableButtons();
+      
+      // Message de succès
+      alert('Modifications enregistrées avec succès !');
         
         
       } else {
