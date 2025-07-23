@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V12 modifié V2
+// Gestionnaire de la page de modification de logement - V12 modifié V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1125,27 +1125,41 @@ removeIcal(index) {
   // On ne peut pas supprimer le premier
   if (index === 0) return;
   
-  // Récupérer toutes les valeurs actuelles
-  const values = [];
+  // Récupérer TOUTES les valeurs actuelles dans l'ordre
+  const allValues = [];
   for (let i = 1; i <= 4; i++) {
     const input = document.getElementById(`ical-url-${i}`);
-    if (input && input.value && i !== index + 1) {
-      values.push(input.value);
+    if (input && input.value.trim()) {
+      allValues.push({
+        position: i,
+        value: input.value.trim()
+      });
     }
   }
   
-  // Réaffecter les valeurs dans l'ordre
+  // Retirer l'élément à la position demandée
+  allValues.splice(index, 1);
+  
+  // Réaffecter les valeurs en gardant le premier fixe
   for (let i = 1; i <= 4; i++) {
     const input = document.getElementById(`ical-url-${i}`);
     const bloc = document.getElementById(`ical-${i}`);
     
     if (input && bloc) {
-      if (i <= values.length) {
-        input.value = values[i - 1];
-        bloc.style.display = 'flex';
+      if (i === 1) {
+        // Le premier garde sa valeur (ne bouge jamais)
+        // On ne touche pas à son input ni à son affichage
       } else {
-        input.value = '';
-        if (i > 1) {
+        // Pour les positions 2, 3, 4 : on décale les valeurs
+        const newIndex = i - 2; // Position dans le tableau des valeurs secondaires
+        const firstValue = allValues.find(v => v.position === 1);
+        const secondaryValues = allValues.filter(v => v.position !== 1);
+        
+        if (newIndex < secondaryValues.length) {
+          input.value = secondaryValues[newIndex].value;
+          bloc.style.display = 'flex';
+        } else {
+          input.value = '';
           bloc.style.display = 'none';
         }
       }
