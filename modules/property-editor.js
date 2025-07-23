@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V12 modifié V5
+// Gestionnaire de la page de modification de logement - V13
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -13,6 +13,7 @@ class PropertyEditor {
     'ical-autres',       // Position 2 → Troisième iCal
     'ical-abritel'       // Position 3 → Quatrième iCal
   ];
+    this.extras = [];
     this.init();
   }
 
@@ -46,6 +47,7 @@ class PropertyEditor {
 
     this.initDiscountManagement();
     this.initIcalManagement();
+    this.initExtrasManagement();
   }
   
   console.log('✅ PropertyEditor initialisé');
@@ -246,7 +248,8 @@ setupTimeFormatters() {
     // 2. Configuration des champs (facilement extensible)
     const fields = [
       { id: 'adresse-input', dataKey: 'address' },
-      { id: 'cadeaux-input', dataKey: 'cadeaux' }
+      { id: 'cadeaux-input', dataKey: 'cadeaux' },
+      { id: 'extras-field', dataKey: 'extras' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -1223,6 +1226,287 @@ updateAddIcalButton() {
     addButton.style.cursor = 'pointer';
   }
 }
+
+// ================================
+// 🎁 GESTION DES EXTRAS
+// ================================
+
+initExtrasManagement() {
+  console.log('🎁 Initialisation gestion des extras...');
+  
+  // Masquer tous les blocs extras au départ
+  document.querySelectorAll('.bloc-extra').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  // Configuration du bouton d'ajout
+  const addButton = document.getElementById('button-add-extra');
+  if (addButton) {
+    addButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addExtra();
+    });
+  }
+  
+  // Parser et afficher les extras existants
+  this.parseAndDisplayExtras();
+}
+
+parseAndDisplayExtras() {
+  console.log('📊 Parsing des extras existants...');
+  
+  // Récupérer la valeur du champ extras
+  const extrasValue = this.propertyData.extras || '';
+  
+  if (!extrasValue) {
+    console.log('❌ Aucun extra à afficher');
+    this.extras = [];
+    return;
+  }
+  
+  // Parser le format "🚴Location de vélos10€/jour, ⏰Départ tardif5€"
+  this.extras = this.parseExtrasString(extrasValue);
+  
+  console.log('✅ Extras parsés:', this.extras);
+  
+  // Afficher chaque extra
+  this.displayExtras();
+}
+
+parseExtrasString(extrasString) {
+  if (!extrasString) return [];
+  
+  // Séparer par virgule
+  const extrasParts = extrasString.split(',').map(part => part.trim());
+  
+  return extrasParts.map(part => {
+    // Extraire l'emoji (premier caractère unicode étendu)
+    const emojiMatch = part.match(/^(\p{Emoji})/u);
+    const emoji = emojiMatch ? emojiMatch[1] : '';
+    
+    // Retirer l'emoji du début
+    const withoutEmoji = part.replace(emoji, '');
+    
+    // Chercher le prix (dernier nombre suivi de €)
+    const priceMatch = withoutEmoji.match(/(\d+)€/);
+    const price = priceMatch ? priceMatch[1] : '';
+    
+    // Le nom est ce qui reste après avoir retiré le prix
+    const name = withoutEmoji.replace(/\d+€.*$/, '').trim();
+    
+    return { emoji, name, price };
+  }).filter(extra => extra.name); // Filtrer les entrées vides
+}
+
+displayExtras() {
+  console.log('🎨 Affichage des extras...');
+  
+  // Masquer tous les blocs d'abord
+  document.querySelectorAll('.bloc-extra').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  if (!this.extras || this.extras.length === 0) {
+    return;
+  }
+  
+  // Afficher chaque extra
+  this.extras.forEach((extra, index) => {
+    console.log(`🎁 Affichage extra ${index + 1}:`, extra);
+    
+    let blocElement;
+    
+    if (index === 0) {
+      // Premier extra : bloc avec labels
+      blocElement = document.querySelector('.bloc-extra:not(.next)');
+    } else {
+      // Extras suivants : blocs sans labels
+      const nextBlocs = document.querySelectorAll('.bloc-extra.next');
+      if (nextBlocs[index - 1]) {
+        blocElement = nextBlocs[index - 1];
+      }
+    }
+    
+    if (blocElement) {
+      // Afficher le bloc
+      blocElement.style.display = 'flex';
+      
+      // Remplir les valeurs
+      const emojiInput = blocElement.querySelector('[data-extra="emoji"]');
+      const nameInput = blocElement.querySelector('[data-extra="name"]');
+      const priceInput = blocElement.querySelector('[data-extra="price"]');
+      
+      if (emojiInput) emojiInput.value = extra.emoji || '';
+      if (nameInput) nameInput.value = extra.name || '';
+      if (priceInput) {
+        priceInput.value = extra.price || '';
+        priceInput.setAttribute('data-raw-value', extra.price || '');
+      }
+      
+      // Ajouter les listeners pour modifications
+      this.setupExtraListeners(blocElement, index);
+      
+      // Configurer le bouton de suppression
+      const deleteButton = blocElement.querySelector('.button-delete-extra');
+      if (deleteButton) {
+        deleteButton.onclick = (e) => {
+          e.preventDefault();
+          this.removeExtra(index);
+        };
+      }
+    }
+  });
+  
+  // Vérifier si on peut encore ajouter des extras
+  this.updateAddExtraButtonState();
+}
+
+addExtra() {
+  console.log('➕ Ajout d\'un nouvel extra');
+  
+  // Vérifier la limite
+  if (this.extras.length >= 10) {
+    alert('Maximum 10 extras autorisés');
+    return;
+  }
+  
+  // Ajouter un nouvel extra vide
+  const newExtra = { emoji: '', name: '', price: '' };
+  const newIndex = this.extras.length;
+  this.extras.push(newExtra);
+  
+  // Afficher le nouveau bloc
+  let blocElement;
+  if (newIndex === 0) {
+    blocElement = document.querySelector('.bloc-extra:not(.next)');
+  } else {
+    const nextBlocs = document.querySelectorAll('.bloc-extra.next');
+    blocElement = nextBlocs[newIndex - 1];
+  }
+  
+  if (blocElement) {
+    blocElement.style.display = 'flex';
+    
+    // Réinitialiser les valeurs
+    const emojiInput = blocElement.querySelector('[data-extra="emoji"]');
+    const nameInput = blocElement.querySelector('[data-extra="name"]');
+    const priceInput = blocElement.querySelector('[data-extra="price"]');
+    
+    if (emojiInput) emojiInput.value = '';
+    if (nameInput) {
+      nameInput.value = '';
+      // Focus sur le nom pour commencer
+      setTimeout(() => nameInput.focus(), 100);
+    }
+    if (priceInput) {
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+    }
+    
+    // Ajouter les listeners
+    this.setupExtraListeners(blocElement, newIndex);
+    
+    // Configurer le bouton de suppression
+    const deleteButton = blocElement.querySelector('.button-delete-extra');
+    if (deleteButton) {
+      deleteButton.onclick = (e) => {
+        e.preventDefault();
+        this.removeExtra(newIndex);
+      };
+    }
+  }
+  
+  // Mettre à jour l'état du bouton d'ajout
+  this.updateAddExtraButtonState();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+removeExtra(index) {
+  console.log(`🗑️ Suppression de l'extra ${index + 1}`);
+  
+  // Supprimer du tableau
+  this.extras.splice(index, 1);
+  
+  // Réafficher tous les extras (gère automatiquement la réorganisation)
+  this.displayExtras();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+setupExtraListeners(blocElement, index) {
+  const emojiInput = blocElement.querySelector('[data-extra="emoji"]');
+  const nameInput = blocElement.querySelector('[data-extra="name"]');
+  const priceInput = blocElement.querySelector('[data-extra="price"]');
+  
+  if (emojiInput) {
+    emojiInput.addEventListener('input', (e) => {
+      this.extras[index].emoji = e.target.value;
+      this.enableButtons();
+    });
+  }
+  
+  if (nameInput) {
+    nameInput.addEventListener('input', (e) => {
+      this.extras[index].name = e.target.value;
+      this.enableButtons();
+    });
+  }
+  
+  if (priceInput) {
+    priceInput.addEventListener('input', (e) => {
+      const value = e.target.value.replace(/[^\d]/g, '');
+      this.extras[index].price = value;
+      this.enableButtons();
+    });
+    
+    // Formatage au blur : ajouter €/jour
+    priceInput.addEventListener('blur', function() {
+      const value = this.value.replace(/[^\d]/g, '');
+      if (value) {
+        this.setAttribute('data-raw-value', value);
+        this.value = value + '€/jour';
+      }
+    });
+    
+    // Retirer le suffixe au focus
+    priceInput.addEventListener('focus', function() {
+      const rawValue = this.getAttribute('data-raw-value');
+      if (rawValue) {
+        this.value = rawValue;
+      } else {
+        this.value = this.value.replace(/[^\d]/g, '');
+      }
+    });
+  }
+}
+
+updateAddExtraButtonState() {
+  const addButton = document.getElementById('button-add-extra');
+  if (addButton) {
+    if (this.extras.length >= 10) {
+      addButton.disabled = true;
+      addButton.style.opacity = '0.5';
+      addButton.style.cursor = 'not-allowed';
+    } else {
+      addButton.disabled = false;
+      addButton.style.opacity = '1';
+      addButton.style.cursor = 'pointer';
+    }
+  }
+}
+
+// Méthode pour générer la chaîne extras au format attendu
+generateExtrasString() {
+  return this.extras
+    .filter(extra => extra.name && extra.price) // Ignorer les extras incomplets
+    .map(extra => {
+      return `${extra.emoji}${extra.name}${extra.price}€/jour`;
+    })
+    .join(', ');
+}
   
 setupFieldListeners() {
   // ✅ GARDER le code existant
@@ -1674,6 +1958,7 @@ setBlockState(element, isActive) {
     }
     // Pour réafficher les blocs correctement
     this.displayIcals();
+    this.parseAndDisplayExtras();
     // Désactiver les boutons
     this.disableButtons();
   }
@@ -1695,7 +1980,15 @@ setBlockState(element, isActive) {
     { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
     { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' }
   ];
+
+  // 🆕 Gérer les extras séparément
+  const currentExtrasString = this.generateExtrasString();
+  const initialExtrasString = this.initialValues.extras || '';
   
+  if (currentExtrasString !== initialExtrasString) {
+    updates.extras = currentExtrasString;
+  }
+    
   // Collecter les valeurs actuelles
   const currentValues = {};
   fieldMapping.forEach(field => {
