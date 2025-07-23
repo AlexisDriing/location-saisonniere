@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13
+// Gestionnaire de la page de modification de logement - V13 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1980,14 +1980,6 @@ setBlockState(element, isActive) {
     { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
     { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' }
   ];
-
-  // 🆕 Gérer les extras séparément
-  const currentExtrasString = this.generateExtrasString();
-  const initialExtrasString = this.initialValues.extras || '';
-  
-  if (currentExtrasString !== initialExtrasString) {
-    updates.extras = currentExtrasString;
-  }
     
   // Collecter les valeurs actuelles
   const currentValues = {};
@@ -2006,6 +1998,14 @@ setBlockState(element, isActive) {
     }
   });
 
+  // 🆕 Gérer les extras séparément
+  const currentExtrasString = this.generateExtrasString();
+  const initialExtrasString = this.initialValues.extras || '';
+  
+  if (currentExtrasString !== initialExtrasString) {
+    updates.extras = currentExtrasString;
+  }
+    
   // NOUVEAU : Collecter les iCals modifiés avec la bonne logique
   const currentIcalValues = [];
   for (let i = 1; i <= 4; i++) {
