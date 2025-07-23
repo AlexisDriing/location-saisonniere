@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13 modifié V2
+// Gestionnaire de la page de modification de logement - V13 modifié V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1959,6 +1959,8 @@ setBlockState(element, isActive) {
     }
     // Pour réafficher les blocs correctement
     this.displayIcals();
+
+    this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
     // Désactiver les boutons
     this.disableButtons();
