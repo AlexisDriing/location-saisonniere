@@ -1,10 +1,18 @@
-// Gestionnaire de la page de modification de logement - V11 cascade modifié
+// Gestionnaire de la page de modification de logement - V12
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
     this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
     this.editingSeasonIndex = null;
+
+    this.icalUrls = []; // Stockage des URLs iCal
+    this.icalFieldMapping = [
+    'url-calendrier',    // Position 0 → Premier iCal
+    'ical-booking',      // Position 1 → Deuxième iCal
+    'ical-autres',       // Position 2 → Troisième iCal
+    'ical-abritel'       // Position 3 → Quatrième iCal
+  ];
     this.init();
   }
 
@@ -37,6 +45,7 @@ class PropertyEditor {
     this.initSeasonManagement();
 
     this.initDiscountManagement();
+    this.initIcalManagement();
   }
   
   console.log('✅ PropertyEditor initialisé');
@@ -821,6 +830,30 @@ initDiscountManagement() {
   this.displayDiscounts();
 }
 
+initIcalManagement() {
+  console.log('📅 Initialisation gestion des liens iCal...');
+  
+  // Masquer tous les blocs sauf le premier
+  document.querySelectorAll('.bloc-ical.next').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  // Configuration du bouton d'ajout
+  const addButton = document.getElementById('button-add-ical');
+  if (addButton) {
+    addButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addIcalBlock();
+    });
+  }
+  
+  // Charger et afficher les iCals existants
+  this.loadExistingIcals();
+  
+  // Configuration des listeners
+  this.setupIcalListeners();
+}
+  
 displayDiscounts() {
   console.log('📊 Affichage des réductions existantes...');
   
@@ -1490,7 +1523,20 @@ setBlockState(element, isActive) {
       updates[key] = currentValues[key];
     }
   });
+
+  // Vérifier les modifications des iCals
+  this.updateAllIcalData(); // S'assurer qu'on a les dernières valeurs
   
+  // Comparer chaque champ iCal
+  this.icalFieldMapping.forEach((fieldName, index) => {
+    const currentValue = this.icalUrls[index] || '';
+    const initialValue = this.initialValues[fieldName] || '';
+    
+    if (currentValue !== initialValue) {
+      updates[fieldName] = currentValue;
+    }
+  });
+    
   const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
   const currentPricingJson = JSON.stringify(this.pricingData);
   
