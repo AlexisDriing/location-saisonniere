@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V5
+// Gestionnaire de la page de modification de logement - V14 V6
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2402,7 +2402,7 @@ setBlockState(element, isActive) {
   
   const nouvelleTailleMaison = `${voyageurs} voyageur${pluriel.voyageur} - ${chambres} chambre${pluriel.chambre} - ${lits} lit${pluriel.lit} - ${sallesBain} salle${pluriel.salle} de bain`;
 
-    
+  const updates = {};
   // Comparer avec les valeurs initiales
   Object.keys(currentValues).forEach(key => {
     if (key === 'equipements_principaux' || key === 'options_accueil') {
