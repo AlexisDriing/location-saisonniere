@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 complexe
+// Gestionnaire de la page de modification de logement - V14 complexe V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2341,14 +2341,6 @@ setBlockState(element, isActive) {
         updates[key] = currentStr; // Envoyer comme string séparé par virgules
       }
     } else if (currentValues[key] !== this.initialValues[key]) {
-      updates[key] = currentValues[key];
-    }
-  });
-    
-  // 🎯 OPTIMISATION : Ne prendre que les champs modifiés
-  const updates = {};
-  Object.keys(currentValues).forEach(key => {
-    if (currentValues[key] !== this.initialValues[key]) {
       updates[key] = currentValues[key];
     }
   });
