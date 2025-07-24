@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14
+// Gestionnaire de la page de modification de logement - V14 complexe
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -272,6 +272,8 @@ setupTimeFormatters() {
 
      // NOUVEAU : Pré-remplir les options de ménage
     this.prefillCleaningOptions();
+
+    this.prefillComplexFields();
 
     // Pré-remplir les autres champs simples
     //this.prefillSimpleFields();
@@ -728,6 +730,90 @@ resetEditSeasonModal() {
   }
 }
 
+prefillComplexFields() {
+  // MODE DE LOCATION (Radio buttons)
+  const modeLocation = this.propertyData.mode_location || '';
+  if (modeLocation) {
+    // Chercher le radio button correspondant
+    const radios = document.querySelectorAll('input[name="mode-location"]');
+    radios.forEach(radio => {
+      if (radio.value === modeLocation) {
+        radio.checked = true;
+        // Mettre à jour le visuel Webflow
+        const label = radio.closest('.w-radio');
+        if (label) {
+          // Retirer la classe checked de tous
+          document.querySelectorAll('input[name="mode-location"]').forEach(r => {
+            r.closest('.w-radio')?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+          });
+          // Ajouter sur le bon
+          label.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+        }
+      }
+    });
+  }
+  this.initialValues.mode_location = modeLocation;
+  
+  // ÉQUIPEMENTS PRINCIPAUX (Checkboxes)
+  const equipements = this.propertyData.equipements_principaux || [];
+  const equipementsArray = Array.isArray(equipements) ? equipements : [];
+  
+  // Mapping des valeurs aux IDs des checkboxes
+  const equipementsMapping = {
+    'Piscine': 'checkbox-piscine',
+    'Jacuzzi': 'checkbox-jacuzzi',
+    'Barbecue': 'checkbox-barbecue',
+    'Climatisation': 'checkbox-climatisation',
+    'Équipement bébé': 'checkbox-equipement-bebe',
+    'Parking gratuit': 'checkbox-parking'
+  };
+  
+  // Cocher les bonnes cases
+  Object.entries(equipementsMapping).forEach(([value, id]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = equipementsArray.includes(value);
+      // Mettre à jour le visuel Webflow
+      const checkboxDiv = checkbox.previousElementSibling;
+      if (checkboxDiv && checkboxDiv.classList.contains('w-checkbox-input')) {
+        if (checkbox.checked) {
+          checkboxDiv.classList.add('w--redirected-checked');
+        } else {
+          checkboxDiv.classList.remove('w--redirected-checked');
+        }
+      }
+    }
+  });
+  this.initialValues.equipements_principaux = equipementsArray;
+  
+  // OPTIONS D'ACCUEIL (Checkboxes)
+  const options = this.propertyData.options_accueil || [];
+  const optionsArray = Array.isArray(options) ? options : [];
+  
+  const optionsMapping = {
+    'Animaux autorisés': 'checkbox-animaux',
+    'Accès PMR': 'checkbox-pmr',
+    'Fumeurs autorisés': 'checkbox-fumeurs'
+  };
+  
+  Object.entries(optionsMapping).forEach(([value, id]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = optionsArray.includes(value);
+      // Mettre à jour le visuel Webflow
+      const checkboxDiv = checkbox.previousElementSibling;
+      if (checkboxDiv && checkboxDiv.classList.contains('w-checkbox-input')) {
+        if (checkbox.checked) {
+          checkboxDiv.classList.add('w--redirected-checked');
+        } else {
+          checkboxDiv.classList.remove('w--redirected-checked');
+        }
+      }
+    }
+  });
+  this.initialValues.options_accueil = optionsArray;
+}
+  
 // 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
 prefillCleaningOptions() {
   console.log('🧹 Pré-remplissage options de ménage...');
@@ -1640,6 +1726,36 @@ setupFieldListeners() {
       });
     }
   });
+
+  // NOUVEAU : Listeners pour les radio buttons
+  document.querySelectorAll('input[name="mode-location"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      this.enableButtons();
+    });
+  });
+  
+  // NOUVEAU : Listeners pour les checkboxes équipements
+  const equipementIds = ['checkbox-piscine', 'checkbox-jacuzzi', 'checkbox-barbecue', 
+                        'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking'];
+  equipementIds.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        this.enableButtons();
+      });
+    }
+  });
+  
+  // NOUVEAU : Listeners pour les checkboxes options
+  const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
+  optionIds.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        this.enableButtons();
+      });
+    }
+  });
   
   // 🆕 AJOUTER cet appel
   this.setupDefaultPricingListeners();
@@ -2094,6 +2210,7 @@ setBlockState(element, isActive) {
       }
     });
 
+    this.prefillComplexFields();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
       // 🔧 COPIE PROFONDE pour éviter les références
@@ -2171,7 +2288,63 @@ setBlockState(element, isActive) {
       currentValues[field.dataKey] = input.value.trim();
     }
   });
+
+  // NOUVEAU : Collecter le mode de location
+  const selectedMode = document.querySelector('input[name="mode-location"]:checked');
+  if (selectedMode) {
+    currentValues.mode_location = selectedMode.value;
+  }
   
+  // NOUVEAU : Collecter les équipements cochés
+  const equipementsMapping = {
+    'checkbox-piscine': 'Piscine',
+    'checkbox-jacuzzi': 'Jacuzzi',
+    'checkbox-barbecue': 'Barbecue',
+    'checkbox-climatisation': 'Climatisation',
+    'checkbox-equipement-bebe': 'Équipement bébé',
+    'checkbox-parking': 'Parking gratuit'
+  };
+  
+  const selectedEquipements = [];
+  Object.entries(equipementsMapping).forEach(([id, value]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox && checkbox.checked) {
+      selectedEquipements.push(value);
+    }
+  });
+  currentValues.equipements_principaux = selectedEquipements;
+  
+  // NOUVEAU : Collecter les options cochées
+  const optionsMapping = {
+    'checkbox-animaux': 'Animaux autorisés',
+    'checkbox-pmr': 'Accès PMR',
+    'checkbox-fumeurs': 'Fumeurs autorisés'
+  };
+  
+  const selectedOptions = [];
+  Object.entries(optionsMapping).forEach(([id, value]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox && checkbox.checked) {
+      selectedOptions.push(value);
+    }
+  });
+  currentValues.options_accueil = selectedOptions;
+  
+  // Comparer avec les valeurs initiales
+  const updates = {};
+  Object.keys(currentValues).forEach(key => {
+    if (key === 'equipements_principaux' || key === 'options_accueil') {
+      // Pour les tableaux, comparer en string
+      const currentStr = currentValues[key].join(', ');
+      const initialStr = (this.initialValues[key] || []).join(', ');
+      if (currentStr !== initialStr) {
+        updates[key] = currentStr; // Envoyer comme string séparé par virgules
+      }
+    } else if (currentValues[key] !== this.initialValues[key]) {
+      updates[key] = currentValues[key];
+    }
+  });
+    
   // 🎯 OPTIMISATION : Ne prendre que les champs modifiés
   const updates = {};
   Object.keys(currentValues).forEach(key => {
