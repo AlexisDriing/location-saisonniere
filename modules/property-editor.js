@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V3
+// Gestionnaire de la page de modification de logement - V14 V4
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2395,17 +2395,26 @@ setBlockState(element, isActive) {
   const updates = {};
   Object.keys(currentValues).forEach(key => {
     if (key === 'equipements_principaux' || key === 'options_accueil') {
-      // Pour les tableaux, comparer en string
       const currentStr = currentValues[key].join(', ');
       const initialStr = (this.initialValues[key] || []).join(', ');
       if (currentStr !== initialStr) {
-        updates[key] = currentStr; // Envoyer comme string séparé par virgules
+        updates[key] = currentStr;
+      }
+    } else if (key === 'taille_maison') {
+      // NOUVEAU : Comparaison spéciale pour taille_maison
+      if (currentValues[key] !== this.initialValues.taille_maison) {
+        updates[key] = currentValues[key];
       }
     } else if (currentValues[key] !== this.initialValues[key]) {
       updates[key] = currentValues[key];
     }
   });
 
+  // Si taille_maison a changé ET contient des voyageurs, forcer l'envoi du JSON
+  if (updates.taille_maison && updates.taille_maison.includes('voyageur')) {
+    updates.pricing_data = this.pricingData;
+  }
+    
   // 🆕 Gérer les extras séparément
   const currentExtrasString = this.generateExtrasString();
   const initialExtrasString = this.initialValues.extras || '';
