@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V13 oui oui pas sur
+// Gestionnaire de la page de modification de logement - V14
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -249,7 +249,11 @@ setupTimeFormatters() {
     const fields = [
       { id: 'adresse-input', dataKey: 'address' },
       { id: 'cadeaux-input', dataKey: 'cadeaux' },
-      { id: 'extras-field', dataKey: 'extras' }
+      { id: 'extras-field', dataKey: 'extras' },
+      { id: 'description-logement-input', dataKey: 'description_logement' },
+      { id: 'description-alentours-input', dataKey: 'description_alentours' },
+      { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
+      { id: 'site-internet-input', dataKey: 'site_internet' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -1613,16 +1617,25 @@ generateExtrasString() {
 }
   
 setupFieldListeners() {
-  // ✅ GARDER le code existant
   const fields = [
     { id: 'adresse-input' },
     { id: 'cadeaux-input' },
+    { id: 'description-logement-input' },
+    { id: 'description-alentours-input' },
+    { id: 'code-enregistrement-input' },
+    { id: 'site-internet-input' }
   ];
   
   fields.forEach(field => {
     const input = document.getElementById(field.id);
     if (input) {
       input.addEventListener('input', () => {
+        // NOUVEAU : Validation spéciale pour certains champs
+        if (field.id === 'site-internet-input') {
+          this.validateURL(input);
+        } else if (field.id === 'code-enregistrement-input') {
+          this.validateCodeEnregistrement(input);
+        }
         this.enableButtons();
       });
     }
@@ -1637,6 +1650,57 @@ setupFieldListeners() {
   this.setupPriceOpacityHandlers();
 }
 
+// Validation de l'URL
+validateURL(input) {
+  const value = input.value.trim();
+  if (value === '') return true; // Champ vide OK
+  
+  // Ajouter http:// si pas de protocole
+  if (value && !value.match(/^https?:\/\//)) {
+    input.value = 'https://' + value;
+  }
+  
+  // Pattern URL simple
+  const urlPattern = /^https?:\/\/([\w\-]+\.)+[\w\-]+(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
+  
+  if (!urlPattern.test(input.value)) {
+    input.style.borderColor = '#ff0000';
+    input.setCustomValidity('URL invalide');
+    return false;
+  } else {
+    input.style.borderColor = '';
+    input.setCustomValidity('');
+    return true;
+  }
+}
+
+// Validation du code d'enregistrement (13 chiffres)
+validateCodeEnregistrement(input) {
+  const value = input.value.trim();
+  if (value === '') return true; // Champ vide OK
+  
+  // Garder seulement les chiffres
+  const digitsOnly = value.replace(/\D/g, '');
+  
+  if (digitsOnly !== value) {
+    input.value = digitsOnly;
+  }
+  
+  if (digitsOnly.length > 13) {
+    input.value = digitsOnly.substring(0, 13);
+  }
+  
+  if (digitsOnly.length === 13) {
+    input.style.borderColor = '';
+    input.setCustomValidity('');
+    return true;
+  } else if (digitsOnly.length > 0) {
+    input.style.borderColor = '#ff8c00';
+    input.setCustomValidity(`${13 - digitsOnly.length} chiffres manquants`);
+    return false;
+  }
+}
+  
 // 🆕 NOUVELLE MÉTHODE à ajouter après setupFieldListeners()
 setupDefaultPricingListeners() {
   // Prix par défaut
@@ -2015,7 +2079,11 @@ setBlockState(element, isActive) {
     // Configuration des champs à réinitialiser
     const fields = [
       { id: 'adresse-input', dataKey: 'address' },
-      { id: 'cadeaux-input', dataKey: 'cadeaux' }
+      { id: 'cadeaux-input', dataKey: 'cadeaux' },
+      { id: 'description-logement-input', dataKey: 'description_logement' },
+      { id: 'description-alentours-input', dataKey: 'description_alentours' },
+      { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
+      { id: 'site-internet-input', dataKey: 'site_internet' }
     ];
     
     // Remettre les valeurs initiales
@@ -2088,7 +2156,11 @@ setBlockState(element, isActive) {
   // Configuration du mapping des champs
   const fieldMapping = [
     { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
-    { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' }
+    { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' },
+    { id: 'description-logement-input', dataKey: 'description_logement', dbKey: 'description_logement' },
+    { id: 'description-alentours-input', dataKey: 'description_alentours', dbKey: 'description_alentours' },
+    { id: 'code-enregistrement-input', dataKey: 'code_enregistrement', dbKey: 'code_enregistrement' },
+    { id: 'site-internet-input', dataKey: 'site_internet', dbKey: 'site_internet' }
   ];
     
   // Collecter les valeurs actuelles
