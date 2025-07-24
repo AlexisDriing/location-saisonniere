@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V6
+// Gestionnaire de la page de modification de logement - V14 V7
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1812,6 +1812,29 @@ setupFieldListeners() {
       });
     }
   });
+
+  // NOUVEAU : Listeners pour taille maison avec synchronisation capacity
+  const tailleMaisonIds = ['voyageurs-input', 'chambres-input', 'lits-input', 'salles-bain-input'];
+  tailleMaisonIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', (e) => {
+        // Limiter aux nombres
+        e.target.value = e.target.value.replace(/\D/g, '');
+        
+        // Si c'est le nombre de voyageurs, synchroniser avec capacity
+        if (id === 'voyageurs-input') {
+          const newCapacity = parseInt(e.target.value) || 0;
+          if (this.pricingData) {
+            this.pricingData.capacity = newCapacity;
+            console.log('🔄 Capacity mise à jour:', newCapacity);
+          }
+        }
+        
+        this.enableButtons();
+      });
+    }
+  });
   
   // 🆕 AJOUTER cet appel
   this.setupDefaultPricingListeners();
@@ -2402,6 +2425,13 @@ setBlockState(element, isActive) {
   
   const nouvelleTailleMaison = `${voyageurs} voyageur${pluriel.voyageur} - ${chambres} chambre${pluriel.chambre} - ${lits} lit${pluriel.lit} - ${sallesBain} salle${pluriel.salle} de bain`;
 
+  // 🆕 NOUVEAU : Synchroniser capacity MAINTENANT avant toute comparaison
+  const nouveauNombreVoyageurs = parseInt(voyageurs) || 0;
+  if (this.pricingData && nouveauNombreVoyageurs !== this.pricingData.capacity) {
+    console.log('🔄 Mise à jour capacity avant save:', this.pricingData.capacity, '→', nouveauNombreVoyageurs);
+    this.pricingData.capacity = nouveauNombreVoyageurs;
+  }
+    
   const updates = {};
   // Comparer avec les valeurs initiales
   Object.keys(currentValues).forEach(key => {
