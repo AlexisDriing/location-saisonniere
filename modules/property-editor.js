@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 complexe V2
+// Gestionnaire de la page de modification de logement - V14 V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -812,6 +812,49 @@ prefillComplexFields() {
     }
   });
   this.initialValues.options_accueil = optionsArray;
+  this.prefillTailleMaison();
+}
+
+prefillTailleMaison() {  
+  const tailleStr = this.propertyData.taille_maison || '';
+  
+  // Parser la chaîne "4 voyageurs - 2 chambres - 2 lits - 1 salle de bain"
+  const regex = /(\d+)\s*voyageur[s]?\s*-\s*(\d+)\s*chambre[s]?\s*-\s*(\d+)\s*lit[s]?\s*-\s*(\d+)\s*salle[s]?\s*de\s*bain/i;
+  const match = tailleStr.match(regex);
+  
+  let values = {
+    voyageurs: 0,
+    chambres: 0,
+    lits: 0,
+    salles_bain: 0
+  };
+  
+  if (match) {
+    values.voyageurs = parseInt(match[1]) || 0;
+    values.chambres = parseInt(match[2]) || 0;
+    values.lits = parseInt(match[3]) || 0;
+    values.salles_bain = parseInt(match[4]) || 0;
+  }
+  
+  // Remplir les inputs
+  const voyageursInput = document.getElementById('voyageurs-input');
+  const chambresInput = document.getElementById('chambres-input');
+  const litsInput = document.getElementById('lits-input');
+  const sallesBainInput = document.getElementById('salles-bain-input');
+  
+  if (voyageursInput) voyageursInput.value = values.voyageurs;
+  if (chambresInput) chambresInput.value = values.chambres;
+  if (litsInput) litsInput.value = values.lits;
+  if (sallesBainInput) sallesBainInput.value = values.salles_bain;
+  
+  // Sauvegarder les valeurs initiales
+  this.initialValues.taille_maison = tailleStr;
+  this.initialValues.taille_maison_values = values;
+  
+  // IMPORTANT : Synchroniser avec capacity dans pricingData
+  if (values.voyageurs > 0 && this.pricingData) {
+    this.pricingData.capacity = values.voyageurs;
+  }
 }
   
 // 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
@@ -2211,6 +2254,7 @@ setBlockState(element, isActive) {
     });
 
     this.prefillComplexFields();
+    this.prefillTailleMaison();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
       // 🔧 COPIE PROFONDE pour éviter les références
@@ -2329,7 +2373,24 @@ setBlockState(element, isActive) {
     }
   });
   currentValues.options_accueil = selectedOptions;
+
+  // NOUVEAU : Reconstituer la chaîne taille maison
+  const voyageurs = document.getElementById('voyageurs-input')?.value || '0';
+  const chambres = document.getElementById('chambres-input')?.value || '0';
+  const lits = document.getElementById('lits-input')?.value || '0';
+  const sallesBain = document.getElementById('salles-bain-input')?.value || '0';
   
+  if (voyageurs || chambres || lits || sallesBain) {
+    const pluriel = {
+      voyageur: parseInt(voyageurs) > 1 ? 's' : '',
+      chambre: parseInt(chambres) > 1 ? 's' : '',
+      lit: parseInt(lits) > 1 ? 's' : '',
+      salle: parseInt(sallesBain) > 1 ? 's' : ''
+    };
+    
+    currentValues.taille_maison = `${voyageurs} voyageur${pluriel.voyageur} - ${chambres} chambre${pluriel.chambre} - ${lits} lit${pluriel.lit} - ${sallesBain} salle${pluriel.salle} de bain`;
+  }
+    
   // Comparer avec les valeurs initiales
   const updates = {};
   Object.keys(currentValues).forEach(key => {
