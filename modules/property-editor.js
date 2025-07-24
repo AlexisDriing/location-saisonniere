@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V4
+// Gestionnaire de la page de modification de logement - V14 V5
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -818,7 +818,7 @@ prefillComplexFields() {
 prefillTailleMaison() {  
   const tailleStr = this.propertyData.taille_maison || '';
   
-  // Parser la chaîne "4 voyageurs - 2 chambres - 2 lits - 1 salle de bain"
+  // Parser la chaîne...
   const regex = /(\d+)\s*voyageur[s]?\s*-\s*(\d+)\s*chambre[s]?\s*-\s*(\d+)\s*lit[s]?\s*-\s*(\d+)\s*salle[s]?\s*de\s*bain/i;
   const match = tailleStr.match(regex);
   
@@ -836,7 +836,13 @@ prefillTailleMaison() {
     values.salles_bain = parseInt(match[4]) || 0;
   }
   
-  // Remplir les inputs
+  // NOUVEAU : Si pas de match mais qu'on a une capacity dans pricingData
+  if (!match && this.pricingData && this.pricingData.capacity) {
+    values.voyageurs = this.pricingData.capacity;
+    console.log('🔄 Utilisation de capacity depuis pricingData:', values.voyageurs);
+  }
+  
+  // Remplir les inputs...
   const voyageursInput = document.getElementById('voyageurs-input');
   const chambresInput = document.getElementById('chambres-input');
   const litsInput = document.getElementById('lits-input');
@@ -851,9 +857,16 @@ prefillTailleMaison() {
   this.initialValues.taille_maison = tailleStr;
   this.initialValues.taille_maison_values = values;
   
-  // IMPORTANT : Synchroniser avec capacity dans pricingData
-  if (values.voyageurs > 0 && this.pricingData) {
-    this.pricingData.capacity = values.voyageurs;
+  // IMPORTANT : S'assurer que pricingData.capacity est synchronisé
+  if (this.pricingData) {
+    // Prioriser la valeur parsée de taille_maison
+    if (values.voyageurs > 0) {
+      this.pricingData.capacity = values.voyageurs;
+      console.log('✅ Capacity synchronisée depuis taille_maison:', values.voyageurs);
+    } else if (!this.pricingData.capacity) {
+      // Si pas de voyageurs dans la chaîne ET pas de capacity, mettre 1 par défaut
+      this.pricingData.capacity = 1;
+    }
   }
 }
   
@@ -2380,19 +2393,17 @@ setBlockState(element, isActive) {
   const lits = document.getElementById('lits-input')?.value || '0';
   const sallesBain = document.getElementById('salles-bain-input')?.value || '0';
   
-  if (voyageurs || chambres || lits || sallesBain) {
-    const pluriel = {
-      voyageur: parseInt(voyageurs) > 1 ? 's' : '',
-      chambre: parseInt(chambres) > 1 ? 's' : '',
-      lit: parseInt(lits) > 1 ? 's' : '',
-      salle: parseInt(sallesBain) > 1 ? 's' : ''
-    };
-    
-    currentValues.taille_maison = `${voyageurs} voyageur${pluriel.voyageur} - ${chambres} chambre${pluriel.chambre} - ${lits} lit${pluriel.lit} - ${sallesBain} salle${pluriel.salle} de bain`;
-  }
+  const pluriel = {
+    voyageur: parseInt(voyageurs) > 1 ? 's' : '',
+    chambre: parseInt(chambres) > 1 ? 's' : '',
+    lit: parseInt(lits) > 1 ? 's' : '',
+    salle: parseInt(sallesBain) > 1 ? 's' : ''
+  };
+  
+  const nouvelleTailleMaison = `${voyageurs} voyageur${pluriel.voyageur} - ${chambres} chambre${pluriel.chambre} - ${lits} lit${pluriel.lit} - ${sallesBain} salle${pluriel.salle} de bain`;
+
     
   // Comparer avec les valeurs initiales
-  const updates = {};
   Object.keys(currentValues).forEach(key => {
     if (key === 'equipements_principaux' || key === 'options_accueil') {
       const currentStr = currentValues[key].join(', ');
@@ -2400,16 +2411,15 @@ setBlockState(element, isActive) {
       if (currentStr !== initialStr) {
         updates[key] = currentStr;
       }
-    } else if (key === 'taille_maison') {
-      // NOUVEAU : Comparaison spéciale pour taille_maison
-      if (currentValues[key] !== this.initialValues.taille_maison) {
-        updates[key] = currentValues[key];
-      }
     } else if (currentValues[key] !== this.initialValues[key]) {
       updates[key] = currentValues[key];
     }
   });
-
+  // NOUVEAU : Comparaison manuelle pour taille_maison
+  if (nouvelleTailleMaison !== this.initialValues.taille_maison) {
+    updates.taille_maison = nouvelleTailleMaison;
+  }
+  
   // Si taille_maison a changé ET contient des voyageurs, forcer l'envoi du JSON
   if (updates.taille_maison && updates.taille_maison.includes('voyageur')) {
     updates.pricing_data = this.pricingData;
