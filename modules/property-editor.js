@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V9
+// Gestionnaire de la page de modification de logement - V14 V9 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2557,6 +2557,14 @@ setBlockState(element, isActive) {
     console.log('🔄 Mise à jour capacity avant save:', this.pricingData.capacity, '→', nouveauNombreVoyageurs);
     this.pricingData.capacity = nouveauNombreVoyageurs;
   }
+
+  // Collecter les horaires
+  const heureArrivee = document.getElementById('heure-arrivee-input')?.value || '';
+  const heureDepart = document.getElementById('heure-depart-input')?.value || '';
+  
+  if (heureArrivee && heureDepart) {
+    currentValues.horaires_arrivee_depart = `${heureArrivee},${heureDepart}`;
+  }
     
   const updates = {};
   // Comparer avec les valeurs initiales
@@ -2579,14 +2587,6 @@ setBlockState(element, isActive) {
   // Si taille_maison a changé ET contient des voyageurs, forcer l'envoi du JSON
   if (updates.taille_maison && updates.taille_maison.includes('voyageur')) {
     updates.pricing_data = this.pricingData;
-  }
-
-  // Collecter les horaires
-  const heureArrivee = document.getElementById('heure-arrivee-input')?.value || '';
-  const heureDepart = document.getElementById('heure-depart-input')?.value || '';
-  
-  if (heureArrivee && heureDepart) {
-    currentValues.horaires_arrivee_depart = `${heureArrivee},${heureDepart}`;
   }
     
   // 🆕 Gérer les extras séparément
