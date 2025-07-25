@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V9 modifié
+// Gestionnaire de la page de modification de logement - V14 V9 modifié v2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -140,49 +140,66 @@ setupTimeFormatters() {
   const heureInputs = document.querySelectorAll('[data-format="heure-minute"]');
   
   heureInputs.forEach(input => {
-    new Cleave(input, {
+    // Configuration Cleave pour le formatage de base
+    const cleaveInstance = new Cleave(input, {
       blocks: [2, 2],
       delimiter: ':',
       numericOnly: true,
-      delimiterLazyShow: true, // Affiche : automatiquement
-      onValueChanged: function(e) {
-        // Validation des heures (0-23)
-        const value = e.target.value;
-        if (value.length >= 2) {
-          const heures = parseInt(value.substring(0, 2));
-          if (heures > 23) {
-            e.target.value = '23' + value.substring(2);
-          }
-        }
-        
-        // Validation des minutes (0-59)
-        if (value.length >= 5) {
-          const minutes = parseInt(value.substring(3, 5));
-          if (minutes > 59) {
-            e.target.value = value.substring(0, 3) + '59';
-          }
+      delimiterLazyShow: true
+    });
+    
+    input.placeholder = '00:00';
+    
+    // Fonction de validation réutilisable
+    const validateAndCorrectTime = (value) => {
+      if (!value) return value;
+      
+      // Extraire heures et minutes
+      const parts = value.split(':');
+      let heures = parseInt(parts[0]) || 0;
+      let minutes = parseInt(parts[1]) || 0;
+      
+      // Appliquer les limites
+      heures = Math.min(heures, 23);
+      minutes = Math.min(minutes, 59);
+      
+      // Retourner le format correct
+      return heures.toString().padStart(2, '0') + ':' + 
+             minutes.toString().padStart(2, '0');
+    };
+    
+    // Validation en temps réel (légère)
+    input.addEventListener('input', function(e) {
+      let value = e.target.value;
+      
+      // Validation rapide des heures si on a tapé 3 chiffres sans ':'
+      if (value.length === 3 && !value.includes(':')) {
+        const heures = parseInt(value.substring(0, 2));
+        if (heures > 23) {
+          // Insérer le ':' et corriger
+          e.target.value = '23:' + value.charAt(2);
+          // Mettre à jour Cleave
+          cleaveInstance.setRawValue(e.target.value);
         }
       }
     });
     
-    // Placeholder explicite
-    input.placeholder = '00:00';
-    
-    // Ajouter zéros automatiquement au blur si nécessaire
+    // Validation complète au blur
     input.addEventListener('blur', function() {
       let value = this.value;
+      
       if (value) {
-        // Si seulement l'heure est entrée (ex: "14"), ajouter ":00"
-        if (value.length === 2 && !value.includes(':')) {
-          this.value = value + ':00';
+        // Format court (ex: "14" → "14:00")
+        if (value.length <= 2 && !value.includes(':')) {
+          value = value + ':00';
         }
-        // Si format incomplet (ex: "14:5"), ajouter le zéro
-        else if (value.includes(':')) {
-          const parts = value.split(':');
-          const heures = parts[0].padStart(2, '0');
-          const minutes = (parts[1] || '00').padStart(2, '0');
-          this.value = heures + ':' + minutes;
+        // Format incomplet (ex: "14:" → "14:00")
+        else if (value.endsWith(':')) {
+          value = value + '00';
         }
+        
+        // Valider et corriger
+        this.value = validateAndCorrectTime(value);
       }
     });
   });
