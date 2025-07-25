@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V8
+// Gestionnaire de la page de modification de logement - V14 V8 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1832,17 +1832,6 @@ setupFieldListeners() {
   const equipementIds = ['checkbox-piscine', 'checkbox-jacuzzi', 'checkbox-barbecue', 
                         'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking'];
   equipementIds.forEach(id => {
-    const checkbox = document.getElementById(id);
-    if (checkbox) {
-      checkbox.addEventListener('change', () => {
-        this.enableButtons();
-      });
-    }
-  });
-  
-  // NOUVEAU : Listeners pour les checkboxes options
-  const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
-  optionIds.forEach(id => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
       checkbox.addEventListener('change', () => {
