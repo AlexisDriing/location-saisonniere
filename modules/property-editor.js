@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V8 modifié
+// Gestionnaire de la page de modification de logement - V14 V9
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -274,7 +274,7 @@ setupTimeFormatters() {
 
      // NOUVEAU : Pré-remplir les options de ménage
     this.prefillCleaningOptions();
-
+    this.prefillHoraires();
     this.prefillComplexFields();
 
     // Pré-remplir les autres champs simples
@@ -904,6 +904,43 @@ prefillTailleMaison() {
       this.pricingData.capacity = 1;
     }
   }
+}
+
+prefillHoraires() {  
+  const horairesStr = this.propertyData.horaires_arrivee_depart || '';
+  
+  let heureArrivee = '';
+  let heureDepart = '';
+  
+  if (horairesStr) {
+    const horaires = horairesStr.split(',').map(h => h.trim());
+    
+    if (horaires.length === 2) {
+      // Nouveau format HH:MM
+      if (horaires[0].includes(':')) {
+        heureArrivee = horaires[0];
+        heureDepart = horaires[1];
+      } else {
+        // Ancien format (juste les heures)
+        heureArrivee = horaires[0].padStart(2, '0') + ':00';
+        heureDepart = horaires[1].padStart(2, '0') + ':00';
+      }
+    }
+  }
+  
+  const arriveeInput = document.getElementById('heure-arrivee-input');
+  const departInput = document.getElementById('heure-depart-input');
+  
+  if (arriveeInput) {
+    arriveeInput.value = heureArrivee;
+    arriveeInput.setAttribute('data-format', 'heure-minute');
+  }
+  if (departInput) {
+    departInput.value = heureDepart;
+    departInput.setAttribute('data-format', 'heure-minute');
+  }
+  
+  this.initialValues.horaires_arrivee_depart = horairesStr;
 }
   
 // 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
@@ -1863,6 +1900,17 @@ setupFieldListeners() {
       });
     }
   });
+
+  // NOUVEAU : Listeners pour les horaires (Cleave s'occupe de la validation)
+  const horaireIds = ['heure-arrivee-input', 'heure-depart-input'];
+  horaireIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => {
+        this.enableButtons();
+      });
+    }
+  });
   
   // NOUVEAU : Listeners pour taille maison avec synchronisation capacity
   const tailleMaisonIds = ['voyageurs-input', 'chambres-input', 'lits-input', 'salles-bain-input'];
@@ -2344,6 +2392,7 @@ setBlockState(element, isActive) {
 
     this.prefillComplexFields();
     this.prefillTailleMaison();
+    this.prefillHoraires();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
       // 🔧 COPIE PROFONDE pour éviter les références
@@ -2530,6 +2579,14 @@ setBlockState(element, isActive) {
   // Si taille_maison a changé ET contient des voyageurs, forcer l'envoi du JSON
   if (updates.taille_maison && updates.taille_maison.includes('voyageur')) {
     updates.pricing_data = this.pricingData;
+  }
+
+  // Collecter les horaires
+  const heureArrivee = document.getElementById('heure-arrivee-input')?.value || '';
+  const heureDepart = document.getElementById('heure-depart-input')?.value || '';
+  
+  if (heureArrivee && heureDepart) {
+    currentValues.horaires_arrivee_depart = `${heureArrivee},${heureDepart}`;
   }
     
   // 🆕 Gérer les extras séparément
