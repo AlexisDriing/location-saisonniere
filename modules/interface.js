@@ -1,4 +1,4 @@
-// Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V2 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -229,9 +229,6 @@ class InterfaceManager {
 
   // Gestion des horaires d'arrivée et de départ
   setupHoraires() {
-    console.log('🕐 Configuration des horaires...');
-    
-    // Chercher l'élément qui contient les horaires
     const horairesElement = document.querySelector('[data-heure-arrivee-depart]');
     
     if (!horairesElement) {
@@ -239,7 +236,6 @@ class InterfaceManager {
       return;
     }
     
-    // Récupérer la valeur du champ
     const horairesString = horairesElement.getAttribute('data-heure-arrivee-depart');
     
     if (!horairesString || horairesString.trim() === '') {
@@ -251,25 +247,28 @@ class InterfaceManager {
     const horaires = horairesString.split(',').map(h => h.trim());
     
     if (horaires.length !== 2) {
-      console.warn('⚠️ Format d\'horaires incorrect. Attendu: "heureArrivée,heureDépart"');
+      console.warn('⚠️ Format d\'horaires incorrect. Attendu: "HH:MM,HH:MM"');
       return;
     }
     
-    // Formater les horaires
+    // NOUVEAU : Formater de HH:MM vers HHhMM
     const formatHeure = (heure) => {
-      // Si c'est juste un nombre, ajouter h00
+      // Si c'est déjà au format HH:MM
+      if (/^\d{1,2}:\d{2}$/.test(heure)) {
+        return heure.replace(':', 'h');
+      }
+      // Si c'est juste un nombre (ancien format)
       if (/^\d+$/.test(heure)) {
         return `${heure}h00`;
       }
-      // Si c'est au format XXh sans minutes, ajouter 00
+      // Si c'est au format XXh sans minutes
       if (/^\d+h$/.test(heure)) {
         return `${heure}00`;
       }
-      // Si c'est au format XXhYY, le garder tel quel
+      // Si c'est au format XXhYY
       if (/^\d+h\d+$/.test(heure)) {
         return heure;
       }
-      // Sinon retourner tel quel
       return heure;
     };
     
@@ -278,7 +277,6 @@ class InterfaceManager {
     
     console.log(`📋 Horaires formatés: Arrivée ${heureArrivee}, Départ ${heureDepart}`);
     
-    // Chercher l'élément texte à modifier
     const textHorairesElement = document.querySelector('.text-horaires');
     
     if (!textHorairesElement) {
@@ -286,26 +284,18 @@ class InterfaceManager {
       return;
     }
     
-    // Remplacer les horaires dans le texte
-    // Pattern pour trouver les heures (format XXhXX ou XXh00)
     let texteActuel = textHorairesElement.textContent;
-    
-    // Remplacer toutes les occurrences d'heures
     const heuresExistantes = texteActuel.match(/\d+h\d+/g) || [];
     
     if (heuresExistantes.length >= 2) {
-      // Remplacer la première heure (arrivée)
       texteActuel = texteActuel.replace(heuresExistantes[0], heureArrivee);
-      // Remplacer la deuxième heure (départ)
       texteActuel = texteActuel.replace(heuresExistantes[1], heureDepart);
     } else {
       console.warn('⚠️ Impossible de trouver 2 horaires dans le texte');
       return;
     }
     
-    // Mettre à jour le texte
     textHorairesElement.textContent = texteActuel;
-    
     console.log(`✅ Horaires mis à jour: ${texteActuel}`);
   }
 
