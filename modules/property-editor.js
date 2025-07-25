@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V9 modifié v2
+// Gestionnaire de la page de modification de logement - V14 V9 modifié v3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -864,10 +864,41 @@ prefillComplexFields() {
     }
   });
   this.initialValues.mode_paiement = modesPaiementArray;
-  
+  this.prefillCautionAcompte();
   this.prefillTailleMaison();
 }
 
+  prefillCautionAcompte() {  
+  // Récupérer les valeurs depuis le JSON pricing
+  const caution = this.pricingData?.caution || 0;
+  const acompte = this.pricingData?.acompte || 0;
+  
+  // Remplir les inputs
+  const cautionInput = document.getElementById('caution-input');
+  const acompteInput = document.getElementById('acompte-input');
+  
+  if (cautionInput) {
+    cautionInput.value = caution;
+    cautionInput.setAttribute('data-raw-value', caution);
+    // S'assurer que l'attribut est là pour votre système
+    cautionInput.setAttribute('data-suffix', 'euro');
+  }
+  
+  if (acompteInput) {
+    acompteInput.value = acompte;
+    acompteInput.setAttribute('data-raw-value', acompte);
+    // S'assurer que l'attribut est là pour votre système
+    acompteInput.setAttribute('data-suffix', 'pourcent');
+  }
+  
+  // Sauvegarder la valeur initiale du champ texte
+  this.initialValues.conditions_reservation = this.propertyData.conditions_reservation || '';
+  this.initialValues.caution = caution;
+  this.initialValues.acompte = acompte;
+  
+  console.log('✅ Caution et acompte configurés:', { caution, acompte });
+}
+  
 prefillTailleMaison() {  
   const tailleStr = this.propertyData.taille_maison || '';
   
@@ -1894,6 +1925,33 @@ setupFieldListeners() {
     }
   });
 
+  // NOUVEAU : Listeners pour caution et acompte avec synchronisation JSON
+  const cautionAcompteIds = ['caution-input', 'acompte-input'];
+  cautionAcompteIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', (e) => {
+        // Limiter aux nombres (votre système de suffixes gère le reste)
+        const rawValue = parseInt(this.getRawValue(e.target)) || 0;
+        
+        // Mettre à jour le JSON pricing
+        if (id === 'caution-input') {
+          if (this.pricingData) {
+            this.pricingData.caution = rawValue;
+            console.log('🔄 Caution mise à jour:', rawValue);
+          }
+        } else if (id === 'acompte-input') {
+          if (this.pricingData) {
+            this.pricingData.acompte = rawValue;
+            console.log('🔄 Acompte mise à jour:', rawValue);
+          }
+        }
+        
+        this.enableButtons();
+      });
+    }
+  });
+  
   // NOUVEAU : Listeners pour les checkboxes options
   const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
   optionIds.forEach(id => {
@@ -2410,6 +2468,7 @@ setBlockState(element, isActive) {
     this.prefillComplexFields();
     this.prefillTailleMaison();
     this.prefillHoraires();
+    this.prefillCautionAcompte();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
       // 🔧 COPIE PROFONDE pour éviter les références
@@ -2582,6 +2641,25 @@ setBlockState(element, isActive) {
   if (heureArrivee && heureDepart) {
     currentValues.horaires_arrivee_depart = `${heureArrivee},${heureDepart}`;
   }
+
+  // NOUVEAU : Construire le texte conditions de réservation
+  const cautionValue = this.getRawValue(document.getElementById('caution-input')) || '0';
+  const acompteValue = this.getRawValue(document.getElementById('acompte-input')) || '0';
+  
+  let conditionsTexte = '';
+  
+  if (parseInt(cautionValue) > 0) {
+    conditionsTexte = `Caution : Une caution de ${cautionValue}€ vous sera demandée au moment de la réservation`;
+  }
+  
+  if (parseInt(acompteValue) > 0) {
+    const acompteTexte = `Acompte : ${acompteValue}% du montant total de la réservation est demandé pour confirmer la réservation.`;
+    conditionsTexte = conditionsTexte 
+      ? conditionsTexte + '\n' + acompteTexte 
+      : acompteTexte;
+  }
+  
+  currentValues.conditions_reservation = conditionsTexte;
     
   const updates = {};
   // Comparer avec les valeurs initiales
@@ -2603,6 +2681,15 @@ setBlockState(element, isActive) {
   
   // Si taille_maison a changé ET contient des voyageurs, forcer l'envoi du JSON
   if (updates.taille_maison && updates.taille_maison.includes('voyageur')) {
+    updates.pricing_data = this.pricingData;
+  }
+
+  // Si caution ou acompte a changé, forcer l'envoi du JSON
+  const cautionChanged = parseInt(cautionValue) !== this.initialValues.caution;
+  const acompteChanged = parseInt(acompteValue) !== this.initialValues.acompte;
+  
+  if ((updates.taille_maison && updates.taille_maison.includes('voyageur')) || 
+      cautionChanged || acompteChanged) {
     updates.pricing_data = this.pricingData;
   }
     
