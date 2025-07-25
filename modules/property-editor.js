@@ -253,7 +253,9 @@ setupTimeFormatters() {
       { id: 'description-logement-input', dataKey: 'description_logement' },
       { id: 'description-alentours-input', dataKey: 'description_alentours' },
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
-      { id: 'site-internet-input', dataKey: 'site_internet' }
+      { id: 'site-internet-input', dataKey: 'site_internet' },
+      { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
+      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -1765,7 +1767,9 @@ setupFieldListeners() {
     { id: 'description-logement-input' },
     { id: 'description-alentours-input' },
     { id: 'code-enregistrement-input' },
-    { id: 'site-internet-input' }
+    { id: 'site-internet-input' },
+    { id: 'inclus-reservation-input' },
+    { id: 'conditions-annulation-input' }
   ];
   
   fields.forEach(field => {
@@ -2278,7 +2282,9 @@ setBlockState(element, isActive) {
       { id: 'description-logement-input', dataKey: 'description_logement' },
       { id: 'description-alentours-input', dataKey: 'description_alentours' },
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
-      { id: 'site-internet-input', dataKey: 'site_internet' }
+      { id: 'site-internet-input', dataKey: 'site_internet' },
+      { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
+      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' }
     ];
     
     // Remettre les valeurs initiales
@@ -2357,7 +2363,9 @@ setBlockState(element, isActive) {
     { id: 'description-logement-input', dataKey: 'description_logement', dbKey: 'description_logement' },
     { id: 'description-alentours-input', dataKey: 'description_alentours', dbKey: 'description_alentours' },
     { id: 'code-enregistrement-input', dataKey: 'code_enregistrement', dbKey: 'code_enregistrement' },
-    { id: 'site-internet-input', dataKey: 'site_internet', dbKey: 'site_internet' }
+    { id: 'site-internet-input', dataKey: 'site_internet', dbKey: 'site_internet' },
+    { id: 'inclus-reservation-input', dataKey: 'inclus_reservation', dbKey: 'inclus_reservation' },
+    { id: 'conditions-annulation-input', dataKey: 'conditions_annulation', dbKey: 'conditions_annulation' }
   ];
     
   // Collecter les valeurs actuelles
