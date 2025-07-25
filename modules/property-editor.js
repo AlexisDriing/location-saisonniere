@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V7 modifié
+// Gestionnaire de la page de modification de logement - V14 V8
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -814,6 +814,40 @@ prefillComplexFields() {
     }
   });
   this.initialValues.options_accueil = optionsArray;
+
+  // NOUVEAU : MODES DE PAIEMENT (Checkboxes)
+  const modesPaiement = this.propertyData.mode_paiement || [];
+  const modesPaiementArray = Array.isArray(modesPaiement) ? modesPaiement : [];
+  
+  const modesPaiementMapping = {
+    'Visa': 'checkbox-visa',
+    'Espèces': 'checkbox-especes',
+    'MasterCard': 'checkbox-mastercard',
+    'Virement bancaire': 'checkbox-virement',
+    'PayPal': 'checkbox-paypal',
+    'PayLib': 'checkbox-paylib',
+    'American Express': 'checkbox-amex',
+    'Chèques acceptés': 'checkbox-cheques',
+    'Chèques-vacances': 'checkbox-cheques-vacances'
+  };
+  
+  Object.entries(modesPaiementMapping).forEach(([value, id]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = modesPaiementArray.includes(value);
+      // Mettre à jour le visuel Webflow
+      const checkboxDiv = checkbox.previousElementSibling;
+      if (checkboxDiv && checkboxDiv.classList.contains('w-checkbox-input')) {
+        if (checkbox.checked) {
+          checkboxDiv.classList.add('w--redirected-checked');
+        } else {
+          checkboxDiv.classList.remove('w--redirected-checked');
+        }
+      }
+    }
+  });
+  this.initialValues.mode_paiement = modesPaiementArray;
+  
   this.prefillTailleMaison();
 }
 
@@ -1817,6 +1851,30 @@ setupFieldListeners() {
     }
   });
 
+  // NOUVEAU : Listeners pour les checkboxes options
+  const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
+  optionIds.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        this.enableButtons();
+      });
+    }
+  });
+  
+  // NOUVEAU : Listeners pour les modes de paiement
+  const paiementIds = ['checkbox-visa', 'checkbox-especes', 'checkbox-mastercard', 
+                       'checkbox-virement', 'checkbox-paypal', 'checkbox-paylib', 
+                       'checkbox-amex', 'checkbox-cheques', 'checkbox-cheques-vacances'];
+  paiementIds.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        this.enableButtons();
+      });
+    }
+  });
+  
   // NOUVEAU : Listeners pour taille maison avec synchronisation capacity
   const tailleMaisonIds = ['voyageurs-input', 'chambres-input', 'lits-input', 'salles-bain-input'];
   tailleMaisonIds.forEach(id => {
@@ -2418,6 +2476,28 @@ setBlockState(element, isActive) {
   });
   currentValues.options_accueil = selectedOptions;
 
+  // NOUVEAU : Collecter les modes de paiement cochés
+  const modesPaiementMapping = {
+    'checkbox-visa': 'Visa',
+    'checkbox-especes': 'Espèces',
+    'checkbox-mastercard': 'MasterCard',
+    'checkbox-virement': 'Virement bancaire',
+    'checkbox-paypal': 'PayPal',
+    'checkbox-paylib': 'PayLib',
+    'checkbox-amex': 'American Express',
+    'checkbox-cheques': 'Chèques acceptés',
+    'checkbox-cheques-vacances': 'Chèques-vacances'
+  };
+  
+  const selectedModesPaiement = [];
+  Object.entries(modesPaiementMapping).forEach(([id, value]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox && checkbox.checked) {
+      selectedModesPaiement.push(value);
+    }
+  });
+  currentValues.mode_paiement = selectedModesPaiement;
+    
   // NOUVEAU : Reconstituer la chaîne taille maison
   const voyageurs = document.getElementById('voyageurs-input')?.value || '0';
   const chambres = document.getElementById('chambres-input')?.value || '0';
@@ -2443,7 +2523,7 @@ setBlockState(element, isActive) {
   const updates = {};
   // Comparer avec les valeurs initiales
   Object.keys(currentValues).forEach(key => {
-    if (key === 'equipements_principaux' || key === 'options_accueil') {
+    if (key === 'equipements_principaux' || key === 'options_accueil' || key === 'mode_paiement') {
       const currentStr = currentValues[key].join(', ');
       const initialStr = (this.initialValues[key] || []).join(', ');
       if (currentStr !== initialStr) {
