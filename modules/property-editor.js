@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V11
+// Gestionnaire de la page de modification de logement - V14 V11 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -535,9 +535,6 @@ setupTimeFormatters() {
         
         // Afficher le bloc
         imageBlock.style.display = 'block'; // ou 'flex' selon votre CSS
-        
-        // Optionnel : Ajouter un bouton de suppression
-        this.addImageDeleteButton(imageBlock, i);
       }
     }
   }
