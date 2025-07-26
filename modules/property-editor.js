@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V9 modifié v3
+// Gestionnaire de la page de modification de logement - V14 V10
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1931,8 +1931,12 @@ setupFieldListeners() {
     const input = document.getElementById(id);
     if (input) {
       input.addEventListener('input', (e) => {
-        // Limiter aux nombres (votre système de suffixes gère le reste)
-        const rawValue = parseInt(this.getRawValue(e.target)) || 0;
+        // Récupérer la valeur SANS suffixe
+        const cleanValue = e.target.value.replace(/[^\d]/g, '');
+        const rawValue = parseInt(cleanValue) || 0;
+        
+        // Stocker immédiatement dans data-raw-value
+        e.target.setAttribute('data-raw-value', rawValue);
         
         // Mettre à jour le JSON pricing
         if (id === 'caution-input') {
@@ -2642,9 +2646,23 @@ setBlockState(element, isActive) {
     currentValues.horaires_arrivee_depart = `${heureArrivee},${heureDepart}`;
   }
 
-  // NOUVEAU : Construire le texte conditions de réservation
-  const cautionValue = this.getRawValue(document.getElementById('caution-input')) || '0';
-  const acompteValue = this.getRawValue(document.getElementById('acompte-input')) || '0';
+  // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
+  const cautionInput = document.getElementById('caution-input');
+  const acompteInput = document.getElementById('acompte-input');
+  
+  if (cautionInput && document.activeElement === cautionInput) {
+    cautionInput.blur();
+  }
+  if (acompteInput && document.activeElement === acompteInput) {
+    acompteInput.blur();
+  }
+  
+  // Petit délai pour laisser le blur se terminer
+  await new Promise(resolve => setTimeout(resolve, 50));
+  
+  // MAINTENANT récupérer les valeurs
+  const cautionValue = this.getRawValue(cautionInput) || '0';
+  const acompteValue = this.getRawValue(acompteInput) || '0';
   
   let conditionsTexte = '';
   
