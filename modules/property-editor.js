@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V10
+// Gestionnaire de la page de modification de logement - V14 V11
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -298,6 +298,8 @@ setupTimeFormatters() {
     //this.prefillSimpleFields();
     
     this.setupFieldListeners();
+    this.displayImageGallery();
+
 
     // 🆕 Appliquer l'opacité initiale après un court délai
     setTimeout(() => {
@@ -475,6 +477,69 @@ setupTimeFormatters() {
       e.preventDefault();
       this.validateAndEditSeason();
     });
+  }
+}
+
+  displayImageGallery() {  
+  // Masquer tous les blocs image par défaut
+  for (let i = 1; i <= 20; i++) {
+    const imageBlock = document.getElementById(`image-block-${i}`);
+    if (imageBlock) {
+      imageBlock.style.display = 'none';
+    }
+  }
+  
+  // Récupérer les images depuis propertyData
+  const imagesGallery = this.propertyData.images_gallery || [];
+  
+  if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
+    console.log('📷 Aucune image dans la galerie');
+    return;
+  }
+  
+  console.log(`📷 ${imagesGallery.length} images trouvées dans la galerie`);
+  
+  // Afficher chaque image (max 20)
+  const maxImages = Math.min(imagesGallery.length, 20);
+  
+  for (let i = 0; i < maxImages; i++) {
+    const imageData = imagesGallery[i];
+    const imageBlock = document.getElementById(`image-block-${i + 1}`);
+    
+    if (imageBlock && imageData) {
+      // Extraire l'URL de l'image
+      let imageUrl = null;
+      
+      // Format Webflow v2 API
+      if (typeof imageData === 'object' && imageData.url) {
+        imageUrl = imageData.url;
+      } 
+      // Si c'est directement une URL string
+      else if (typeof imageData === 'string') {
+        imageUrl = imageData;
+      }
+      
+      if (imageUrl) {
+        // Chercher l'élément img dans le bloc
+        const imgElement = imageBlock.querySelector('img');
+        
+        if (imgElement) {
+          imgElement.src = imageUrl;
+          imgElement.alt = `Image ${i + 1}`;
+          
+          // Optionnel : Ajouter lazy loading pour performance
+          if (i > 3) { // Lazy load après les 4 premières images
+            imgElement.loading = 'lazy';
+          }
+        }
+        
+        // Afficher le bloc
+        imageBlock.style.display = 'block'; // ou 'flex' selon votre CSS
+        
+        // Optionnel : Ajouter un bouton de suppression
+        this.addImageDeleteButton(imageBlock, i);
+      }
+    }
   }
 }
 
