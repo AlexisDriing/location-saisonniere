@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V11 modifié
+// Gestionnaire de la page de modification de logement - V14 V12
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -480,7 +480,21 @@ setupTimeFormatters() {
   }
 }
 
-  displayImageGallery() {  
+  displayImageGallery() { 
+  // Récupérer les images depuis propertyData
+  const imagesGallery = this.propertyData.images_gallery || [];
+
+    // Gérer l'affichage du bloc empty
+  const blocEmpty = document.getElementById('bloc-empty-photos');
+  if (blocEmpty) {
+    if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
+      // Afficher le bloc empty si pas d'images
+      blocEmpty.style.display = 'flex';
+    } else {
+      // Masquer le bloc empty s'il y a des images
+      blocEmpty.style.display = 'none';
+    }
+  }
   // Masquer tous les blocs image par défaut
   for (let i = 1; i <= 20; i++) {
     const imageBlock = document.getElementById(`image-block-${i}`);
@@ -488,9 +502,6 @@ setupTimeFormatters() {
       imageBlock.style.display = 'none';
     }
   }
-  
-  // Récupérer les images depuis propertyData
-  const imagesGallery = this.propertyData.images_gallery || [];
   
   if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
     console.log('📷 Aucune image dans la galerie');
