@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V13 modifié flex
+// Gestionnaire de la page de modification de logement - V15
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -49,7 +49,8 @@ class PropertyEditor {
     this.initIcalManagement();
     this.initExtrasManagement();
   }
-  
+  this.validationManager = new ValidationManager(this);
+    
   console.log('✅ PropertyEditor initialisé');
   window.propertyEditor = this;
 }
@@ -206,7 +207,7 @@ setupTimeFormatters() {
 }
   
   setupSuffixFormatters() {
-    // Euros
+   // Euros
     document.querySelectorAll('[data-suffix="euro"], [data-suffix="euro-nuit"]').forEach(input => {
       input.addEventListener('blur', function() {
         const value = this.value.replace(/[^\d]/g, '');
@@ -215,9 +216,13 @@ setupTimeFormatters() {
           const suffix = this.getAttribute('data-suffix') === 'euro' ? ' €' : ' € / nuit';
           this.value = value + suffix;
         } else {
-          // 🆕 IMPORTANT : Si le champ est vide, on supprime data-raw-value
           this.removeAttribute('data-raw-value');
-          this.value = ''; // S'assurer que le champ reste vide
+          this.value = '';
+        }
+        
+        // 🆕 NOUVEAU : Ajouter la validation
+        if (window.propertyEditor && window.propertyEditor.validationManager) {
+          window.propertyEditor.validationManager.validateFieldOnBlur(this.id);
         }
       });
       
@@ -226,7 +231,6 @@ setupTimeFormatters() {
         if (rawValue) {
           this.value = rawValue;
         } else {
-          // 🆕 Si pas de data-raw-value, retirer juste le suffixe
           this.value = this.value.replace(/[^\d]/g, '');
         }
       });
@@ -1388,6 +1392,10 @@ setupDiscountListeners(blocElement, index) {
       if (value) {
         this.value = value + ' %';
       }
+      // 🆕 NOUVEAU : Ajouter la validation
+      if (window.propertyEditor && window.propertyEditor.validationManager) {
+        window.propertyEditor.validationManager.validateFieldOnBlur(this.id);
+      }
     });
     
     // Retirer le % au focus
@@ -2031,6 +2039,11 @@ setupFieldListeners() {
         }
         this.enableButtons();
       });
+      input.addEventListener('blur', () => {
+        if (this.validationManager) {
+          this.validationManager.validateFieldOnBlur(field.id);
+        }
+      });
     }
   });
 
@@ -2116,6 +2129,11 @@ setupFieldListeners() {
       input.addEventListener('input', () => {
         this.enableButtons();
       });
+      input.addEventListener('blur', () => {
+      if (this.validationManager) {
+        this.validationManager.validateFieldOnBlur(id);
+      }
+    });
     }
   });
   
@@ -2264,6 +2282,14 @@ setupDefaultPricingListeners() {
         this.updateDefaultPricing();
         this.enableButtons();
       });
+      input.addEventListener('blur', () => {
+      if (this.validationManager) {
+        // Valider le champ individuel
+        this.validationManager.validateFieldOnBlur(`default-${platform}-price-input`);
+        // Valider aussi la règle des 10%
+        this.validationManager.validatePlatformPrices();
+      }
+    });
     }
   });
 }
@@ -2609,7 +2635,10 @@ setBlockState(element, isActive) {
 
   cancelModifications() {
     console.log('❌ Annulation des modifications');
-    
+
+    if (this.validationManager) {
+      this.validationManager.clearAllErrors();
+    }
     // Configuration des champs à réinitialiser
     const fields = [
       { id: 'adresse-input', dataKey: 'address' },
@@ -2686,6 +2715,12 @@ setBlockState(element, isActive) {
 
   async saveModifications() {
   console.log('💾 Sauvegarde des modifications...');
+
+  if (this.validationManager && !this.validationManager.validateAllFields()) {
+    console.log('❌ Validation échouée - Sauvegarde annulée');
+    alert('Veuillez corriger les erreurs avant d\'enregistrer');
+    return;
+  }
     
   // 🆕 NOUVEAU : Forcer le blur sur l'input actif pour capturer sa valeur
   const activeElement = document.activeElement;
