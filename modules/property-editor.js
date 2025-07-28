@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V13
+// Gestionnaire de la page de modification de logement - V14 V13 modifié
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -502,11 +502,22 @@ setupTimeFormatters() {
       if (blocHote) {
         blocHote.style.display = 'flex';
         
-        // Optionnel : mettre à jour l'image si elle est dans le bloc
-        const imgElement = blocHote.querySelector('img');
-        if (imgElement) {
-          imgElement.src = hostImageUrl;
-          imgElement.alt = 'Photo de l\'hôte';
+        // NOUVEAU : Mettre à jour l'image dans le bloc avec l'ID "image-hote"
+        const imageHoteElement = document.getElementById('image-hote');
+        if (imageHoteElement) {
+          // Si c'est directement une image
+          if (imageHoteElement.tagName === 'IMG') {
+            imageHoteElement.src = hostImageUrl;
+            imageHoteElement.alt = 'Photo de l\'hôte';
+          } 
+          // Si c'est un conteneur avec une image dedans
+          else {
+            const imgElement = imageHoteElement.querySelector('img');
+            if (imgElement) {
+              imgElement.src = hostImageUrl;
+              imgElement.alt = 'Photo de l\'hôte';
+            }
+          }
         }
       }
     }
