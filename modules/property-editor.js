@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V13 modifié
+// Gestionnaire de la page de modification de logement - V14 V13 modifié flex
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -539,7 +539,7 @@ setupTimeFormatters() {
   } else {
     // Il y a des images : masquer empty, afficher photos
     if (blocEmpty) blocEmpty.style.display = 'none';
-    if (blocPhotos) blocPhotos.style.display = 'flex';
+    if (blocPhotos) blocPhotos.style.display = 'block';
   }
   // Masquer tous les blocs image par défaut
   for (let i = 1; i <= 20; i++) {
