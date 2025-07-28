@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V14 V12
+// Gestionnaire de la page de modification de logement - V14 V13
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -272,7 +272,10 @@ setupTimeFormatters() {
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
       { id: 'site-internet-input', dataKey: 'site_internet' },
       { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
-      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' }
+      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
+      { id: 'hote-input', dataKey: 'host_name' },
+      { id: 'email-input', dataKey: 'email' },
+      { id: 'telephone-input', dataKey: 'telephone' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -299,7 +302,7 @@ setupTimeFormatters() {
     
     this.setupFieldListeners();
     this.displayImageGallery();
-
+    this.displayHostImage();
 
     // 🆕 Appliquer l'opacité initiale après un court délai
     setTimeout(() => {
@@ -480,20 +483,52 @@ setupTimeFormatters() {
   }
 }
 
+  displayHostImage() {    
+    // Récupérer l'URL de l'image hôte
+    const hostImageUrl = this.propertyData.host_image || '';
+    
+    // Récupérer les blocs
+    const blocEmptyHote = document.getElementById('bloc-empty-hote');
+    const blocHote = document.getElementById('bloc-hote');
+    
+    if (!hostImageUrl || hostImageUrl.trim() === '') {
+      // Pas d'image hôte : afficher empty, masquer bloc hôte
+      if (blocEmptyHote) blocEmptyHote.style.display = 'flex';
+      if (blocHote) blocHote.style.display = 'none';
+      console.log('👤 Aucune image hôte - Affichage du bloc empty');
+    } else {
+      // Il y a une image : masquer empty, afficher bloc hôte
+      if (blocEmptyHote) blocEmptyHote.style.display = 'none';
+      if (blocHote) {
+        blocHote.style.display = 'flex';
+        
+        // Optionnel : mettre à jour l'image si elle est dans le bloc
+        const imgElement = blocHote.querySelector('img');
+        if (imgElement) {
+          imgElement.src = hostImageUrl;
+          imgElement.alt = 'Photo de l\'hôte';
+        }
+      }
+    }
+  }
+
+  
   displayImageGallery() { 
   // Récupérer les images depuis propertyData
   const imagesGallery = this.propertyData.images_gallery || [];
 
-    // Gérer l'affichage du bloc empty
+  // Gérer l'affichage du bloc empty ET du bloc photos
   const blocEmpty = document.getElementById('bloc-empty-photos');
-  if (blocEmpty) {
-    if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
-      // Afficher le bloc empty si pas d'images
-      blocEmpty.style.display = 'flex';
-    } else {
-      // Masquer le bloc empty s'il y a des images
-      blocEmpty.style.display = 'none';
-    }
+  const blocPhotos = document.getElementById('bloc-photos-logement');
+  
+  if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
+    // Pas d'images : afficher empty, masquer photos
+    if (blocEmpty) blocEmpty.style.display = 'flex';
+    if (blocPhotos) blocPhotos.style.display = 'none';
+  } else {
+    // Il y a des images : masquer empty, afficher photos
+    if (blocEmpty) blocEmpty.style.display = 'none';
+    if (blocPhotos) blocPhotos.style.display = 'flex';
   }
   // Masquer tous les blocs image par défaut
   for (let i = 1; i <= 20; i++) {
@@ -1961,18 +1996,27 @@ setupFieldListeners() {
     { id: 'code-enregistrement-input' },
     { id: 'site-internet-input' },
     { id: 'inclus-reservation-input' },
-    { id: 'conditions-annulation-input' }
+    { id: 'conditions-annulation-input' },
+    { id: 'hote-input' },
+    { id: 'email-input' },
+    { id: 'telephone-input' }
   ];
   
   fields.forEach(field => {
     const input = document.getElementById(field.id);
     if (input) {
       input.addEventListener('input', () => {
-        // NOUVEAU : Validation spéciale pour certains champs
+        // Validation spéciale pour certains champs
         if (field.id === 'site-internet-input') {
           this.validateURL(input);
         } else if (field.id === 'code-enregistrement-input') {
           this.validateCodeEnregistrement(input);
+        } else if (field.id === 'email-input') {
+          // NOUVEAU : Validation email
+          this.validateEmail(input);
+        } else if (field.id === 'telephone-input') {
+          // NOUVEAU : Formatage téléphone
+          this.formatTelephone(input);
         }
         this.enableButtons();
       });
@@ -2145,6 +2189,39 @@ validateCodeEnregistrement(input) {
     input.setCustomValidity(`${13 - digitsOnly.length} chiffres manquants`);
     return false;
   }
+}
+
+  // Validation de l'email
+validateEmail(input) {
+  const value = input.value.trim();
+  if (value === '') return true;
+  
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailPattern.test(value)) {
+    input.style.borderColor = '#ff0000';
+    input.setCustomValidity('Email invalide');
+    return false;
+  } else {
+    input.style.borderColor = '';
+    input.setCustomValidity('');
+    return true;
+  }
+}
+
+// Formatage du téléphone
+formatTelephone(input) {
+  let value = input.value;
+  
+  // Garder seulement les chiffres et le +
+  value = value.replace(/[^\d+]/g, '');
+  
+  // Limiter à 15 caractères (standard international)
+  if (value.length > 15) {
+    value = value.substring(0, 15);
+  }
+  
+  input.value = value;
 }
   
 // 🆕 NOUVELLE MÉTHODE à ajouter après setupFieldListeners()
@@ -2531,7 +2608,10 @@ setBlockState(element, isActive) {
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
       { id: 'site-internet-input', dataKey: 'site_internet' },
       { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
-      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' }
+      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
+      { id: 'hote-input', dataKey: 'host_name' },
+      { id: 'email-input', dataKey: 'email' },
+      { id: 'telephone-input', dataKey: 'telephone' }
     ];
     
     // Remettre les valeurs initiales
@@ -2614,7 +2694,10 @@ setBlockState(element, isActive) {
     { id: 'code-enregistrement-input', dataKey: 'code_enregistrement', dbKey: 'code_enregistrement' },
     { id: 'site-internet-input', dataKey: 'site_internet', dbKey: 'site_internet' },
     { id: 'inclus-reservation-input', dataKey: 'inclus_reservation', dbKey: 'inclus_reservation' },
-    { id: 'conditions-annulation-input', dataKey: 'conditions_annulation', dbKey: 'conditions_annulation' }
+    { id: 'conditions-annulation-input', dataKey: 'conditions_annulation', dbKey: 'conditions_annulation' },
+    { id: 'hote-input', dataKey: 'host_name', dbKey: 'host_name' },
+    { id: 'email-input', dataKey: 'email', dbKey: 'email' },
+    { id: 'telephone-input', dataKey: 'telephone', dbKey: 'telephone' }
   ];
     
   // Collecter les valeurs actuelles
