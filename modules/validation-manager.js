@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V2
+// Gestionnaire de validation pour la page modification de logement V3
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -451,17 +451,26 @@ class ValidationManager {
     // Message d'erreur
     let errorDiv = field.nextElementSibling;
     
+    // Pour les caractères counter, prendre le suivant
+    if (errorDiv?.classList.contains('character-counter')) {
+      errorDiv = errorDiv.nextElementSibling;
+    }
+    
+    // 🆕 NOUVEAU : Pour les inputs dans flex-error
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = field.closest('.flex-error');
+      if (flexErrorParent) {
+        // Chercher la div error après le bloc flex-error
+        errorDiv = flexErrorParent.nextElementSibling;
+      }
+    }
+    
     // Pour les groupes, chercher la div error-group
     if (!errorDiv?.classList.contains('error')) {
       const parent = field.closest('[data-group]');
       if (parent) {
         errorDiv = parent.nextElementSibling;
       }
-    }
-    
-    // Pour les caractères counter, prendre le suivant
-    if (errorDiv?.classList.contains('character-counter')) {
-      errorDiv = errorDiv.nextElementSibling;
     }
     
     if (errorDiv && errorDiv.classList.contains('error')) {
@@ -481,17 +490,25 @@ class ValidationManager {
     // Masquer le message
     let errorDiv = field.nextElementSibling;
     
+    // Pour les caractères counter
+    if (errorDiv?.classList.contains('character-counter')) {
+      errorDiv = errorDiv.nextElementSibling;
+    }
+    
+    // 🆕 NOUVEAU : Pour les inputs dans flex-error
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = field.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.nextElementSibling;
+      }
+    }
+    
     // Pour les groupes
     if (!errorDiv?.classList.contains('error')) {
       const parent = field.closest('[data-group]');
       if (parent) {
         errorDiv = parent.nextElementSibling;
       }
-    }
-    
-    // Pour les caractères counter
-    if (errorDiv?.classList.contains('character-counter')) {
-      errorDiv = errorDiv.nextElementSibling;
     }
     
     if (errorDiv && errorDiv.classList.contains('error')) {
