@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement
+// Gestionnaire de validation pour la page modification de logement V2
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -89,7 +89,32 @@ class ValidationManager {
           },
           'ical-url-1': {
             required: true,
-            messages: { empty: "Au moins un lien calendrier est obligatoire" }
+            pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
+            messages: { 
+              empty: "Au moins un lien calendrier est obligatoire",
+              invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
+            }
+          },
+          'ical-url-2': {
+            required: false,
+            pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
+            messages: { 
+              invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
+            }
+          },
+          'ical-url-3': {
+            required: false,
+            pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
+            messages: { 
+              invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
+            }
+          },
+          'ical-url-4': {
+            required: false,
+            pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
+            messages: { 
+              invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
+            }
           }
         },
         tabIndicatorId: 'error-indicator-tab3'
