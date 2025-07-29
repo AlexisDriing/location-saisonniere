@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V3
+// Gestionnaire de validation pour la page modification de logement V4
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -460,8 +460,8 @@ class ValidationManager {
     if (!errorDiv?.classList.contains('error')) {
       const flexErrorParent = field.closest('.flex-error');
       if (flexErrorParent) {
-        // Chercher la div error après le bloc flex-error
-        errorDiv = flexErrorParent.nextElementSibling;
+        // Chercher la div error DANS le flex-error
+        errorDiv = flexErrorParent.querySelector('.error');
       }
     }
     
@@ -499,7 +499,7 @@ class ValidationManager {
     if (!errorDiv?.classList.contains('error')) {
       const flexErrorParent = field.closest('.flex-error');
       if (flexErrorParent) {
-        errorDiv = flexErrorParent.nextElementSibling;
+        errorDiv = flexErrorParent.querySelector('.error');
       }
     }
     
