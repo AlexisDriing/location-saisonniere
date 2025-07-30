@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V3
+// Gestionnaire de la page de modification de logement - V15 V4 saisons
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -674,6 +674,24 @@ openEditSeasonModal(seasonIndex) {
     minNightsInput.setAttribute('data-raw-value', season.minNights || 1);
   }
 
+  // NOUVEAU : Pré-remplir les prix plateformes
+  if (season.platformPrices) {
+    const platformInputs = {
+      'season-airbnb-price-input-edit': season.platformPrices.airbnb || 0,
+      'season-booking-price-input-edit': season.platformPrices.booking || 0,
+      'season-gites-price-input-edit': season.platformPrices.gites || 0,
+      'season-other-price-input-edit': season.platformPrices.other || 0
+    };
+    
+    Object.entries(platformInputs).forEach(([inputId, value]) => {
+      const input = document.getElementById(inputId);
+      if (input) {
+        input.value = value;
+        input.setAttribute('data-raw-value', value);
+      }
+    });
+  }
+  
   // Configurer les listeners de validation
   this.setupSeasonValidationListeners(true);
   
@@ -702,6 +720,22 @@ resetSeasonModal() {
       input.removeAttribute('data-date-value');
     }
   });
+
+  // NOUVEAU : Réinitialiser les prix plateformes
+  const platformIds = [
+    'season-airbnb-price-input',
+    'season-booking-price-input',
+    'season-gites-price-input',
+    'season-other-price-input'
+  ];
+  
+  platformIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+    }
+  });
 }
 
 validateAndAddSeason() {
@@ -727,7 +761,20 @@ validateAndAddSeason() {
     }]
   };
   
-  console.log('📊 Nouvelle saison:', newSeason);
+  // NOUVEAU : Ajouter les prix plateformes s'ils existent
+  const airbnb = parseInt(seasonData.airbnbPrice) || 0;
+  const booking = parseInt(seasonData.bookingPrice) || 0;
+  const gites = parseInt(seasonData.gitesPrice) || 0;
+  const other = parseInt(seasonData.otherPrice) || 0;
+  
+  if (airbnb > 0 || booking > 0 || gites > 0 || other > 0) {
+    newSeason.platformPrices = {
+      airbnb: airbnb,
+      booking: booking,
+      gites: gites,
+      other: other
+    };
+  }
   
   // Ajouter au JSON
   this.pricingData.seasons.push(newSeason);
@@ -762,7 +809,7 @@ validateAndEditSeason() {
   // Récupérer les valeurs des champs
   const seasonData = this.getEditSeasonFormData();
   
-  // Mettre à jour la saison existante
+  /// Mettre à jour la saison existante
   const updatedSeason = {
     name: seasonData.name,
     price: parseInt(seasonData.price),
@@ -773,7 +820,20 @@ validateAndEditSeason() {
     }]
   };
   
-  console.log('📊 Saison modifiée:', updatedSeason);
+  // NOUVEAU : Ajouter les prix plateformes s'ils existent
+  const airbnb = parseInt(seasonData.airbnbPrice) || 0;
+  const booking = parseInt(seasonData.bookingPrice) || 0;
+  const gites = parseInt(seasonData.gitesPrice) || 0;
+  const other = parseInt(seasonData.otherPrice) || 0;
+  
+  if (airbnb > 0 || booking > 0 || gites > 0 || other > 0) {
+    updatedSeason.platformPrices = {
+      airbnb: airbnb,
+      booking: booking,
+      gites: gites,
+      other: other
+    };
+  }
   
   // Remplacer la saison dans le tableau
   this.pricingData.seasons[this.editingSeasonIndex] = updatedSeason;
@@ -794,7 +854,12 @@ getSeasonFormData() {
     dateStart: this.getDateValue(document.getElementById('season-date-start-input')),
     dateEnd: this.getDateValue(document.getElementById('season-date-end-input')),
     price: this.getRawValue(document.getElementById('season-price-input')),
-    minNights: this.getRawValue(document.getElementById('season-min-nights-input')) || '1'
+    minNights: this.getRawValue(document.getElementById('season-min-nights-input')) || '1',
+    // NOUVEAU : Prix plateformes
+    airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input')) || '0',
+    bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input')) || '0',
+    gitesPrice: this.getRawValue(document.getElementById('season-gites-price-input')) || '0',
+    otherPrice: this.getRawValue(document.getElementById('season-other-price-input')) || '0'
   };
 }
 
@@ -805,7 +870,12 @@ getEditSeasonFormData() {
     dateStart: this.getDateValue(document.getElementById('season-date-start-input-edit')),
     dateEnd: this.getDateValue(document.getElementById('season-date-end-input-edit')),
     price: this.getRawValue(document.getElementById('season-price-input-edit')),
-    minNights: this.getRawValue(document.getElementById('season-min-nights-input-edit')) || '1'
+    minNights: this.getRawValue(document.getElementById('season-min-nights-input-edit')) || '1',
+    // NOUVEAU : Prix plateformes
+    airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-edit')) || '0',
+    bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-edit')) || '0',
+    gitesPrice: this.getRawValue(document.getElementById('season-gites-price-input-edit')) || '0',
+    otherPrice: this.getRawValue(document.getElementById('season-other-price-input-edit')) || '0'
   };
 }
   
@@ -859,6 +929,21 @@ resetEditSeasonModal() {
       input.value = '';
       input.removeAttribute('data-raw-value');
       input.removeAttribute('data-date-value');
+    }
+  });
+  // NOUVEAU : Réinitialiser les prix plateformes
+  const platformIds = [
+    'season-airbnb-price-input-edit',
+    'season-booking-price-input-edit',
+    'season-gites-price-input-edit',
+    'season-other-price-input-edit'
+  ];
+  
+  platformIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
     }
   });
 }
