@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V6 gite non
+// Gestionnaire de la page de modification de logement - V15 V6 saison erreurs
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -888,24 +888,34 @@ closeSeasonModal() {
 }
 
   // 🆕 Fermer la modal de modification
-closeEditSeasonModal() {
-  const modal = document.getElementById('modal-edit-season');
-  if (modal) {
-    modal.style.display = 'none';
+  closeEditSeasonModal() {
+    const modal = document.getElementById('modal-edit-season');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    
+    // NOUVEAU : Nettoyer toutes les erreurs de la modal de modification
+    if (this.validationManager) {
+      const editModalFields = [
+        'season-name-input-edit',
+        'season-date-start-input-edit',
+        'season-date-end-input-edit',
+        'season-price-input-edit',
+        'season-min-nights-input-edit',
+        'season-airbnb-price-input-edit',
+        'season-booking-price-input-edit',
+        'season-gites-price-input-edit',
+        'season-other-price-input-edit'
+      ];
+      
+      editModalFields.forEach(id => {
+        this.validationManager.hideFieldError(id);
+      });
+    }
+    
+    this.resetEditSeasonModal();
+    this.editingSeasonIndex = null;
   }
-  this.resetEditSeasonModal();
-  this.editingSeasonIndex = null;
-  
-  // Nettoyer les erreurs
-  if (this.validationManager) {
-    ['season-name-input-edit', 'season-date-start-input-edit', 'season-date-end-input-edit', 
-     'season-price-input-edit', 'season-min-nights-input-edit',
-     'season-airbnb-price-input-edit', 'season-booking-price-input-edit',
-      'season-other-price-input-edit'].forEach(id => {
-      this.validationManager.hideFieldError(id);
-    });
-  }
-}
 
 // 🆕 Réinitialiser les champs de la modal de modification
 resetEditSeasonModal() {
