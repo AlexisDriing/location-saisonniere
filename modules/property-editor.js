@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15
+// Gestionnaire de la page de modification de logement - V15 modifs
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1370,11 +1370,22 @@ setupDiscountListeners(blocElement, index) {
   const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
   
   if (nightsInput) {
-    // SIMPLE : Directement récupérer la valeur de l'input
+    // Ajouter un ID unique si pas présent
+    if (!nightsInput.id) {
+      nightsInput.id = `discount-nights-${index}`;
+    }
+    
     nightsInput.addEventListener('input', (e) => {
       const value = parseInt(e.target.value) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
+    });
+    
+    // 🆕 NOUVEAU : Validation au blur
+    nightsInput.addEventListener('blur', () => {
+      if (this.validationManager) {
+        this.validationManager.validateDiscountOnBlur(nightsInput);
+      }
     });
   }
   
