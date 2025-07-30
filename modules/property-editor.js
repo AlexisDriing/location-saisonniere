@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V4 saisons
+// Gestionnaire de la page de modification de logement - V15 V5 saisons
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -889,7 +889,9 @@ closeSeasonModal() {
   // Nettoyer les erreurs
   if (this.validationManager) {
     ['season-name-input', 'season-date-start-input', 'season-date-end-input', 
-     'season-price-input', 'season-min-nights-input'].forEach(id => {
+     'season-price-input', 'season-min-nights-input',
+     'season-airbnb-price-input', 'season-booking-price-input',
+     'season-gites-price-input', 'season-other-price-input'].forEach(id => {
       this.validationManager.hideFieldError(id);
     });
   }
@@ -907,7 +909,9 @@ closeEditSeasonModal() {
   // Nettoyer les erreurs
   if (this.validationManager) {
     ['season-name-input-edit', 'season-date-start-input-edit', 'season-date-end-input-edit', 
-     'season-price-input-edit', 'season-min-nights-input-edit'].forEach(id => {
+     'season-price-input-edit', 'season-min-nights-input-edit',
+     'season-airbnb-price-input-edit', 'season-booking-price-input-edit',
+     'season-gites-price-input-edit', 'season-other-price-input-edit'].forEach(id => {
       this.validationManager.hideFieldError(id);
     });
   }
@@ -952,33 +956,91 @@ resetEditSeasonModal() {
   setupSeasonValidationListeners(isEdit = false) {
     const suffix = isEdit ? '-edit' : '';
     
-    // Prix direct - validation au blur
+    // Prix direct - validation au blur ET formatage
     const priceInput = document.getElementById(`season-price-input${suffix}`);
     if (priceInput) {
-      priceInput.addEventListener('blur', () => {
-        if (this.validationManager) {
-          const price = parseInt(this.getRawValue(priceInput)) || 0;
+      // Formatage au blur
+      priceInput.addEventListener('blur', function() {
+        const value = this.value.replace(/[^\d]/g, '');
+        if (value) {
+          this.setAttribute('data-raw-value', value);
+          this.value = value + ' € / nuit';
+        }
+        
+        // Validation des prix plateformes
+        if (window.propertyEditor && window.propertyEditor.validationManager) {
+          const price = parseInt(value) || 0;
           if (price > 0) {
-            this.validationManager.validateSeasonPlatformPrices(price, suffix);
+            window.propertyEditor.validationManager.validateSeasonPlatformPrices(price, suffix);
           }
+        }
+      });
+      
+      // Retirer le suffixe au focus
+      priceInput.addEventListener('focus', function() {
+        const rawValue = this.getAttribute('data-raw-value');
+        if (rawValue) {
+          this.value = rawValue;
+        } else {
+          this.value = this.value.replace(/[^\d]/g, '');
         }
       });
     }
     
-    // Prix plateformes - validation au blur
+    // Prix plateformes - validation au blur ET formatage
     ['airbnb', 'booking', 'gites', 'other'].forEach(platform => {
       const input = document.getElementById(`season-${platform}-price-input${suffix}`);
       if (input) {
-        input.addEventListener('blur', () => {
-          if (this.validationManager) {
-            const directPrice = parseInt(this.getRawValue(priceInput)) || 0;
+        // Formatage au blur
+        input.addEventListener('blur', function() {
+          const value = this.value.replace(/[^\d]/g, '');
+          if (value) {
+            this.setAttribute('data-raw-value', value);
+            this.value = value + ' € / nuit';
+          }
+          
+          // Validation
+          if (window.propertyEditor && window.propertyEditor.validationManager) {
+            const directPrice = parseInt(window.propertyEditor.getRawValue(priceInput)) || 0;
             if (directPrice > 0) {
-              this.validationManager.validateSeasonPlatformPrices(directPrice, suffix);
+              window.propertyEditor.validationManager.validateSeasonPlatformPrices(directPrice, suffix);
             }
+          }
+        });
+        
+        // Retirer le suffixe au focus
+        input.addEventListener('focus', function() {
+          const rawValue = this.getAttribute('data-raw-value');
+          if (rawValue) {
+            this.value = rawValue;
+          } else {
+            this.value = this.value.replace(/[^\d]/g, '');
           }
         });
       }
     });
+    
+    // Nuits minimum - formatage
+    const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
+    if (minNightsInput) {
+      minNightsInput.addEventListener('blur', function() {
+        const value = this.value.replace(/[^\d]/g, '');
+        if (value) {
+          this.setAttribute('data-raw-value', value);
+          const nuitText = parseInt(value) > 1 ? ' nuits' : ' nuit';
+          this.value = value + nuitText;
+        }
+      });
+      
+      minNightsInput.addEventListener('focus', function() {
+        const rawValue = this.getAttribute('data-raw-value');
+        if (rawValue) {
+          this.value = rawValue;
+        } else {
+          this.value = this.value.replace(/[^\d]/g, '');
+        }
+      });
+    }
   }
 
   
