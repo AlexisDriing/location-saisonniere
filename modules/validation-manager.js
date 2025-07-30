@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V5
+// Gestionnaire de validation pour la page modification de logement V5 modif
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -402,9 +402,10 @@ class ValidationManager {
       this.showTabError('error-indicator-tab3');
     }
 
-    if (tabKey === 'tab3' && !this.validateDiscounts()) {
+    // Validation des réductions
+    if (!this.validateDiscounts()) {
       isValid = false;
-      tabHasErrors = true;
+      this.showTabError('error-indicator-tab3');
     }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
