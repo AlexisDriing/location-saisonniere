@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V5 saisons
+// Gestionnaire de la page de modification de logement - V15 V6 saisons
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -952,95 +952,36 @@ resetEditSeasonModal() {
   });
 }
 
-  // Setup des listeners de validation pour les modals de saison
   setupSeasonValidationListeners(isEdit = false) {
     const suffix = isEdit ? '-edit' : '';
     
-    // Prix direct - validation au blur ET formatage
+    // Prix direct - validation au blur seulement
     const priceInput = document.getElementById(`season-price-input${suffix}`);
     if (priceInput) {
-      // Formatage au blur
-      priceInput.addEventListener('blur', function() {
-        const value = this.value.replace(/[^\d]/g, '');
-        if (value) {
-          this.setAttribute('data-raw-value', value);
-          this.value = value + ' € / nuit';
-        }
-        
-        // Validation des prix plateformes
-        if (window.propertyEditor && window.propertyEditor.validationManager) {
-          const price = parseInt(value) || 0;
+      priceInput.addEventListener('blur', () => {
+        if (this.validationManager) {
+          const price = parseInt(this.getRawValue(priceInput)) || 0;
           if (price > 0) {
-            window.propertyEditor.validationManager.validateSeasonPlatformPrices(price, suffix);
+            this.validationManager.validateSeasonPlatformPrices(price, suffix);
           }
-        }
-      });
-      
-      // Retirer le suffixe au focus
-      priceInput.addEventListener('focus', function() {
-        const rawValue = this.getAttribute('data-raw-value');
-        if (rawValue) {
-          this.value = rawValue;
-        } else {
-          this.value = this.value.replace(/[^\d]/g, '');
         }
       });
     }
     
-    // Prix plateformes - validation au blur ET formatage
+    // Prix plateformes - validation au blur seulement
     ['airbnb', 'booking', 'gites', 'other'].forEach(platform => {
       const input = document.getElementById(`season-${platform}-price-input${suffix}`);
       if (input) {
-        // Formatage au blur
-        input.addEventListener('blur', function() {
-          const value = this.value.replace(/[^\d]/g, '');
-          if (value) {
-            this.setAttribute('data-raw-value', value);
-            this.value = value + ' € / nuit';
-          }
-          
-          // Validation
-          if (window.propertyEditor && window.propertyEditor.validationManager) {
-            const directPrice = parseInt(window.propertyEditor.getRawValue(priceInput)) || 0;
+        input.addEventListener('blur', () => {
+          if (this.validationManager) {
+            const directPrice = parseInt(this.getRawValue(priceInput)) || 0;
             if (directPrice > 0) {
-              window.propertyEditor.validationManager.validateSeasonPlatformPrices(directPrice, suffix);
+              this.validationManager.validateSeasonPlatformPrices(directPrice, suffix);
             }
-          }
-        });
-        
-        // Retirer le suffixe au focus
-        input.addEventListener('focus', function() {
-          const rawValue = this.getAttribute('data-raw-value');
-          if (rawValue) {
-            this.value = rawValue;
-          } else {
-            this.value = this.value.replace(/[^\d]/g, '');
           }
         });
       }
     });
-    
-    // Nuits minimum - formatage
-    const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
-    if (minNightsInput) {
-      minNightsInput.addEventListener('blur', function() {
-        const value = this.value.replace(/[^\d]/g, '');
-        if (value) {
-          this.setAttribute('data-raw-value', value);
-          const nuitText = parseInt(value) > 1 ? ' nuits' : ' nuit';
-          this.value = value + nuitText;
-        }
-      });
-      
-      minNightsInput.addEventListener('focus', function() {
-        const rawValue = this.getAttribute('data-raw-value');
-        if (rawValue) {
-          this.value = rawValue;
-        } else {
-          this.value = this.value.replace(/[^\d]/g, '');
-        }
-      });
-    }
   }
 
   
