@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V2
+// Gestionnaire de la page de modification de logement - V15 V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -602,24 +602,26 @@ setupTimeFormatters() {
 }
 
   // Méthode pour ouvrir la modal (vous l'avez déjà, mais au cas où)
-openAddSeasonModal() {
-  console.log('🌞 Ouverture modal ajout saison');
-  
-  // Vérifier qu'on a moins de 4 saisons
-  if (this.pricingData.seasons.length >= 4) {
-    alert('Maximum 4 saisons autorisées');
-    return;
+  openAddSeasonModal() {
+    
+    // Vérifier qu'on a moins de 4 saisons
+    if (this.pricingData.seasons.length >= 4) {
+      alert('Maximum 4 saisons autorisées');
+      return;
+    }
+    
+    // Réinitialiser les champs de la modal
+    this.resetSeasonModal();
+    
+    // Configurer les listeners de validation
+    this.setupSeasonValidationListeners(false);
+    
+    // Votre code pour afficher la modal
+    const modal = document.getElementById('modal-add-season'); // Adaptez l'ID
+    if (modal) {
+      modal.style.display = 'flex';
+    }
   }
-  
-  // Réinitialiser les champs de la modal
-  this.resetSeasonModal();
-  
-  // Votre code pour afficher la modal
-  const modal = document.getElementById('modal-add-season'); // Adaptez l'ID
-  if (modal) {
-    modal.style.display = 'flex';
-  }
-}
 
   // 🆕 Ouvrir la modal de modification
 openEditSeasonModal(seasonIndex) {
@@ -671,6 +673,9 @@ openEditSeasonModal(seasonIndex) {
     minNightsInput.value = season.minNights || 1;
     minNightsInput.setAttribute('data-raw-value', season.minNights || 1);
   }
+
+  // Configurer les listeners de validation
+  this.setupSeasonValidationListeners(true);
   
   // Afficher la modal
   const modal = document.getElementById('modal-edit-season'); // Adaptez l'ID selon votre modal
@@ -702,14 +707,14 @@ resetSeasonModal() {
 validateAndAddSeason() {
   console.log('✅ Validation de la nouvelle saison');
   
-  // Récupérer les valeurs des champs
-  const seasonData = this.getSeasonFormData();
-  
-  // Validation basique
-  if (!seasonData.name || !seasonData.dateStart || !seasonData.dateEnd || !seasonData.price) {
-    alert('Veuillez remplir tous les champs obligatoires');
+  // Validation complète avec ValidationManager
+  if (this.validationManager && !this.validationManager.validateSeason(false)) {
+    console.log('❌ Validation échouée');
     return;
   }
+  
+  // Récupérer les valeurs des champs
+  const seasonData = this.getSeasonFormData();
   
   // Créer l'objet saison pour le JSON
   const newSeason = {
@@ -748,14 +753,14 @@ validateAndEditSeason() {
     return;
   }
   
-  // Récupérer les valeurs des champs
-  const seasonData = this.getEditSeasonFormData();
-  
-  // Validation basique
-  if (!seasonData.name || !seasonData.dateStart || !seasonData.dateEnd || !seasonData.price) {
-    alert('Veuillez remplir tous les champs obligatoires');
+  // Validation complète avec ValidationManager
+  if (this.validationManager && !this.validationManager.validateSeason(true)) {
+    console.log('❌ Validation échouée');
     return;
   }
+  
+  // Récupérer les valeurs des champs
+  const seasonData = this.getEditSeasonFormData();
   
   // Mettre à jour la saison existante
   const updatedSeason = {
@@ -810,6 +815,14 @@ closeSeasonModal() {
     modal.style.display = 'none';
   }
   this.resetSeasonModal();
+  
+  // Nettoyer les erreurs
+  if (this.validationManager) {
+    ['season-name-input', 'season-date-start-input', 'season-date-end-input', 
+     'season-price-input', 'season-min-nights-input'].forEach(id => {
+      this.validationManager.hideFieldError(id);
+    });
+  }
 }
 
   // 🆕 Fermer la modal de modification
@@ -820,6 +833,14 @@ closeEditSeasonModal() {
   }
   this.resetEditSeasonModal();
   this.editingSeasonIndex = null;
+  
+  // Nettoyer les erreurs
+  if (this.validationManager) {
+    ['season-name-input-edit', 'season-date-start-input-edit', 'season-date-end-input-edit', 
+     'season-price-input-edit', 'season-min-nights-input-edit'].forEach(id => {
+      this.validationManager.hideFieldError(id);
+    });
+  }
 }
 
 // 🆕 Réinitialiser les champs de la modal de modification
@@ -842,6 +863,40 @@ resetEditSeasonModal() {
   });
 }
 
+  // Setup des listeners de validation pour les modals de saison
+  setupSeasonValidationListeners(isEdit = false) {
+    const suffix = isEdit ? '-edit' : '';
+    
+    // Prix direct - validation au blur
+    const priceInput = document.getElementById(`season-price-input${suffix}`);
+    if (priceInput) {
+      priceInput.addEventListener('blur', () => {
+        if (this.validationManager) {
+          const price = parseInt(this.getRawValue(priceInput)) || 0;
+          if (price > 0) {
+            this.validationManager.validateSeasonPlatformPrices(price, suffix);
+          }
+        }
+      });
+    }
+    
+    // Prix plateformes - validation au blur
+    ['airbnb', 'booking', 'gites', 'other'].forEach(platform => {
+      const input = document.getElementById(`season-${platform}-price-input${suffix}`);
+      if (input) {
+        input.addEventListener('blur', () => {
+          if (this.validationManager) {
+            const directPrice = parseInt(this.getRawValue(priceInput)) || 0;
+            if (directPrice > 0) {
+              this.validationManager.validateSeasonPlatformPrices(directPrice, suffix);
+            }
+          }
+        });
+      }
+    });
+  }
+
+  
   prefillDefaultPricing() {
   console.log('💰 Pré-remplissage defaultPricing...');
   
