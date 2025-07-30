@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V6
+// Gestionnaire de validation pour la page modification de logement V7
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -408,6 +408,12 @@ class ValidationManager {
     // Validation min/max pour les nombres
     if (fieldConfig.min !== undefined && parseFloat(value) < fieldConfig.min) {
       this.showFieldError(fieldId, fieldConfig.messages.min);
+      return;
+    }
+
+    // Cas spécial pour les réductions
+    if (fieldId === 'discounts') {
+      this.validateDiscounts();
       return;
     }
     
