@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4
+// Gestionnaire de validation pour la page modification de logement V5
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -114,6 +114,13 @@ class ValidationManager {
             pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
             messages: { 
               invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
+            }
+          },
+          'discounts': {
+            type: 'custom',
+            customValidation: 'validateDiscounts',
+            messages: {
+              duplicate: "Plusieurs réductions utilisent le même nombre de jours : {days} jours"
             }
           }
         },
@@ -234,6 +241,76 @@ class ValidationManager {
     }
   }
 
+  // Validation des réductions (pas de doublons de jours)
+  validateDiscounts() {
+    if (!this.editor.pricingData || !this.editor.pricingData.discounts) {
+      return true;
+    }
+    
+    const discounts = this.editor.pricingData.discounts;
+    const daysMap = new Map();
+    let hasError = false;
+    
+    // D'abord, nettoyer toutes les erreurs de réductions
+    discounts.forEach((discount, index) => {
+      const nightsInput = document.querySelector(`.bloc-reduction:nth-child(${index + 1}) [data-discount="nights"]`) ||
+                         document.querySelector(`.bloc-reduction.next:nth-of-type(${index}) [data-discount="nights"]`);
+      if (nightsInput) {
+        this.hideFieldError(nightsInput.id || `discount-nights-${index}`);
+      }
+    });
+    
+    // Collecter et vérifier les doublons
+    discounts.forEach((discount, index) => {
+      if (discount.nights > 0) {
+        if (daysMap.has(discount.nights)) {
+          // Doublon trouvé !
+          hasError = true;
+          
+          // Afficher l'erreur sur TOUS les inputs qui ont ce nombre de jours
+          const firstIndex = daysMap.get(discount.nights);
+          
+          // Erreur sur le premier
+          this.showDiscountError(firstIndex, `${discount.nights} jours est déjà utilisé dans une autre réduction`);
+          
+          // Erreur sur le doublon actuel
+          this.showDiscountError(index, `${discount.nights} jours est déjà utilisé dans une autre réduction`);
+        } else {
+          daysMap.set(discount.nights, index);
+        }
+      }
+    });
+    
+    return !hasError;
+  }
+  
+  // Nouvelle méthode helper pour afficher l'erreur sur une réduction spécifique
+  showDiscountError(index, message) {
+    // Trouver le bon input selon l'index
+    let nightsInput;
+    
+    if (index === 0) {
+      // Premier bloc (avec labels)
+      nightsInput = document.querySelector('.bloc-reduction:not(.next) [data-discount="nights"]');
+    } else {
+      // Blocs suivants
+      const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
+      if (nextBlocs[index - 1]) {
+        nightsInput = nextBlocs[index - 1].querySelector('[data-discount="nights"]');
+      }
+    }
+    
+    if (nightsInput) {
+      // Utiliser un ID temporaire si l'input n'en a pas
+      if (!nightsInput.id) {
+        nightsInput.id = `temp-discount-nights-${index}`;
+      }
+      
+      // Utiliser showFieldError qui gère déjà flex-error
+      this.showFieldError(nightsInput.id, message);
+    }
+  }
+  
   // Validation au blur (formats seulement)
   validateFieldOnBlur(fieldId) {
     // Trouver la config de ce champ
@@ -324,11 +401,18 @@ class ValidationManager {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
+
+    if (tabKey === 'tab3' && !this.validateDiscounts()) {
+      isValid = false;
+      tabHasErrors = true;
+    }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
     return isValid;
   }
 
+  
+  
   // Valider un champ spécifique
   validateField(fieldId, fieldConfig) {
     const value = this.getFieldValue(fieldId, fieldConfig.type);
