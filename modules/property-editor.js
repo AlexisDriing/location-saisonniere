@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 modifs V4
+// Gestionnaire de la page de modification de logement - V15
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1365,42 +1365,40 @@ removeDiscount(index) {
 }
 
 setupDiscountListeners(blocElement, index) {
+  // Listeners pour les modifications
   const nightsInput = blocElement.querySelector('[data-discount="nights"]');
   const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
   
   if (nightsInput) {
+    // SIMPLE : Directement récupérer la valeur de l'input
     nightsInput.addEventListener('input', (e) => {
       const value = parseInt(e.target.value) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
     });
-    
-    nightsInput.addEventListener('blur', () => {
-      if (this.validationManager) {
-        this.validationManager.validateFieldOnBlur('discounts');
-      }
-    });
   }
   
   if (percentageInput) {
+    // Récupérer la valeur en enlevant le %
     percentageInput.addEventListener('input', (e) => {
       const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
       this.pricingData.discounts[index].percentage = value;
       this.enableButtons();
     });
     
+    // Formatage au blur : ajouter %
     percentageInput.addEventListener('blur', function() {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
         this.value = value + ' %';
       }
-      
-      // Validation au blur
+      // 🆕 NOUVEAU : Ajouter la validation
       if (window.propertyEditor && window.propertyEditor.validationManager) {
-        window.propertyEditor.validationManager.validateFieldOnBlur('discounts');
+        window.propertyEditor.validationManager.validateFieldOnBlur(this.id);
       }
     });
     
+    // Retirer le % au focus
     percentageInput.addEventListener('focus', function() {
       this.value = this.value.replace(/[^\d]/g, '');
     });
