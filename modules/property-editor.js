@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V6 saisons
+// Gestionnaire de la page de modification de logement - V15 V6 oui
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -858,7 +858,6 @@ getSeasonFormData() {
     // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input')) || '0',
-    gitesPrice: this.getRawValue(document.getElementById('season-gites-price-input')) || '0',
     otherPrice: this.getRawValue(document.getElementById('season-other-price-input')) || '0'
   };
 }
@@ -874,7 +873,6 @@ getEditSeasonFormData() {
     // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-edit')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-edit')) || '0',
-    gitesPrice: this.getRawValue(document.getElementById('season-gites-price-input-edit')) || '0',
     otherPrice: this.getRawValue(document.getElementById('season-other-price-input-edit')) || '0'
   };
 }
