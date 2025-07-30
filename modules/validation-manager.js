@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V7
+// Gestionnaire de validation pour la page modification de logement V4
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -114,14 +114,6 @@ class ValidationManager {
             pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
             messages: { 
               invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
-            }
-          },
-          'discounts': {
-            type: 'custom',
-            customValidation: 'validateDiscounts',
-            messages: {
-              duplicate: "Ce nombre de nuits existe déjà",
-              incomplete: "Veuillez remplir le nombre de nuits et le pourcentage de réduction"
             }
           }
         },
@@ -242,136 +234,6 @@ class ValidationManager {
     }
   }
 
-
-  // Validation des réductions (doublons et champs incomplets)
-  validateDiscounts() {
-    let hasError = false;
-    const nightsMap = new Map(); // Pour détecter les doublons
-    
-    // Récupérer TOUS les inputs nights visibles
-    const allNightsInputs = document.querySelectorAll('[data-discount="nights"]');
-    const allPercentageInputs = document.querySelectorAll('[data-discount="percentage"]');
-    
-    // D'abord, nettoyer toutes les erreurs
-    allNightsInputs.forEach(input => {
-      const block = input.closest('.bloc-reduction, .bloc-reduction.next');
-      if (block && block.style.display !== 'none') {
-        this.hideFieldError(input);
-      }
-    });
-    
-    allPercentageInputs.forEach(input => {
-      const block = input.closest('.bloc-reduction, .bloc-reduction.next');
-      if (block && block.style.display !== 'none') {
-        this.hideFieldError(input);
-      }
-    });
-    
-    // Ensuite, valider chaque bloc visible
-    allNightsInputs.forEach((nightsInput, index) => {
-      const block = nightsInput.closest('.bloc-reduction, .bloc-reduction.next');
-      if (!block || block.style.display === 'none') return;
-      
-      const percentageInput = block.querySelector('[data-discount="percentage"]');
-      if (!percentageInput) return;
-      
-      const nights = nightsInput.value.trim();
-      const percentage = this.editor.getRawValue(percentageInput) || percentageInput.value.replace(/[^\d]/g, '');
-      
-      // Vérifier si les deux champs sont remplis ou les deux vides
-      if ((nights && !percentage) || (!nights && percentage)) {
-        // Un seul champ rempli = erreur
-        if (!nights) {
-          this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.incomplete);
-        }
-        if (!percentage) {
-          this.showDiscountError(percentageInput, this.validationConfig.tab3.fields.discounts.messages.incomplete);
-        }
-        hasError = true;
-      }
-      
-      // Vérifier les doublons seulement si nights est rempli
-      if (nights) {
-        if (nightsMap.has(nights)) {
-          // Doublon trouvé
-          this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.duplicate);
-          hasError = true;
-        } else {
-          nightsMap.set(nights, index);
-        }
-      }
-    });
-    
-    return !hasError;
-  }
-  
-  // Nouvelle méthode spécifique pour les erreurs de réduction
-  showDiscountError(input, message) {
-    // Border rouge sur l'input
-    input.style.borderColor = '#E53131';
-    
-    // Chercher la div error juste après cet input spécifique
-    let errorDiv = input.nextElementSibling;
-    
-    if (errorDiv && errorDiv.classList.contains('error')) {
-      errorDiv.textContent = message;
-      errorDiv.classList.add('show');
-    }
-  }
-  
-  // Cacher l'erreur d'un champ de réduction
-  hideFieldError(input) {
-    // Si on reçoit un ID string, chercher l'élément
-    if (typeof input === 'string') {
-      input = document.getElementById(input);
-      if (!input) return;
-    }
-    
-    // Retirer le border rouge
-    input.style.borderColor = '';
-    
-    // Chercher et masquer l'erreur
-    let errorDiv = input.nextElementSibling;
-    
-    if (errorDiv && errorDiv.classList.contains('error')) {
-      errorDiv.textContent = '';
-      errorDiv.classList.remove('show');
-    }
-  }
-  
-  // Validation d'une réduction au blur
-  validateDiscountOnBlur(nightsInput) {
-    const block = nightsInput.closest('.bloc-reduction, .bloc-reduction.next');
-    if (!block || block.style.display === 'none') return;
-    
-    const nights = nightsInput.value.trim();
-    
-    // Si le champ est vide, pas d'erreur au blur
-    if (!nights) {
-      this.hideFieldError(nightsInput);
-      return;
-    }
-    
-    // Vérifier les doublons
-    let hasDuplicate = false;
-    
-    document.querySelectorAll('[data-discount="nights"]').forEach(input => {
-      if (input !== nightsInput && input.value.trim() === nights) {
-        const parentBlock = input.closest('.bloc-reduction, .bloc-reduction.next');
-        if (parentBlock && parentBlock.style.display !== 'none') {
-          hasDuplicate = true;
-        }
-      }
-    });
-    
-    if (hasDuplicate) {
-      this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.duplicate);
-    } else {
-      this.hideFieldError(nightsInput);
-    }
-  }
-  
-  
   // Validation au blur (formats seulement)
   validateFieldOnBlur(fieldId) {
     // Trouver la config de ce champ
@@ -408,12 +270,6 @@ class ValidationManager {
     // Validation min/max pour les nombres
     if (fieldConfig.min !== undefined && parseFloat(value) < fieldConfig.min) {
       this.showFieldError(fieldId, fieldConfig.messages.min);
-      return;
-    }
-
-    // Cas spécial pour les réductions
-    if (fieldId === 'discounts') {
-      this.validateDiscounts();
       return;
     }
     
@@ -461,18 +317,6 @@ class ValidationManager {
       } else {
         this.hideTabError(tabConfig.tabIndicatorId);
       }
-    }
-
-    // Validation spéciale réductions
-    if (!this.validateDiscounts()) {
-      isValid = false;
-      this.showTabError('error-indicator-tab3');
-    }
-    
-    // Validation spéciale prix plateformes
-    if (!this.validatePlatformPrices()) {
-      isValid = false;
-      this.showTabError('error-indicator-tab3');
     }
     
     // Validation spéciale prix plateformes
