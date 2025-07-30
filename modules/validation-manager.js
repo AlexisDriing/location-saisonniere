@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V5 modif
+// Gestionnaire de validation pour la page modification de logement V5 NEW
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -120,7 +120,8 @@ class ValidationManager {
             type: 'custom',
             customValidation: 'validateDiscounts',
             messages: {
-              duplicate: "Plusieurs réductions utilisent le même nombre de jours : {days} jours"
+              duplicate: "Ce nombre de nuits existe déjà",
+              incomplete: "Veuillez remplir le nombre de nuits et le pourcentage de réduction"
             }
           }
         },
@@ -241,42 +242,62 @@ class ValidationManager {
     }
   }
 
-  // Validation des réductions (pas de doublons de jours)
+
+  // Validation des réductions (doublons et champs incomplets)
   validateDiscounts() {
-    if (!this.editor.pricingData || !this.editor.pricingData.discounts) {
-      return true;
+    let hasError = false;
+    const nightsMap = new Map(); // Pour détecter les doublons
+    const discountBlocks = [];
+    
+    // Collecter tous les blocs de réduction visibles
+    // Premier bloc
+    const firstBlock = document.querySelector('.bloc-reduction:not(.next)');
+    if (firstBlock && firstBlock.style.display !== 'none') {
+      discountBlocks.push(firstBlock);
     }
     
-    const discounts = this.editor.pricingData.discounts;
-    const daysMap = new Map();
-    let hasError = false;
-    
-    // D'abord, nettoyer toutes les erreurs de réductions
-    discounts.forEach((discount, index) => {
-      const nightsInput = document.querySelector(`.bloc-reduction:nth-child(${index + 1}) [data-discount="nights"]`) ||
-                         document.querySelector(`.bloc-reduction.next:nth-of-type(${index}) [data-discount="nights"]`);
-      if (nightsInput) {
-        this.hideFieldError(nightsInput.id || `discount-nights-${index}`);
+    // Blocs suivants
+    const nextBlocks = document.querySelectorAll('.bloc-reduction.next');
+    nextBlocks.forEach(block => {
+      if (block.style.display !== 'none') {
+        discountBlocks.push(block);
       }
     });
     
-    // Collecter et vérifier les doublons
-    discounts.forEach((discount, index) => {
-      if (discount.nights > 0) {
-        if (daysMap.has(discount.nights)) {
-          // Doublon trouvé !
+    // Valider chaque bloc
+    discountBlocks.forEach((block, index) => {
+      const nightsInput = block.querySelector('[data-discount="nights"]');
+      const percentageInput = block.querySelector('[data-discount="percentage"]');
+      
+      if (!nightsInput || !percentageInput) return;
+      
+      const nights = nightsInput.value.trim();
+      const percentage = this.editor.getRawValue(percentageInput) || percentageInput.value.replace(/[^\d]/g, '');
+      
+      // Vérifier si les deux champs sont remplis ou les deux vides
+      if ((nights && !percentage) || (!nights && percentage)) {
+        // Un seul champ rempli = erreur
+        if (!nights) {
+          this.showFieldError(nightsInput.id || `discount-nights-${index}`, this.validationConfig.tab3.fields.discounts.messages.incomplete);
+        }
+        if (!percentage) {
+          this.showFieldError(percentageInput.id || `discount-percentage-${index}`, this.validationConfig.tab3.fields.discounts.messages.incomplete);
+        }
+        hasError = true;
+      } else {
+        // Les deux remplis ou les deux vides = OK pour l'incomplet
+        this.hideFieldError(nightsInput.id || `discount-nights-${index}`);
+        this.hideFieldError(percentageInput.id || `discount-percentage-${index}`);
+      }
+      
+      // Vérifier les doublons seulement si nights est rempli
+      if (nights) {
+        if (nightsMap.has(nights)) {
+          // Doublon trouvé
+          this.showFieldError(nightsInput.id || `discount-nights-${index}`, this.validationConfig.tab3.fields.discounts.messages.duplicate);
           hasError = true;
-          
-          // Afficher l'erreur sur TOUS les inputs qui ont ce nombre de jours
-          const firstIndex = daysMap.get(discount.nights);
-          
-          // Erreur sur le premier
-          this.showDiscountError(firstIndex, `${discount.nights} jours est déjà utilisé dans une autre réduction`);
-          
-          // Erreur sur le doublon actuel
-          this.showDiscountError(index, `${discount.nights} jours est déjà utilisé dans une autre réduction`);
         } else {
-          daysMap.set(discount.nights, index);
+          nightsMap.set(nights, index);
         }
       }
     });
@@ -284,32 +305,43 @@ class ValidationManager {
     return !hasError;
   }
   
-  // Nouvelle méthode helper pour afficher l'erreur sur une réduction spécifique
-  showDiscountError(index, message) {
-    // Trouver le bon input selon l'index
-    let nightsInput;
+  // Validation d'une réduction au blur
+  validateDiscountOnBlur(nightsInput) {
+    const block = nightsInput.closest('.bloc-reduction, .bloc-reduction.next');
+    if (!block) return;
     
-    if (index === 0) {
-      // Premier bloc (avec labels)
-      nightsInput = document.querySelector('.bloc-reduction:not(.next) [data-discount="nights"]');
-    } else {
-      // Blocs suivants
-      const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
-      if (nextBlocs[index - 1]) {
-        nightsInput = nextBlocs[index - 1].querySelector('[data-discount="nights"]');
-      }
+    const percentageInput = block.querySelector('[data-discount="percentage"]');
+    if (!percentageInput) return;
+    
+    const nights = nightsInput.value.trim();
+    const percentage = this.editor.getRawValue(percentageInput) || percentageInput.value.replace(/[^\d]/g, '');
+    
+    // Si le champ est vide, pas d'erreur au blur
+    if (!nights) {
+      this.hideFieldError(nightsInput.id || 'discount-nights');
+      return;
     }
     
-    if (nightsInput) {
-      // Utiliser un ID temporaire si l'input n'en a pas
-      if (!nightsInput.id) {
-        nightsInput.id = `temp-discount-nights-${index}`;
+    // Vérifier les doublons
+    const allNightsInputs = document.querySelectorAll('[data-discount="nights"]');
+    let hasDuplicate = false;
+    
+    allNightsInputs.forEach(input => {
+      if (input !== nightsInput && input.value.trim() === nights) {
+        const parentBlock = input.closest('.bloc-reduction, .bloc-reduction.next');
+        if (parentBlock && parentBlock.style.display !== 'none') {
+          hasDuplicate = true;
+        }
       }
-      
-      // Utiliser showFieldError qui gère déjà flex-error
-      this.showFieldError(nightsInput.id, message);
+    });
+    
+    if (hasDuplicate) {
+      this.showFieldError(nightsInput.id || 'discount-nights', this.validationConfig.tab3.fields.discounts.messages.duplicate);
+    } else {
+      this.hideFieldError(nightsInput.id || 'discount-nights');
     }
   }
+  
   
   // Validation au blur (formats seulement)
   validateFieldOnBlur(fieldId) {
@@ -395,15 +427,21 @@ class ValidationManager {
         this.hideTabError(tabConfig.tabIndicatorId);
       }
     }
+
+    // Validation spéciale réductions
+    if (!this.validateDiscounts()) {
+      isValid = false;
+      this.showTabError('error-indicator-tab3');
+    }
     
     // Validation spéciale prix plateformes
     if (!this.validatePlatformPrices()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
-
-    // Validation des réductions
-    if (!this.validateDiscounts()) {
+    
+    // Validation spéciale prix plateformes
+    if (!this.validatePlatformPrices()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
@@ -412,8 +450,6 @@ class ValidationManager {
     return isValid;
   }
 
-  
-  
   // Valider un champ spécifique
   validateField(fieldId, fieldConfig) {
     const value = this.getFieldValue(fieldId, fieldConfig.type);
