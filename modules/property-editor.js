@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15
+// Gestionnaire de la page de modification de logement - V15 V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1375,6 +1375,13 @@ setupDiscountListeners(blocElement, index) {
       const value = parseInt(e.target.value) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
+    });
+    
+    // NOUVEAU : Validation au blur pour les doublons
+    nightsInput.addEventListener('blur', () => {
+      if (this.validationManager) {
+        this.validationManager.validateDiscountDuplicateOnBlur(nightsInput, index);
+      }
     });
   }
   
