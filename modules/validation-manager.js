@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4
+// Gestionnaire de validation pour la page modification de logement V4 V2
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -114,6 +114,14 @@ class ValidationManager {
             pattern: /\b(?:https?|webcal):\/\/[^\s]*\.ics(?:[^\s]*)?\b/i,
             messages: { 
               invalid: "Le lien doit être une URL iCal valide (doit contenir .ics)"
+            }
+          },
+          'discounts': {
+            required: false,
+            type: 'custom-discounts',
+            messages: {
+              duplicate: "Ce nombre de nuits existe déjà",
+              incomplete: "Les deux champs (nuits et réduction) doivent être remplis"
             }
           }
         },
@@ -324,6 +332,12 @@ class ValidationManager {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
+
+    // Validation des réductions
+    if (!this.validateDiscounts()) {
+      isValid = false;
+      this.showTabError('error-indicator-tab3');
+    }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
     return isValid;
@@ -440,6 +454,131 @@ class ValidationManager {
     return !hasError;
   }
 
+
+  // Validation des doublons au blur
+  validateDiscountDuplicateOnBlur(inputElement, currentIndex) {
+    // Récupérer la valeur actuelle
+    const currentValue = parseInt(inputElement.value) || 0;
+    if (currentValue === 0) {
+      this.hideDiscountError(inputElement);
+      return;
+    }
+    
+    // Parcourir toutes les autres réductions
+    const allDiscounts = this.editor.pricingData.discounts || [];
+    
+    for (let i = 0; i < allDiscounts.length; i++) {
+      if (i !== currentIndex && allDiscounts[i].nights === currentValue) {
+        this.showDiscountError(inputElement, this.validationConfig.tab3.fields.discounts.messages.duplicate);
+        return;
+      }
+    }
+    
+    // Pas de doublon
+    this.hideDiscountError(inputElement);
+  }
+  
+  // Validation complète des réductions (au save)
+  validateDiscounts() {
+    const discounts = this.editor.pricingData.discounts || [];
+    let hasError = false;
+    
+    // Map pour stocker les nombres de nuits et détecter les doublons
+    const nightsMap = new Map();
+    
+    discounts.forEach((discount, index) => {
+      let blocElement;
+      if (index === 0) {
+        blocElement = document.querySelector('.bloc-reduction:not(.next)');
+      } else {
+        const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
+        blocElement = nextBlocs[index - 1];
+      }
+      
+      if (!blocElement) return;
+      
+      const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+      const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+      
+      if (!nightsInput || !percentageInput) return;
+      
+      const nights = parseInt(nightsInput.value) || 0;
+      const percentage = parseInt(this.editor.getRawValue(percentageInput)) || 0;
+      
+      // Vérifier si les deux champs sont remplis ou vides
+      if ((nights > 0 && percentage === 0) || (nights === 0 && percentage > 0)) {
+        // Un seul champ est rempli
+        if (nights === 0) {
+          this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.incomplete);
+        }
+        if (percentage === 0) {
+          this.showDiscountError(percentageInput, this.validationConfig.tab3.fields.discounts.messages.incomplete);
+        }
+        hasError = true;
+      } else {
+        // Les deux sont OK, vérifier les doublons uniquement si nights > 0
+        if (nights > 0) {
+          if (nightsMap.has(nights)) {
+            this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.duplicate);
+            hasError = true;
+          } else {
+            nightsMap.set(nights, index);
+            this.hideDiscountError(nightsInput);
+          }
+        }
+        this.hideDiscountError(percentageInput);
+      }
+    });
+    
+    return !hasError;
+  }
+  
+  // Afficher l'erreur sur un input de réduction
+  showDiscountError(input, message) {
+    // Border rouge
+    input.style.borderColor = '#E53131';
+    
+    // Chercher la div error existante (créée dans Webflow)
+    let errorDiv = input.nextElementSibling;
+    
+    // Si c'est dans un flex-error, chercher différemment
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = input.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.querySelector('.error');
+      }
+    }
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+    }
+  }
+  
+  // Masquer l'erreur d'un input de réduction
+  hideDiscountError(input) {
+    // Retirer le border rouge
+    input.style.borderColor = '';
+    
+    // Chercher la div error existante
+    let errorDiv = input.nextElementSibling;
+    
+    // Si c'est dans un flex-error, chercher différemment
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = input.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.querySelector('.error');
+      }
+    }
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = '';
+      errorDiv.classList.remove('show');
+    }
+  }
+  
+
+  
   // Afficher une erreur sur un champ
   showFieldError(fieldId, message) {
     const field = document.getElementById(fieldId);
