@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 modifs V3
+// Gestionnaire de la page de modification de logement - V15 modifs V4
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1373,24 +1373,11 @@ setupDiscountListeners(blocElement, index) {
       const value = parseInt(e.target.value) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
-      
-      // 🆕 NOUVEAU : Revalider immédiatement pour enlever l'erreur
-      if (this.validationManager) {
-        // Revalider ce champ pour les doublons
-        this.validationManager.validateDiscountOnBlur(nightsInput);
-        
-        // Revalider aussi les autres champs avec la même valeur
-        document.querySelectorAll('[data-discount="nights"]').forEach(input => {
-          if (input !== nightsInput && input.value.trim() === e.target.value.trim()) {
-            this.validationManager.validateDiscountOnBlur(input);
-          }
-        });
-      }
     });
     
     nightsInput.addEventListener('blur', () => {
       if (this.validationManager) {
-        this.validationManager.validateDiscountOnBlur(nightsInput);
+        this.validationManager.validateFieldOnBlur('discounts');
       }
     });
   }
@@ -1400,54 +1387,20 @@ setupDiscountListeners(blocElement, index) {
       const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
       this.pricingData.discounts[index].percentage = value;
       this.enableButtons();
-      
-      // 🆕 NOUVEAU : Vérifier si on doit enlever l'erreur "incomplet"
-      if (this.validationManager && nightsInput) {
-        const nights = nightsInput.value.trim();
-        const percentage = value.toString();
-        
-        // Si les deux sont remplis maintenant, enlever les erreurs
-        if (nights && percentage) {
-          this.validationManager.hideFieldError(nightsInput);
-          this.validationManager.hideFieldError(percentageInput);
-        }
-      }
     });
     
-    // Formatage au blur : ajouter %
     percentageInput.addEventListener('blur', function() {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
         this.value = value + ' %';
       }
       
-      // 🆕 NOUVEAU : Revalider pour l'erreur "incomplet"
+      // Validation au blur
       if (window.propertyEditor && window.propertyEditor.validationManager) {
-        const block = this.closest('.bloc-reduction, .bloc-reduction.next');
-        const nightsInput = block?.querySelector('[data-discount="nights"]');
-        
-        if (nightsInput) {
-          const nights = nightsInput.value.trim();
-          const percentage = value;
-          
-          // Si un seul est rempli, afficher l'erreur
-          if ((nights && !percentage) || (!nights && percentage)) {
-            if (!nights) {
-              window.propertyEditor.validationManager.showDiscountError(nightsInput, window.propertyEditor.validationManager.validationConfig.tab3.fields.discounts.messages.incomplete);
-            }
-            if (!percentage) {
-              window.propertyEditor.validationManager.showDiscountError(this, window.propertyEditor.validationManager.validationConfig.tab3.fields.discounts.messages.incomplete);
-            }
-          } else {
-            // Sinon, enlever les erreurs
-            window.propertyEditor.validationManager.hideFieldError(nightsInput);
-            window.propertyEditor.validationManager.hideFieldError(this);
-          }
-        }
+        window.propertyEditor.validationManager.validateFieldOnBlur('discounts');
       }
     });
     
-    // Retirer le % au focus
     percentageInput.addEventListener('focus', function() {
       this.value = this.value.replace(/[^\d]/g, '');
     });
