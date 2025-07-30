@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V5 NEW
+// Gestionnaire de validation pour la page modification de logement V6
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -247,29 +247,33 @@ class ValidationManager {
   validateDiscounts() {
     let hasError = false;
     const nightsMap = new Map(); // Pour détecter les doublons
-    const discountBlocks = [];
     
-    // Collecter tous les blocs de réduction visibles
-    // Premier bloc
-    const firstBlock = document.querySelector('.bloc-reduction:not(.next)');
-    if (firstBlock && firstBlock.style.display !== 'none') {
-      discountBlocks.push(firstBlock);
-    }
+    // Récupérer TOUS les inputs nights visibles
+    const allNightsInputs = document.querySelectorAll('[data-discount="nights"]');
+    const allPercentageInputs = document.querySelectorAll('[data-discount="percentage"]');
     
-    // Blocs suivants
-    const nextBlocks = document.querySelectorAll('.bloc-reduction.next');
-    nextBlocks.forEach(block => {
-      if (block.style.display !== 'none') {
-        discountBlocks.push(block);
+    // D'abord, nettoyer toutes les erreurs
+    allNightsInputs.forEach(input => {
+      const block = input.closest('.bloc-reduction, .bloc-reduction.next');
+      if (block && block.style.display !== 'none') {
+        this.hideFieldError(input);
       }
     });
     
-    // Valider chaque bloc
-    discountBlocks.forEach((block, index) => {
-      const nightsInput = block.querySelector('[data-discount="nights"]');
-      const percentageInput = block.querySelector('[data-discount="percentage"]');
+    allPercentageInputs.forEach(input => {
+      const block = input.closest('.bloc-reduction, .bloc-reduction.next');
+      if (block && block.style.display !== 'none') {
+        this.hideFieldError(input);
+      }
+    });
+    
+    // Ensuite, valider chaque bloc visible
+    allNightsInputs.forEach((nightsInput, index) => {
+      const block = nightsInput.closest('.bloc-reduction, .bloc-reduction.next');
+      if (!block || block.style.display === 'none') return;
       
-      if (!nightsInput || !percentageInput) return;
+      const percentageInput = block.querySelector('[data-discount="percentage"]');
+      if (!percentageInput) return;
       
       const nights = nightsInput.value.trim();
       const percentage = this.editor.getRawValue(percentageInput) || percentageInput.value.replace(/[^\d]/g, '');
@@ -278,23 +282,19 @@ class ValidationManager {
       if ((nights && !percentage) || (!nights && percentage)) {
         // Un seul champ rempli = erreur
         if (!nights) {
-          this.showFieldError(nightsInput.id || `discount-nights-${index}`, this.validationConfig.tab3.fields.discounts.messages.incomplete);
+          this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.incomplete);
         }
         if (!percentage) {
-          this.showFieldError(percentageInput.id || `discount-percentage-${index}`, this.validationConfig.tab3.fields.discounts.messages.incomplete);
+          this.showDiscountError(percentageInput, this.validationConfig.tab3.fields.discounts.messages.incomplete);
         }
         hasError = true;
-      } else {
-        // Les deux remplis ou les deux vides = OK pour l'incomplet
-        this.hideFieldError(nightsInput.id || `discount-nights-${index}`);
-        this.hideFieldError(percentageInput.id || `discount-percentage-${index}`);
       }
       
       // Vérifier les doublons seulement si nights est rempli
       if (nights) {
         if (nightsMap.has(nights)) {
           // Doublon trouvé
-          this.showFieldError(nightsInput.id || `discount-nights-${index}`, this.validationConfig.tab3.fields.discounts.messages.duplicate);
+          this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.duplicate);
           hasError = true;
         } else {
           nightsMap.set(nights, index);
@@ -305,28 +305,57 @@ class ValidationManager {
     return !hasError;
   }
   
+  // Nouvelle méthode spécifique pour les erreurs de réduction
+  showDiscountError(input, message) {
+    // Border rouge sur l'input
+    input.style.borderColor = '#E53131';
+    
+    // Chercher la div error juste après cet input spécifique
+    let errorDiv = input.nextElementSibling;
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+    }
+  }
+  
+  // Cacher l'erreur d'un champ de réduction
+  hideFieldError(input) {
+    // Si on reçoit un ID string, chercher l'élément
+    if (typeof input === 'string') {
+      input = document.getElementById(input);
+      if (!input) return;
+    }
+    
+    // Retirer le border rouge
+    input.style.borderColor = '';
+    
+    // Chercher et masquer l'erreur
+    let errorDiv = input.nextElementSibling;
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = '';
+      errorDiv.classList.remove('show');
+    }
+  }
+  
   // Validation d'une réduction au blur
   validateDiscountOnBlur(nightsInput) {
     const block = nightsInput.closest('.bloc-reduction, .bloc-reduction.next');
-    if (!block) return;
-    
-    const percentageInput = block.querySelector('[data-discount="percentage"]');
-    if (!percentageInput) return;
+    if (!block || block.style.display === 'none') return;
     
     const nights = nightsInput.value.trim();
-    const percentage = this.editor.getRawValue(percentageInput) || percentageInput.value.replace(/[^\d]/g, '');
     
     // Si le champ est vide, pas d'erreur au blur
     if (!nights) {
-      this.hideFieldError(nightsInput.id || 'discount-nights');
+      this.hideFieldError(nightsInput);
       return;
     }
     
     // Vérifier les doublons
-    const allNightsInputs = document.querySelectorAll('[data-discount="nights"]');
     let hasDuplicate = false;
     
-    allNightsInputs.forEach(input => {
+    document.querySelectorAll('[data-discount="nights"]').forEach(input => {
       if (input !== nightsInput && input.value.trim() === nights) {
         const parentBlock = input.closest('.bloc-reduction, .bloc-reduction.next');
         if (parentBlock && parentBlock.style.display !== 'none') {
@@ -336,9 +365,9 @@ class ValidationManager {
     });
     
     if (hasDuplicate) {
-      this.showFieldError(nightsInput.id || 'discount-nights', this.validationConfig.tab3.fields.discounts.messages.duplicate);
+      this.showDiscountError(nightsInput, this.validationConfig.tab3.fields.discounts.messages.duplicate);
     } else {
-      this.hideFieldError(nightsInput.id || 'discount-nights');
+      this.hideFieldError(nightsInput);
     }
   }
   
