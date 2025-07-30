@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V2
+// Gestionnaire de validation pour la page modification de logement V4 V3
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -578,6 +578,163 @@ class ValidationManager {
   }
   
 
+  // Validation d'une saison (ajout ou modification)
+  validateSeason(isEdit = false) {
+    console.log('🌞 Validation saison:', isEdit ? 'modification' : 'ajout');
+    
+    const suffix = isEdit ? '-edit' : '';
+    let hasError = false;
+    
+    // Récupérer les champs
+    const nameInput = document.getElementById(`season-name-input${suffix}`);
+    const startInput = document.getElementById(`season-date-start-input${suffix}`);
+    const endInput = document.getElementById(`season-date-end-input${suffix}`);
+    const priceInput = document.getElementById(`season-price-input${suffix}`);
+    const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
+    
+    // Validation du nom
+    if (!nameInput || !nameInput.value.trim()) {
+      this.showFieldError(`season-name-input${suffix}`, "Le nom de la saison est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-name-input${suffix}`);
+    }
+    
+    // Validation des dates
+    const startDate = this.editor.getDateValue(startInput);
+    const endDate = this.editor.getDateValue(endInput);
+    
+    if (!startDate) {
+      this.showFieldError(`season-date-start-input${suffix}`, "La date de début est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-date-start-input${suffix}`);
+    }
+    
+    if (!endDate) {
+      this.showFieldError(`season-date-end-input${suffix}`, "La date de fin est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-date-end-input${suffix}`);
+    }
+    
+    // Validation du prix
+    const price = parseInt(this.editor.getRawValue(priceInput)) || 0;
+    if (price < 10) {
+      this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-price-input${suffix}`);
+    }
+    
+    // Validation des nuits minimum
+    const minNights = parseInt(this.editor.getRawValue(minNightsInput)) || 0;
+    if (minNights < 1) {
+      this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-min-nights-input${suffix}`);
+    }
+    
+    // Si pas d'erreur de base, vérifier les chevauchements de dates
+    if (!hasError && startDate && endDate) {
+      const overlap = this.checkSeasonDateOverlap(startDate, endDate, isEdit);
+      if (overlap) {
+        this.showFieldError(`season-date-start-input${suffix}`, overlap);
+        this.showFieldError(`season-date-end-input${suffix}`, overlap);
+        hasError = true;
+      }
+    }
+    
+    // Validation des prix plateformes (si renseignés)
+    if (!hasError && price > 0) {
+      hasError = !this.validateSeasonPlatformPrices(price, suffix);
+    }
+    
+    return !hasError;
+  }
+  
+  // Vérifier le chevauchement des dates
+  checkSeasonDateOverlap(newStart, newEnd, isEdit) {
+    const seasons = this.editor.pricingData.seasons || [];
+    const editingIndex = isEdit ? this.editor.editingSeasonIndex : -1;
+    
+    // Convertir les dates au format comparable
+    const [newStartDay, newStartMonth] = newStart.split('-').map(n => parseInt(n));
+    const [newEndDay, newEndMonth] = newEnd.split('-').map(n => parseInt(n));
+    
+    for (let i = 0; i < seasons.length; i++) {
+      // Ignorer la saison en cours de modification
+      if (i === editingIndex) continue;
+      
+      const season = seasons[i];
+      if (!season.periods || season.periods.length === 0) continue;
+      
+      for (const period of season.periods) {
+        const [startDay, startMonth] = period.start.split('-').map(n => parseInt(n));
+        const [endDay, endMonth] = period.end.split('-').map(n => parseInt(n));
+        
+        // Vérifier le chevauchement (même logique que dans votre serveur)
+        if (this.datesOverlap(
+          newStartDay, newStartMonth, newEndDay, newEndMonth,
+          startDay, startMonth, endDay, endMonth
+        )) {
+          return `Ces dates chevauchent avec la saison "${season.name}"`;
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  // Vérifier si deux périodes se chevauchent
+  datesOverlap(start1Day, start1Month, end1Day, end1Month, start2Day, start2Month, end2Day, end2Month) {
+    // Convertir en valeur numérique pour comparer (MMDD)
+    const start1 = start1Month * 100 + start1Day;
+    const end1 = end1Month * 100 + end1Day;
+    const start2 = start2Month * 100 + start2Day;
+    const end2 = end2Month * 100 + end2Day;
+    
+    // Gérer les périodes qui traversent l'année
+    if (start1 > end1) { // Période 1 traverse l'année
+      return (start2 <= end1 || start2 >= start1) || (end2 <= end1 || end2 >= start1);
+    }
+    
+    if (start2 > end2) { // Période 2 traverse l'année
+      return (start1 <= end2 || start1 >= start2) || (end1 <= end2 || end1 >= start2);
+    }
+    
+    // Cas normal : chevauchement si une période commence avant la fin de l'autre
+    return start1 <= end2 && end1 >= start2;
+  }
+  
+  // Validation des prix plateformes d'une saison
+  validateSeasonPlatformPrices(directPrice, suffix) {
+    const minPlatformPrice = directPrice * 1.10; // +10%
+    let hasError = false;
+    
+    ['airbnb', 'booking', 'gites', 'other'].forEach(platform => {
+      const input = document.getElementById(`season-${platform}-price-input${suffix}`);
+      if (input) {
+        const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
+        
+        if (platformPrice > 0 && platformPrice < minPlatformPrice) {
+          this.showFieldError(
+            `season-${platform}-price-input${suffix}`, 
+            `Le prix doit être au moins ${Math.ceil(minPlatformPrice)}€ (10% de plus que le prix direct)`
+          );
+          hasError = true;
+        } else {
+          this.hideFieldError(`season-${platform}-price-input${suffix}`);
+        }
+      }
+    });
+    
+    return !hasError;
+  }
+
+
+  
   
   // Afficher une erreur sur un champ
   showFieldError(fieldId, message) {
