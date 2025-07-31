@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V10 prix semaine
+// Gestionnaire de la page de modification de logement - V15 V11
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -420,7 +420,7 @@ setupTimeFormatters() {
       priceElement.textContent = season.price;
     }
     
-    // 🆕 NOUVEAU : Prix par semaine
+    // Prix par semaine
     const weekPriceElement = document.getElementById(`prix-semaine-season-${seasonNum}`);
     if (weekPriceElement) {
       const weekPrice = this.calculateWeekPrice(season.price, this.pricingData.discounts);
@@ -460,11 +460,16 @@ setupTimeFormatters() {
       let weekPrice = nightlyPrice * 7;
       
       if (discounts && discounts.length > 0) {
-        const weekDiscount = discounts.find(discount => discount.nights <= 7);
-        if (weekDiscount) {
+        const applicableDiscounts = discounts.filter(discount => discount.nights <= 7);
+
+        if (applicableDiscounts.length > 0) {
+          // Trier par nombre de nuits décroissant pour prendre la plus élevée
+          applicableDiscounts.sort((a, b) => b.nights - a.nights);
+          
+          // Prendre la première (qui sera la plus élevée après le tri)
+          const weekDiscount = applicableDiscounts[0];
           weekPrice = weekPrice * (1 - weekDiscount.percentage / 100);
         }
-      }
       
       return Math.round(weekPrice);
     }
