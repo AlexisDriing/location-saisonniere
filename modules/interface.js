@@ -1,4 +1,4 @@
-// V2 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V3 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -41,7 +41,7 @@ class InterfaceManager {
       
       if (gitesField && gitesField.trim() !== "") {
         const img = document.createElement("img");
-        img.src = "https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/6798ece4142552abd72e22c4_Frame%20288955.jpg";
+        img.src = "https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/688b2ed71694b8ab6ae9f4a9_other-icon.jpg";
         img.alt = "Logo Gîtes de France";
         container.appendChild(img);
       }
