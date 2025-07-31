@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V6 saison erreurs
+// Gestionnaire de la page de modification de logement - V15 V7 saison erreurs
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -630,6 +630,25 @@ openEditSeasonModal(seasonIndex) {
   if (!this.pricingData.seasons[seasonIndex]) {
     console.error('❌ Saison non trouvée à l\'index', seasonIndex);
     return;
+  }
+
+  // NOUVEAU : Nettoyer les erreurs de la modal de modification uniquement
+  if (this.validationManager) {
+    const editModalFields = [
+      'season-name-input-edit',
+      'season-date-start-input-edit',
+      'season-date-end-input-edit',
+      'season-price-input-edit',
+      'season-min-nights-input-edit',
+      'season-airbnb-price-input-edit',
+      'season-booking-price-input-edit',
+      'season-gites-price-input-edit',
+      'season-other-price-input-edit'
+    ];
+    
+    editModalFields.forEach(id => {
+      this.validationManager.hideFieldError(id);
+    });
   }
   
   // Stocker l'index de la saison en cours de modification
