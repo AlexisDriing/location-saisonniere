@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V7 saison erreurs
+// Gestionnaire de la page de modification de logement - V15 V8
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -625,6 +625,8 @@ setupTimeFormatters() {
   // 🆕 Ouvrir la modal de modification
 openEditSeasonModal(seasonIndex) {
   console.log('✏️ Ouverture modal modification saison', seasonIndex + 1);
+
+  this.resetEditSeasonModal();
   
   // Vérifier que la saison existe
   if (!this.pricingData.seasons[seasonIndex]) {
