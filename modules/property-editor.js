@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V11 correc
+// Gestionnaire de la page de modification de logement - V15 V11 nuits modifs
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1014,6 +1014,15 @@ resetEditSeasonModal() {
             this.validationManager.validateSeasonPlatformPrices(price, suffix);
           }
         }
+      });
+    }
+
+    // 🆕 NOUVEAU : Nuits minimum - ajouter un listener pour mettre à jour data-raw-value
+    const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
+    if (minNightsInput) {
+      minNightsInput.addEventListener('input', (e) => {
+        const value = e.target.value.replace(/[^\d]/g, '');
+        e.target.setAttribute('data-raw-value', value || '1');
       });
     }
     
