@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V8
+// Gestionnaire de la page de modification de logement - V15 V9
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -279,7 +279,10 @@ setupTimeFormatters() {
       { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
       { id: 'hote-input', dataKey: 'host_name' },
       { id: 'email-input', dataKey: 'email' },
-      { id: 'telephone-input', dataKey: 'telephone' }
+      { id: 'telephone-input', dataKey: 'telephone' },
+      { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb' },
+      { id: 'annonce-booking-input', dataKey: 'annonce_booking' },
+      { id: 'annonce-gites-input', dataKey: 'annonce_gites' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -2188,7 +2191,10 @@ setupFieldListeners() {
     { id: 'conditions-annulation-input' },
     { id: 'hote-input' },
     { id: 'email-input' },
-    { id: 'telephone-input' }
+    { id: 'telephone-input' },
+    { id: 'annonce-airbnb-input' },
+    { id: 'annonce-booking-input' },
+    { id: 'annonce-gites-input' }
   ];
   
   fields.forEach(field => {
@@ -2201,12 +2207,11 @@ setupFieldListeners() {
         } else if (field.id === 'code-enregistrement-input') {
           this.validateCodeEnregistrement(input);
         } else if (field.id === 'email-input') {
-          // NOUVEAU : Validation email
           this.validateEmail(input);
         } else if (field.id === 'telephone-input') {
-          // NOUVEAU : Formatage téléphone
           this.formatTelephone(input);
         }
+        // PAS BESOIN d'ajouter de validation pour annonce-airbnb etc.
         this.enableButtons();
       });
       input.addEventListener('blur', () => {
@@ -2821,7 +2826,10 @@ setBlockState(element, isActive) {
       { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
       { id: 'hote-input', dataKey: 'host_name' },
       { id: 'email-input', dataKey: 'email' },
-      { id: 'telephone-input', dataKey: 'telephone' }
+      { id: 'telephone-input', dataKey: 'telephone' },
+      { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb' },
+      { id: 'annonce-booking-input', dataKey: 'annonce_booking' },
+      { id: 'annonce-gites-input', dataKey: 'annonce_gites' }
     ];
     
     // Remettre les valeurs initiales
@@ -2913,7 +2921,10 @@ setBlockState(element, isActive) {
     { id: 'conditions-annulation-input', dataKey: 'conditions_annulation', dbKey: 'conditions_annulation' },
     { id: 'hote-input', dataKey: 'host_name', dbKey: 'host_name' },
     { id: 'email-input', dataKey: 'email', dbKey: 'email' },
-    { id: 'telephone-input', dataKey: 'telephone', dbKey: 'telephone' }
+    { id: 'telephone-input', dataKey: 'telephone', dbKey: 'telephone' },
+    { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb', dbKey: 'annonce_airbnb' },
+    { id: 'annonce-booking-input', dataKey: 'annonce_booking', dbKey: 'annonce_booking' },
+    { id: 'annonce-gites-input', dataKey: 'annonce_gites', dbKey: 'annonce_gites' }
   ];
     
   // Collecter les valeurs actuelles
