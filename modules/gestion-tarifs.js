@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison v2
+// Gestion de l'affichage des tarifs par saison v3
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -31,8 +31,15 @@ class TariffsDisplayManager {
     let weekPrice = nightlyPrice * 7;
     
     if (discounts && discounts.length > 0) {
-      const weekDiscount = discounts.find(discount => discount.nights <= 7);
-      if (weekDiscount) {
+      // Filtrer les réductions applicables (7 nuits ou moins)
+      const applicableDiscounts = discounts.filter(discount => discount.nights <= 7);
+      
+      if (applicableDiscounts.length > 0) {
+        // Trier par nombre de nuits décroissant pour prendre la plus élevée
+        applicableDiscounts.sort((a, b) => b.nights - a.nights);
+        
+        // Prendre la première (qui sera la plus élevée après le tri)
+        const weekDiscount = applicableDiscounts[0];
         weekPrice = weekPrice * (1 - weekDiscount.percentage / 100);
       }
     }
