@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V11
+// Gestionnaire de la page de modification de logement - V15 V11 correc
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -473,6 +473,7 @@ setupTimeFormatters() {
       
       return Math.round(weekPrice);
     }
+  } 
   
   setupSeasonButtons() {
   // Bouton ajouter saison
