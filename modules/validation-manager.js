@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V3
+// Gestionnaire de validation pour la page modification de logement V4 V4
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -123,7 +123,32 @@ class ValidationManager {
               duplicate: "Ce nombre de nuits existe déjà",
               incomplete: "Les deux champs (nuits et réduction) doivent être remplis"
             }
+          },
+          'annonce-airbnb-input': {
+          required: false,
+          pattern: /^https?:\/\/.*airbnb.*/i,
+          customValidation: 'coherencePrixLien',
+          messages: {
+            invalid: "L'URL doit être un lien Airbnb",
+            coherence: "Un prix Airbnb nécessite un lien d'annonce (et inversement)"
           }
+        },
+        'annonce-booking-input': {
+          required: false,
+          pattern: /^https?:\/\/.*booking.*/i,
+          customValidation: 'coherencePrixLien',
+          messages: {
+            invalid: "L'URL doit être un lien Booking",
+            coherence: "Un prix Booking nécessite un lien d'annonce (et inversement)"
+          }
+        },
+        'annonce-gites-input': {
+          required: false,
+          customValidation: 'coherencePrixLien',
+          messages: {
+            coherence: "Un prix autre plateforme nécessite un lien d'annonce (et inversement)"
+          }
+        }
         },
         tabIndicatorId: 'error-indicator-tab3'
       },
@@ -292,6 +317,46 @@ class ValidationManager {
     this.hideFieldError(fieldId);
   }
 
+  // Validation de cohérence prix/lien plateformes
+  validateCoherencePrixLien() {
+    let hasError = false;
+    const platforms = [
+      { price: 'default-airbnb-price-input', link: 'annonce-airbnb-input', name: 'Airbnb' },
+      { price: 'default-booking-price-input', link: 'annonce-booking-input', name: 'Booking' },
+      { price: 'default-gites-price-input', link: 'annonce-other-input', name: 'Autres' }
+    ];
+    
+    platforms.forEach(({ price, link, name }) => {
+      const priceInput = document.getElementById(price);
+      const linkInput = document.getElementById(link);
+      
+      if (!priceInput || !linkInput) return;
+      
+      const priceValue = parseFloat(this.editor.getRawValue(priceInput)) || 0;
+      const linkValue = linkInput.value.trim();
+      
+      // Si prix sans lien OU lien sans prix
+      if ((priceValue > 0 && !linkValue) || (linkValue && priceValue === 0)) {
+        const message = `Un prix ${name} nécessite un lien d'annonce (et inversement)`;
+        
+        if (priceValue > 0 && !linkValue) {
+          this.showFieldError(link, message);
+        } else {
+          this.showFieldError(price, message);
+        }
+        
+        hasError = true;
+      } else {
+        // Nettoyer les erreurs si tout est OK
+        this.hideFieldError(price);
+        this.hideFieldError(link);
+      }
+    });
+    
+    return !hasError;
+  }
+  
+  
   // Validation complète (au save)
   validateAllFields() {
     console.log('🔍 Validation complète des champs...');
@@ -333,6 +398,11 @@ class ValidationManager {
       this.showTabError('error-indicator-tab3');
     }
 
+    if (!this.validateCoherencePrixLien()) {
+      isValid = false;
+      this.showTabError('error-indicator-tab3');
+    }
+    
     // Validation des réductions
     if (!this.validateDiscounts()) {
       isValid = false;
