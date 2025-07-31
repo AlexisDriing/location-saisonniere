@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V11 nuits modifs
+// Gestionnaire de la page de modification de logement - V15 V12
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -492,8 +492,8 @@ setupTimeFormatters() {
       e.preventDefault();
       this.validateAndAddSeason();
     });
-  }
-  
+  } 
+    
   // 🆕 Boutons modifier pour chaque saison (1 à 4)
   for (let i = 1; i <= 4; i++) {
     const editBtn = document.getElementById(`edit-${i}`);
@@ -504,7 +504,17 @@ setupTimeFormatters() {
       });
     }
   }
+
+  // 🆕 NOUVEAU : Boutons supprimer pour chaque saison
+    const deleteBtn = document.getElementById(`delete-${i}`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removeSeason(i - 1); // index 0-based
+      });
+    }
   
+    
   // 🆕 Bouton valider dans la modal de modification
   const validateEditBtn = document.getElementById('button-validate-edit-season');
   if (validateEditBtn) {
@@ -1001,6 +1011,22 @@ resetEditSeasonModal() {
   });
 }
 
+// 🆕 NOUVELLE MÉTHODE : Supprimer une saison
+removeSeason(index) {
+  console.log(`🗑️ Suppression de la saison ${index + 1}`);
+  
+  // Supprimer du tableau
+  this.pricingData.seasons.splice(index, 1);
+  
+  // Réafficher toutes les saisons (gère automatiquement la réorganisation)
+  this.hideAllSeasonBlocks();
+  this.displayExistingSeasons();
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+
+  
   setupSeasonValidationListeners(isEdit = false) {
     const suffix = isEdit ? '-edit' : '';
     
