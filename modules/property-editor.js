@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V12
+// Gestionnaire de la page de modification de logement - V15 V12 modifs
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -500,20 +500,19 @@ setupTimeFormatters() {
     if (editBtn) {
       editBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        this.openEditSeasonModal(i - 1); // index 0-based
+        this.openEditSeasonModal(i - 1);
       });
     }
-  }
-
-  // 🆕 NOUVEAU : Boutons supprimer pour chaque saison
+    
+    // 🆕 NOUVEAU : Boutons supprimer pour chaque saison
     const deleteBtn = document.getElementById(`delete-${i}`);
     if (deleteBtn) {
       deleteBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        this.removeSeason(i - 1); // index 0-based
+        this.removeSeason(i - 1);
       });
     }
-  
+  }
     
   // 🆕 Bouton valider dans la modal de modification
   const validateEditBtn = document.getElementById('button-validate-edit-season');
