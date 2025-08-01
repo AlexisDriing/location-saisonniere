@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V14
+// Gestionnaire de la page de modification de logement - V15 V14 idk
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
