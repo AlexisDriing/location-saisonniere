@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V12 modifs
+// Gestionnaire de la page de modification de logement - V15 V14
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2509,7 +2509,7 @@ setupDefaultPricingListeners() {
   }
   
   // Prix plateformes
-  const platforms = ['airbnb', 'booking', 'other'];
+  const platforms = ['airbnb', 'booking', 'gites'];
   platforms.forEach(platform => {
     const input = document.getElementById(`default-${platform}-price-input`);
     if (input) {
@@ -2610,130 +2610,56 @@ setupCleaningListeners() {
   }
 
   // Version corrigée avec cascade des états
-setupPriceOpacityHandlers() {
-  console.log('👁️ Configuration de l\'opacité des blocs tarifs...');
-  
-  // Configuration centralisée des dépendances
-  const dependencies = [
-    {
-      trigger: 'default-price-input',
-      target: 'bloc-tarifs-plateformes',
-      condition: (value) => value && parseInt(value) > 0,
-      // 🆕 NOUVEAU : Dépendances enfants qui doivent être mises à jour
-      cascadeTargets: ['bloc-lien-airbnb', 'bloc-lien-booking', 'bloc-lien-other']
-    },
-    {
-      trigger: 'default-airbnb-price-input',
-      target: 'bloc-lien-airbnb',
-      condition: (value) => value && parseInt(value) > 0,
-      // 🆕 Condition parent qui doit aussi être vraie
-      parentCondition: () => {
-        const parentInput = document.getElementById('default-price-input');
-        const parentValue = this.getRawValue(parentInput);
-        return parentValue && parseInt(parentValue) > 0;
+  setupPriceOpacityHandlers() {    
+    // Configuration centralisée des dépendances
+    const dependencies = [
+      {
+        trigger: 'default-price-input',
+        target: 'bloc-tarifs-plateformes',
+        condition: (value) => value && parseInt(value) > 0
       }
-    },
-    {
-      trigger: 'default-booking-price-input',
-      target: 'bloc-lien-booking',
-      condition: (value) => value && parseInt(value) > 0,
-      parentCondition: () => {
-        const parentInput = document.getElementById('default-price-input');
-        const parentValue = this.getRawValue(parentInput);
-        return parentValue && parseInt(parentValue) > 0;
-      }
-    },
-    {
-      trigger: 'default-other-price-input',
-      target: 'bloc-lien-other',
-      condition: (value) => value && parseInt(value) > 0,
-      parentCondition: () => {
-        const parentInput = document.getElementById('default-price-input');
-        const parentValue = this.getRawValue(parentInput);
-        return parentValue && parseInt(parentValue) > 0;
-      }
-    }
-  ];
-  
-  // Appliquer la logique pour chaque dépendance
-  dependencies.forEach(({ trigger, target, condition, cascadeTargets, parentCondition }) => {
-    const triggerElement = document.getElementById(trigger);
-    const targetElement = document.getElementById(target);
+    ];
     
-    if (!triggerElement || !targetElement) return;
-    
-    // Fonction réutilisable pour la mise à jour
-    const updateOpacity = () => {
-      const value = this.getRawValue(triggerElement);
-      let isActive = condition(value);
+    // Appliquer la logique pour chaque dépendance
+    dependencies.forEach(({ trigger, target, condition }) => {
+      const triggerElement = document.getElementById(trigger);
+      const targetElement = document.getElementById(target);
       
-      // 🆕 Vérifier aussi la condition parent si elle existe
-      if (isActive && parentCondition) {
-        isActive = parentCondition();
-      }
+      if (!triggerElement || !targetElement) return;
       
-      this.setBlockState(targetElement, isActive);
+      // Fonction réutilisable pour la mise à jour
+      const updateOpacity = () => {
+        const value = this.getRawValue(triggerElement);
+        const isActive = condition(value);
+        this.setBlockState(targetElement, isActive);
+      };
       
-      // 🆕 NOUVEAU : Mettre à jour les enfants en cascade
-      if (cascadeTargets) {
-        cascadeTargets.forEach(childId => {
-          const childElement = document.getElementById(childId);
-          if (childElement) {
-            // Si le parent est désactivé, désactiver tous les enfants
-            if (!isActive) {
-              this.setBlockState(childElement, false);
-            } else {
-              // Sinon, vérifier l'état individuel de l'enfant
-              const childDep = dependencies.find(d => d.target === childId);
-              if (childDep) {
-                const childTrigger = document.getElementById(childDep.trigger);
-                if (childTrigger) {
-                  const childValue = this.getRawValue(childTrigger);
-                  const childActive = childDep.condition(childValue);
-                  this.setBlockState(childElement, childActive);
-                }
-              }
-            }
-          }
-        });
-      }
-    };
-    
-    // État initial
-    updateOpacity();
-    
-    // Listeners
-    triggerElement.addEventListener('input', updateOpacity);
-    triggerElement.addEventListener('blur', updateOpacity);
-  });
-  
-  // 🆕 IMPORTANT : Appliquer l'état initial complet
-  this.applyInitialStates();
-}
-
-// 🆕 NOUVELLE MÉTHODE : Appliquer tous les états initiaux dans le bon ordre
-applyInitialStates() {
-  // 1. D'abord vérifier le prix par défaut
-  const defaultPriceInput = document.getElementById('default-price-input');
-  const defaultPriceValue = this.getRawValue(defaultPriceInput);
-  const hasDefaultPrice = defaultPriceValue && parseInt(defaultPriceValue) > 0;
-  
-  // 2. Si pas de prix par défaut, tout désactiver
-  if (!hasDefaultPrice) {
-    const blocPlateformes = document.getElementById('bloc-tarifs-plateformes');
-    if (blocPlateformes) {
-      this.setBlockState(blocPlateformes, false);
-    }
-    
-    // Désactiver aussi tous les blocs liens
-    ['bloc-lien-airbnb', 'bloc-lien-booking', 'bloc-lien-other'].forEach(blocId => {
-      const bloc = document.getElementById(blocId);
-      if (bloc) {
-        this.setBlockState(bloc, false);
-      }
+      // État initial
+      updateOpacity();
+      
+      // Listeners
+      triggerElement.addEventListener('input', updateOpacity);
+      triggerElement.addEventListener('blur', updateOpacity);
     });
+    
+    // 🆕 IMPORTANT : Appliquer l'état initial complet
+    this.applyInitialStates();
   }
-}
+
+  applyInitialStates() {
+    // 1. D'abord vérifier le prix par défaut
+    const defaultPriceInput = document.getElementById('default-price-input');
+    const defaultPriceValue = this.getRawValue(defaultPriceInput);
+    const hasDefaultPrice = defaultPriceValue && parseInt(defaultPriceValue) > 0;
+    
+    // 2. Si pas de prix par défaut, désactiver seulement le bloc tarifs plateformes
+    if (!hasDefaultPrice) {
+      const blocPlateformes = document.getElementById('bloc-tarifs-plateformes');
+      if (blocPlateformes) {
+        this.setBlockState(blocPlateformes, false);
+      }
+    }
+  }
 
 // Méthode helper améliorée pour gérer l'état d'un bloc
 setBlockState(element, isActive) {
@@ -2812,7 +2738,7 @@ setBlockState(element, isActive) {
   }
   
   // Prix plateformes
-  const platforms = ['airbnb', 'booking', 'other'];
+  const platforms = ['airbnb', 'booking', 'gites'];
   let hasPlatformPrices = false;
   
   platforms.forEach(platform => {
