@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V14 Lives V2
+// Gestionnaire de la page de modification de logement - V15 V14 Lives V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3136,20 +3136,20 @@ setBlockState(element, isActive) {
     saveButton.textContent = 'Enregistrement...';
     
     try {
-    // 🆕 NOUVEAU : Ajouter le paramètre live si le logement est publié
-    if (this.isPublished) {
-      updates._live = true;
-      console.log('📌 Logement publié - Ajout du paramètre live: true');
-    }
-    
-    // Appeler la route de mise à jour
     const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(updates)
+      body: JSON.stringify({
+        ...updates,
+        _live: this.isPublished
+      })
     });
+    
+    if (this.isPublished) {
+      console.log('📌 Logement publié - Publication directe activée');
+    }
       
       const result = await response.json();
       
