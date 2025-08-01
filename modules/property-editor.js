@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V14 idk
+// Gestionnaire de la page de modification de logement - V15 V14 gites
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -346,7 +346,7 @@ setupTimeFormatters() {
         platformPrices: {
           airbnb: 0,
           booking: 0,
-          other: 0
+          gites: 0
         }
       },
       platformPricing: {
@@ -683,7 +683,7 @@ openEditSeasonModal(seasonIndex) {
       'season-airbnb-price-input-edit',
       'season-booking-price-input-edit',
       'season-gites-price-input-edit',
-      'season-other-price-input-edit'
+      'season-gites-price-input-edit'
     ];
     
     editModalFields.forEach(id => {
@@ -737,7 +737,7 @@ openEditSeasonModal(seasonIndex) {
     const platformInputs = {
       'season-airbnb-price-input-edit': season.platformPrices.airbnb || 0,
       'season-booking-price-input-edit': season.platformPrices.booking || 0,
-      'season-other-price-input-edit': season.platformPrices.other || 0
+      'season-gites-price-input-edit': season.platformPrices.gites || 0
     };
     
     Object.entries(platformInputs).forEach(([inputId, value]) => {
@@ -782,7 +782,7 @@ resetSeasonModal() {
   const platformIds = [
     'season-airbnb-price-input',
     'season-booking-price-input',
-    'season-other-price-input'
+    'season-gites-price-input'
   ];
   
   platformIds.forEach(id => {
@@ -820,13 +820,13 @@ validateAndAddSeason() {
   // NOUVEAU : Ajouter les prix plateformes s'ils existent
   const airbnb = parseInt(seasonData.airbnbPrice) || 0;
   const booking = parseInt(seasonData.bookingPrice) || 0;
-  const other = parseInt(seasonData.otherPrice) || 0;
+  const gites = parseInt(seasonData.gitesPrice) || 0;
   
-  if (airbnb > 0 || booking > 0 || other > 0) {
+  if (airbnb > 0 || booking > 0 || gites > 0) {
     newSeason.platformPrices = {
       airbnb: airbnb,
       booking: booking,
-      other: other
+      gites: gites
     };
   }
   
@@ -877,13 +877,13 @@ validateAndEditSeason() {
   // NOUVEAU : Ajouter les prix plateformes s'ils existent
   const airbnb = parseInt(seasonData.airbnbPrice) || 0;
   const booking = parseInt(seasonData.bookingPrice) || 0;
-  const other = parseInt(seasonData.otherPrice) || 0;
+  const gites = parseInt(seasonData.gitesPrice) || 0;
   
-  if (airbnb > 0 || booking > 0 || other > 0) {
+  if (airbnb > 0 || booking > 0 || gites > 0) {
     updatedSeason.platformPrices = {
       airbnb: airbnb,
       booking: booking,
-      other: other
+      gites: gites
     };
   }
   
@@ -910,7 +910,7 @@ getSeasonFormData() {
     // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input')) || '0',
-    otherPrice: this.getRawValue(document.getElementById('season-other-price-input')) || '0'
+    gitesPrice: this.getRawValue(document.getElementById('season-gites-price-input')) || '0'
   };
 }
 
@@ -925,7 +925,7 @@ getEditSeasonFormData() {
     // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-edit')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-edit')) || '0',
-    otherPrice: this.getRawValue(document.getElementById('season-other-price-input-edit')) || '0'
+    gitesPrice: this.getRawValue(document.getElementById('season-gites-price-input-edit')) || '0'
   };
 }
   
@@ -940,7 +940,7 @@ closeSeasonModal() {
   if (this.validationManager) {
     ['season-name-input', 'season-date-start-input', 'season-date-end-input', 
      'season-price-input', 'season-min-nights-input',
-     'season-airbnb-price-input', 'season-booking-price-input', 'season-other-price-input'].forEach(id => {
+     'season-airbnb-price-input', 'season-booking-price-input', 'season-gites-price-input'].forEach(id => {
       this.validationManager.hideFieldError(id);
     });
   }
@@ -964,7 +964,7 @@ closeSeasonModal() {
         'season-airbnb-price-input-edit',
         'season-booking-price-input-edit',
         'season-gites-price-input-edit',
-        'season-other-price-input-edit'
+        'season-gites-price-input-edit'
       ];
       
       editModalFields.forEach(id => {
@@ -998,7 +998,7 @@ resetEditSeasonModal() {
   const platformIds = [
     'season-airbnb-price-input-edit',
     'season-booking-price-input-edit',
-    'season-other-price-input-edit'
+    'season-gites-price-input-edit'
   ];
   
   platformIds.forEach(id => {
@@ -1052,7 +1052,7 @@ removeSeason(index) {
     }
     
     // Prix plateformes - validation au blur seulement
-    ['airbnb', 'booking', 'other'].forEach(platform => {
+    ['airbnb', 'booking', 'gites'].forEach(platform => {
       const input = document.getElementById(`season-${platform}-price-input${suffix}`);
       if (input) {
         input.addEventListener('blur', () => {
@@ -1086,7 +1086,7 @@ removeSeason(index) {
   
   // Prix plateformes (optionnels)
   if (this.pricingData.defaultPricing && this.pricingData.defaultPricing.platformPrices) {
-    const platforms = ['airbnb', 'booking', 'other'];
+    const platforms = ['airbnb', 'booking', 'gites'];
     platforms.forEach(platform => {
       const input = document.getElementById(`default-${platform}-price-input`);
       if (input) {
