@@ -1,11 +1,11 @@
-// Gestionnaire de la page de modification de logement - V15 V14 gites
+// Gestionnaire de la page de modification de logement - V15 V14 Lives
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
     this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
     this.editingSeasonIndex = null;
-
+    this.isPublished = false;
     this.icalUrls = []; // Stockage des URLs iCal
     this.icalFieldMapping = [
     'url-calendrier',    // Position 0 → Premier iCal
@@ -72,6 +72,9 @@ class PropertyEditor {
       
       this.propertyData = await response.json();
       console.log('✅ Données reçues:', this.propertyData);
+      
+      // 🆕 NOUVEAU : Stocker le statut de publication
+      this.isPublished = !this.propertyData._draft;
       
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
@@ -3132,14 +3135,19 @@ setBlockState(element, isActive) {
     saveButton.textContent = 'Enregistrement...';
     
     try {
-      // Appeler la route de mise à jour
-      const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      });
+    // 🆕 NOUVEAU : Ajouter le paramètre live si le logement est publié
+    if (this.isPublished) {
+      updates._live = true;
+    }
+    
+    // Appeler la route de mise à jour
+    const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updates)
+    });
       
       const result = await response.json();
       
