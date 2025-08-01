@@ -1,11 +1,11 @@
-// Gestionnaire de la page de modification de logement - V15 V14 Lives V3
+// Gestionnaire de la page de modification de logement - V15 V14 avant
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
     this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
     this.editingSeasonIndex = null;
-    this.isPublished = false;
+
     this.icalUrls = []; // Stockage des URLs iCal
     this.icalFieldMapping = [
     'url-calendrier',    // Position 0 → Premier iCal
@@ -72,10 +72,6 @@ class PropertyEditor {
       
       this.propertyData = await response.json();
       console.log('✅ Données reçues:', this.propertyData);
-      
-      // 🆕 NOUVEAU : Stocker le statut de publication
-      this.isPublished = !this.propertyData._draft;
-      console.log('📌 Statut de publication:', this.isPublished ? 'Publié' : 'Draft');
       
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
@@ -3136,20 +3132,14 @@ setBlockState(element, isActive) {
     saveButton.textContent = 'Enregistrement...';
     
     try {
+    // Appeler la route de mise à jour
     const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        ...updates,
-        _live: this.isPublished
-      })
+      body: JSON.stringify(updates)
     });
-    
-    if (this.isPublished) {
-      console.log('📌 Logement publié - Publication directe activée');
-    }
       
       const result = await response.json();
       
