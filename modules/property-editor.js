@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V14 Lives
+// Gestionnaire de la page de modification de logement - V15 V14 Lives V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -75,6 +75,7 @@ class PropertyEditor {
       
       // 🆕 NOUVEAU : Stocker le statut de publication
       this.isPublished = !this.propertyData._draft;
+      console.log('📌 Statut de publication:', this.isPublished ? 'Publié' : 'Draft');
       
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
@@ -3138,6 +3139,7 @@ setBlockState(element, isActive) {
     // 🆕 NOUVEAU : Ajouter le paramètre live si le logement est publié
     if (this.isPublished) {
       updates._live = true;
+      console.log('📌 Logement publié - Ajout du paramètre live: true');
     }
     
     // Appeler la route de mise à jour
