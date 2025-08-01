@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V6
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V7
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -387,9 +387,7 @@ setupModifyButton(property) {
       });
       
       if (response.ok) {
-      setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        window.location.reload();
       }
       
     } catch (error) {
