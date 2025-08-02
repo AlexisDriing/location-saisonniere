@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V8 modifs
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V8 images
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -267,6 +267,7 @@ setupDisableButton(property) {
           imageElement.style.backgroundImage = `url(${imageUrl})`;
           imageElement.style.backgroundSize = 'cover';
           imageElement.style.backgroundPosition = 'center';
+          imageElement.style.display = 'block';
         }
         
         console.log(`✅ Image ${i} remplie dans #image-${i}-${status}:`, imageUrl);
