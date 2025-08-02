@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V7
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V8
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -118,8 +118,10 @@ class ProfileManager {
   // 3. Remplir les images
   this.fillPropertyImages(property);
   
-  // 4. 🆕 NOUVEAU : Configurer le bouton modifier
+  // 4. Configurer le bouton modifier
   this.setupModifyButton(property);
+
+  this.setupDisableButton(property);
 }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
@@ -149,6 +151,22 @@ setupModifyButton(property) {
     console.log(`✅ Bouton modifier configuré avec ID Webflow: ${webflowId}`);
   } else {
     console.warn(`❌ Bouton .brouillon-modifier non trouvé dans le bloc ${status}`);
+  }
+}
+
+// 🆕 NOUVELLE MÉTHODE : Désactiver le bouton dans pending-none
+setupDisableButton(property) {
+  const status = this.getPropertyStatus(property);
+  
+  // Seulement si le statut est pending-none
+  if (status === 'pending-none') {
+    const disableButton = document.getElementById('button-disable');
+    
+    if (disableButton) {
+      // Désactiver le clic sans changer l'apparence
+      disableButton.style.pointerEvents = 'none';
+      disableButton.style.cursor = 'not-allowed';
+    }
   }
 }
 
