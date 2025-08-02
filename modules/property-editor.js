@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V17 pending
+// Gestionnaire de la page de modification de logement - V15 V17 tags
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -271,6 +271,8 @@ setupTimeFormatters() {
     if (titleElement && this.propertyData.name) {
       titleElement.textContent = this.propertyData.name;
     }
+
+    this.displayStatusTag();
     
     // 2. Configuration des champs (facilement extensible)
     const fields = [
@@ -323,6 +325,31 @@ setupTimeFormatters() {
     }, 100);
   }
 
+  // 🆕 NOUVELLE MÉTHODE : Afficher le bon tag selon le statut
+  displayStatusTag() {
+    const status = this.propertyData.verification_status || 'pending-none';
+    
+    // Récupérer les deux tags
+    const tagPublished = document.getElementById('tag-published');
+    const tagPending = document.getElementById('tag-pending');
+    
+    if (!tagPublished || !tagPending) {
+      console.warn('⚠️ Tags de statut non trouvés dans le DOM');
+      return;
+    }
+    
+    // Afficher le bon tag selon le statut
+    if (status === 'published') {
+      tagPublished.style.display = 'block'; // ou 'flex' selon votre CSS
+      tagPending.style.display = 'none';
+      console.log('✅ Affichage du tag published');
+    } else {
+      tagPublished.style.display = 'none';
+      tagPending.style.display = 'block'; // ou 'flex' selon votre CSS
+      console.log('✅ Affichage du tag pending');
+    }
+  }
+    
   initSeasonManagement() {
     console.log('🌞 Initialisation gestion des saisons...');
     
