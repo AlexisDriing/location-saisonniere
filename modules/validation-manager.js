@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V4
+// Gestionnaire de validation pour la page modification de logement V4 V5
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -323,7 +323,7 @@ class ValidationManager {
     const platforms = [
       { price: 'default-airbnb-price-input', link: 'annonce-airbnb-input', name: 'Airbnb' },
       { price: 'default-booking-price-input', link: 'annonce-booking-input', name: 'Booking' },
-      { price: 'default-gites-price-input', link: 'annonce-other-input', name: 'Autres' }
+      { price: 'default-gites-price-input', link: 'annonce-gites-input', name: 'Gîtes' }
     ];
     
     platforms.forEach(({ price, link, name }) => {
@@ -504,7 +504,7 @@ class ValidationManager {
     const minPlatformPrice = directPrice * 1.10; // +10%
     let hasError = false;
     
-    ['airbnb', 'booking', 'gites', 'other'].forEach(platform => {
+    ['airbnb', 'booking', 'gites'].forEach(platform => {
       const input = document.getElementById(`default-${platform}-price-input`);
       if (input) {
         const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
