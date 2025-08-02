@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V16
+// Gestionnaire de la page de modification de logement - V15 V16 extras
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2088,6 +2088,7 @@ setupExtraListeners(blocElement, index) {
   const priceInput = blocElement.querySelector('[data-extra="price"]');
   
   if (emojiInput) {
+    emojiInput.readOnly = true;
     emojiInput.addEventListener('input', (e) => {
       this.extras[index].emoji = e.target.value;
       this.enableButtons();
@@ -2111,12 +2112,12 @@ setupExtraListeners(blocElement, index) {
       this.enableButtons();
     });
     
-    // Formatage au blur : ajouter €/jour
+    // Formatage au blur : ajouter €
     priceInput.addEventListener('blur', function() {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
         this.setAttribute('data-raw-value', value);
-        this.value = value + '€/jour';
+        this.value = value + '€';
       }
     });
     
@@ -2238,7 +2239,7 @@ generateExtrasString() {
   return this.extras
     .filter(extra => extra.name && extra.price) // Ignorer les extras incomplets
     .map(extra => {
-      return `${extra.emoji}${extra.name}${extra.price}€/jour`;
+      return `${extra.emoji}${extra.name}${extra.price}€`;
     })
     .join(', ');
 }
