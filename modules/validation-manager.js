@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V5
+// Gestionnaire de validation pour la page modification de logement V4 V5 modif gites
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -142,7 +142,7 @@ class ValidationManager {
             coherence: "Un prix Booking nécessite un lien d'annonce (et inversement)"
           }
         },
-        'annonce-gites-input': {
+        'annonce-other-input': {
           required: false,
           customValidation: 'coherencePrixLien',
           messages: {
@@ -323,7 +323,7 @@ class ValidationManager {
     const platforms = [
       { price: 'default-airbnb-price-input', link: 'annonce-airbnb-input', name: 'Airbnb' },
       { price: 'default-booking-price-input', link: 'annonce-booking-input', name: 'Booking' },
-      { price: 'default-gites-price-input', link: 'annonce-gites-input', name: 'Gîtes' }
+      { price: 'default-other-price-input', link: 'annonce-other-input', name: 'Autres' }
     ];
     
     platforms.forEach(({ price, link, name }) => {
@@ -504,7 +504,7 @@ class ValidationManager {
     const minPlatformPrice = directPrice * 1.10; // +10%
     let hasError = false;
     
-    ['airbnb', 'booking', 'gites'].forEach(platform => {
+    ['airbnb', 'booking', 'other'].forEach(platform => {
       const input = document.getElementById(`default-${platform}-price-input`);
       if (input) {
         const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
@@ -783,7 +783,7 @@ class ValidationManager {
     const minPlatformPrice = directPrice * 1.10; // +10%
     let hasError = false;
     
-    ['airbnb', 'booking', 'gites', 'other'].forEach(platform => {
+    ['airbnb', 'booking', 'other'].forEach(platform => {
       const input = document.getElementById(`season-${platform}-price-input${suffix}`);
       if (input) {
         const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
