@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V15 gites
+// Gestionnaire de la page de modification de logement - V15 V16
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -209,6 +209,12 @@ setupTimeFormatters() {
   setupSuffixFormatters() {
    // Euros
     document.querySelectorAll('[data-suffix="euro"], [data-suffix="euro-nuit"]').forEach(input => {
+      // NOUVEAU : Mettre à jour data-raw-value aussi sur input
+      input.addEventListener('input', function() {
+        const value = this.value.replace(/[^\d]/g, '');
+        this.setAttribute('data-raw-value', value || '0');
+      });
+      
       input.addEventListener('blur', function() {
         const value = this.value.replace(/[^\d]/g, '');
         if (value) {
