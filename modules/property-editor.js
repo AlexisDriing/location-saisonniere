@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V15
+// Gestionnaire de la page de modification de logement - V15 V15 oui
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -821,11 +821,11 @@ validateAndAddSeason() {
   const booking = parseInt(seasonData.bookingPrice) || 0;
   const other = parseInt(seasonData.otherPrice) || 0;
   
-  if (airbnb > 0 || booking > 0 || gites > 0) {
+  if (airbnb > 0 || booking > 0 || other > 0) {
     newSeason.platformPrices = {
       airbnb: airbnb,
       booking: booking,
-      gites: other
+      other: other
     };
   }
   
