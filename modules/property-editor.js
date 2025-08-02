@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V16 extras
+// Gestionnaire de la page de modification de logement - V15 V16 extras V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2089,6 +2089,7 @@ setupExtraListeners(blocElement, index) {
   
   if (emojiInput) {
     emojiInput.readOnly = true;
+    emojiInput.style.cursor = 'pointer';
     emojiInput.addEventListener('input', (e) => {
       this.extras[index].emoji = e.target.value;
       this.enableButtons();
