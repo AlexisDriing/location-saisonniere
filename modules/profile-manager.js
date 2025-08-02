@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V8 images
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V9
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -109,20 +109,25 @@ class ProfileManager {
   displayProperty(property) {
   console.log('🏠 Affichage du logement:', property);
   
-  // 1. Afficher le bon bloc selon le statut
-  this.showCorrectStatusBlock(property);
-  
-  // 2. Remplir les informations du logement
-  this.fillPropertyInfo(property);
-  
-  // 3. Remplir les images
-  this.fillPropertyImages(property);
-  
-  // 4. Configurer le bouton modifier
-  this.setupModifyButton(property);
-
-  this.setupDisableButton(property);
-}
+    // 1. Afficher le bon bloc selon le statut
+    this.showCorrectStatusBlock(property);
+    
+    // 2. Remplir les informations du logement
+    this.fillPropertyInfo(property);
+    
+    // 3. Remplir les images SEULEMENT pour certains statuts
+    const status = this.getPropertyStatus(property);
+    if (status === 'verified' || status === 'published') {
+      // Remplir les images seulement si on a des vraies images du CMS
+      this.fillPropertyImages(property);
+    }
+    
+    // 4. Configurer le bouton modifier
+    this.setupModifyButton(property);
+    
+    // 5. Désactiver le bouton si pending-none
+    this.setupDisableButton(property);
+  }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
 setupModifyButton(property) {
