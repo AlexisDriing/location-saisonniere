@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V15 oui
+// Gestionnaire de la page de modification de logement - V15 V15 gites
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -346,7 +346,7 @@ setupTimeFormatters() {
         platformPrices: {
           airbnb: 0,
           booking: 0,
-          gites: 0
+          other: 0
         }
       },
       platformPricing: {
@@ -1084,7 +1084,7 @@ removeSeason(index) {
   
   // Prix plateformes (optionnels)
   if (this.pricingData.defaultPricing && this.pricingData.defaultPricing.platformPrices) {
-    const platforms = ['airbnb', 'booking', 'gites'];
+    const platforms = ['airbnb', 'booking', 'other'];
     platforms.forEach(platform => {
       const input = document.getElementById(`default-${platform}-price-input`);
       if (input) {
@@ -2507,7 +2507,7 @@ setupDefaultPricingListeners() {
   }
   
   // Prix plateformes
-  const platforms = ['airbnb', 'booking', 'gites'];
+  const platforms = ['airbnb', 'booking', 'other'];
   platforms.forEach(platform => {
     const input = document.getElementById(`default-${platform}-price-input`);
     if (input) {
@@ -2736,7 +2736,7 @@ setBlockState(element, isActive) {
   }
   
   // Prix plateformes
-  const platforms = ['airbnb', 'booking', 'gites'];
+  const platforms = ['airbnb', 'booking', 'other'];
   let hasPlatformPrices = false;
   
   platforms.forEach(platform => {
