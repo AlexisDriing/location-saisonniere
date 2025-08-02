@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V6 annonce gites
+// Gestionnaire de validation pour la page modification de logement V4 V7
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -48,7 +48,7 @@ class ValidationManager {
           },
           'mode-location': {
             required: true,
-            type: 'radio',
+            type: 'radio-group',
             messages: { empty: "Le mode de location est obligatoire" }
           },
           'code-enregistrement-input': {
