@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V16 extras V2
+// Gestionnaire de la page de modification de logement - V15 V17 pending
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3067,6 +3067,14 @@ setBlockState(element, isActive) {
       updates[key] = currentValues[key];
     }
   });
+
+  const currentStatus = this.propertyData.verification_status || 'pending-none';
+  if (currentStatus === 'pending-none') {
+    // C'est le premier enregistrement avec validation réussie
+    updates['verification_status'] = 'pending-verif';
+    console.log('🔄 Changement de statut: pending-none → pending-verif');
+  }
+    
   // NOUVEAU : Comparaison manuelle pour taille_maison
   if (nouvelleTailleMaison !== this.initialValues.taille_maison) {
     updates.taille_maison = nouvelleTailleMaison;
