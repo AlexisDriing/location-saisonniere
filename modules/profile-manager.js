@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V8
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V8 modifs
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -174,6 +174,7 @@ setupDisableButton(property) {
     // Masquer tous les blocs d'état (vos IDs réels)
     const allStatusBlocks = [
       'pending-none',
+      'pending-verif',
       'pending', 
       'verified',
       'published' // Corrigé
@@ -207,7 +208,7 @@ setupDisableButton(property) {
     console.log('📊 Statut du champ CMS verification_status:', status);
     
     // Vérifier que le statut existe et correspond à un de vos blocs
-    const validStatuses = ['pending-none', 'pending', 'verified', 'published'];
+    const validStatuses = ['pending-none', 'pending-verif', 'pending', 'verified', 'published'];
     
     if (validStatuses.includes(status)) {
       return status;
@@ -290,7 +291,7 @@ setupDisableButton(property) {
     console.log('📭 Aucun logement trouvé');
     
     // Masquer tous les blocs de statut
-    const allStatusBlocks = ['pending-none', 'pending', 'verified', 'published'];
+    const allStatusBlocks = ['pending-none', 'pending-verif', 'pending', 'verified', 'published'];
     allStatusBlocks.forEach(blockId => {
       const block = document.getElementById(blockId);
       if (block) {
