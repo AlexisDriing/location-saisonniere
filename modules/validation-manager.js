@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V5 modif gites
+// Gestionnaire de validation pour la page modification de logement V4 V6 annonce gites
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -142,7 +142,7 @@ class ValidationManager {
             coherence: "Un prix Booking nécessite un lien d'annonce (et inversement)"
           }
         },
-        'annonce-other-input': {
+        'annonce-gites-input': {
           required: false,
           customValidation: 'coherencePrixLien',
           messages: {
@@ -323,7 +323,7 @@ class ValidationManager {
     const platforms = [
       { price: 'default-airbnb-price-input', link: 'annonce-airbnb-input', name: 'Airbnb' },
       { price: 'default-booking-price-input', link: 'annonce-booking-input', name: 'Booking' },
-      { price: 'default-other-price-input', link: 'annonce-other-input', name: 'Autres' }
+      { price: 'default-other-price-input', link: 'annonce-gites-input', name: 'autre plateforme' }
     ];
     
     platforms.forEach(({ price, link, name }) => {
