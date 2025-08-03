@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V17 tags
+// Gestionnaire de la page de modification de logement - V15 V18
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2547,17 +2547,25 @@ setupDefaultPricingListeners() {
     const input = document.getElementById(`default-${platform}-price-input`);
     if (input) {
       input.addEventListener('input', () => {
+        // IMPORTANT : Mettre à jour data-raw-value immédiatement
+        const cleanValue = input.value.replace(/[^\d]/g, '');
+        input.setAttribute('data-raw-value', cleanValue || '');
+        
         this.updateDefaultPricing();
         this.enableButtons();
       });
       input.addEventListener('blur', () => {
-      if (this.validationManager) {
-        // Valider le champ individuel
-        this.validationManager.validateFieldOnBlur(`default-${platform}-price-input`);
-        // Valider aussi la règle des 10%
-        this.validationManager.validatePlatformPrices();
-      }
-    });
+        // Double vérification au blur
+        const cleanValue = input.value.replace(/[^\d]/g, '');
+        input.setAttribute('data-raw-value', cleanValue || '');
+        
+        if (this.validationManager) {
+          // Valider le champ individuel
+          this.validationManager.validateFieldOnBlur(`default-${platform}-price-input`);
+          // Valider aussi la règle des 10%
+          this.validationManager.validatePlatformPrices();
+        }
+      });
     }
   });
 }
@@ -2775,21 +2783,31 @@ setBlockState(element, isActive) {
   let hasPlatformPrices = false;
   
   platforms.forEach(platform => {
-  const input = document.getElementById(`default-${platform}-price-input`);
-  if (input) {
-    const value = parseInt(this.getRawValue(input)) || 0;
-    if (value > 0) {
-      if (!this.pricingData.defaultPricing.platformPrices) {
-        this.pricingData.defaultPricing.platformPrices = {};
+    const input = document.getElementById(`default-${platform}-price-input`);
+    if (input) {
+      // IMPORTANT : Forcer la récupération depuis data-raw-value
+      let value = input.getAttribute('data-raw-value');
+      
+      // Si pas de data-raw-value, extraire depuis la valeur actuelle
+      if (!value && input.value) {
+        value = input.value.replace(/[^\d]/g, '');
       }
-      this.pricingData.defaultPricing.platformPrices[platform] = value;
-      hasPlatformPrices = true;
-    } else if (this.pricingData.defaultPricing.platformPrices && this.pricingData.defaultPricing.platformPrices[platform]) {
-      // 🆕 Si la valeur est 0 ou vide, supprimer la plateforme
-      delete this.pricingData.defaultPricing.platformPrices[platform];
+      
+      const numericValue = parseInt(value) || 0;
+      
+      if (numericValue > 0) {
+        if (!this.pricingData.defaultPricing.platformPrices) {
+          this.pricingData.defaultPricing.platformPrices = {};
+        }
+        this.pricingData.defaultPricing.platformPrices[platform] = numericValue;
+        hasPlatformPrices = true;
+        console.log(`✅ Prix ${platform} mis à jour: ${numericValue}€`);
+      } else if (this.pricingData.defaultPricing.platformPrices && this.pricingData.defaultPricing.platformPrices[platform]) {
+        // 🆕 Si la valeur est 0 ou vide, supprimer la plateforme
+        delete this.pricingData.defaultPricing.platformPrices[platform];
+      }
     }
-  }
-});
+  });
   
   // Si aucun prix plateforme, supprimer l'objet
   if (!hasPlatformPrices && this.pricingData.defaultPricing.platformPrices) {
@@ -2919,9 +2937,20 @@ setBlockState(element, isActive) {
     return;
   }
     
-  // 🆕 NOUVEAU : Forcer le blur sur l'input actif pour capturer sa valeur
+ // 🆕 NOUVEAU : Sauvegarder la valeur brute AVANT le blur
   const activeElement = document.activeElement;
+  let activeElementValue = null;
+  let activeElementId = null;
+  
   if (activeElement && activeElement.tagName === 'INPUT') {
+    activeElementId = activeElement.id;
+    // Capturer la valeur brute AVANT le blur
+    if (activeElement.hasAttribute('data-suffix')) {
+      activeElementValue = activeElement.value.replace(/[^\d]/g, '');
+      // Forcer la mise à jour de data-raw-value
+      activeElement.setAttribute('data-raw-value', activeElementValue);
+    }
+    
     activeElement.blur();
     // Petit délai pour laisser le blur se terminer
     await new Promise(resolve => setTimeout(resolve, 50));
