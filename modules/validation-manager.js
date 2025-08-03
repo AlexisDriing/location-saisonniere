@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V7 hmmm
+// Gestionnaire de validation pour la page modification de logement V4 V8
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -53,10 +53,10 @@ class ValidationManager {
           },
           'code-enregistrement-input': {
             required: true,
-            pattern: /^\d{13}$/,
+            pattern: /^[A-Z0-9]{13}$/,
             messages: {
               empty: "Le code d'enregistrement est obligatoire",
-              invalid: "Le code doit contenir exactement 13 chiffres"
+              invalid: "Le code doit contenir exactement 13 caractères (lettres et chiffres)"
             }
           }
         },
