@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V18 szaisons
+// Gestionnaire de la page de modification de logement - V15 V18 modificiations aller
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1642,10 +1642,23 @@ setupDiscountListeners(blocElement, index) {
     });
   }
   
+  // Version simplifiée :
   if (percentageInput) {
     // Récupérer la valeur en enlevant le %
     percentageInput.addEventListener('input', (e) => {
-      const value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
+      let value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
+      
+      // Limiter entre 1 et 100 si une valeur est entrée
+      if (value > 0) {
+        if (value > 100) {
+          value = 100;
+          e.target.value = '100';
+        } else if (value < 1) {
+          value = 1;
+          e.target.value = '1';
+        }
+      }
+      
       this.pricingData.discounts[index].percentage = value;
       this.enableButtons();
     });
@@ -1655,10 +1668,6 @@ setupDiscountListeners(blocElement, index) {
       const value = this.value.replace(/[^\d]/g, '');
       if (value) {
         this.value = value + ' %';
-      }
-      // 🆕 NOUVEAU : Ajouter la validation
-      if (window.propertyEditor && window.propertyEditor.validationManager) {
-        window.propertyEditor.validationManager.validateFieldOnBlur(this.id);
       }
     });
     
@@ -2336,34 +2345,44 @@ setupFieldListeners() {
 
   // NOUVEAU : Listeners pour caution et acompte avec synchronisation JSON
   const cautionAcompteIds = ['caution-input', 'acompte-input'];
-  cautionAcompteIds.forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.addEventListener('input', (e) => {
-        // Récupérer la valeur SANS suffixe
-        const cleanValue = e.target.value.replace(/[^\d]/g, '');
-        const rawValue = parseInt(cleanValue) || 0;
-        
-        // Stocker immédiatement dans data-raw-value
-        e.target.setAttribute('data-raw-value', rawValue);
-        
-        // Mettre à jour le JSON pricing
-        if (id === 'caution-input') {
-          if (this.pricingData) {
-            this.pricingData.caution = rawValue;
-            console.log('🔄 Caution mise à jour:', rawValue);
-          }
-        } else if (id === 'acompte-input') {
-          if (this.pricingData) {
-            this.pricingData.acompte = rawValue;
-            console.log('🔄 Acompte mise à jour:', rawValue);
-          }
+  // Version simplifiée :
+cautionAcompteIds.forEach(id => {
+  const input = document.getElementById(id);
+  if (input) {
+    input.addEventListener('input', (e) => {
+      // Récupérer la valeur SANS suffixe
+      const cleanValue = e.target.value.replace(/[^\d]/g, '');
+      let rawValue = parseInt(cleanValue) || 0;
+      
+      // Limitation pour l'acompte (1-100%)
+      if (id === 'acompte-input' && rawValue > 0) {
+        if (rawValue > 100) {
+          rawValue = 100;
+          e.target.value = '100';
+        } else if (rawValue < 1) {
+          rawValue = 1;
+          e.target.value = '1';
         }
-        
-        this.enableButtons();
-      });
-    }
-  });
+      }
+      
+      // Stocker immédiatement dans data-raw-value
+      e.target.setAttribute('data-raw-value', rawValue);
+      
+      // Mettre à jour le JSON pricing
+      if (id === 'caution-input') {
+        if (this.pricingData) {
+          this.pricingData.caution = rawValue;
+        }
+      } else if (id === 'acompte-input') {
+        if (this.pricingData) {
+          this.pricingData.acompte = rawValue;
+        }
+      }
+      
+      this.enableButtons();
+    });
+  }
+});
   
   // NOUVEAU : Listeners pour les checkboxes options
   const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
@@ -2466,24 +2485,27 @@ validateCodeEnregistrement(input) {
   const value = input.value.trim();
   if (value === '') return true; // Champ vide OK
   
-  // Garder seulement les chiffres
-  const digitsOnly = value.replace(/\D/g, '');
+  // Garder seulement les caractères alphanumériques (lettres et chiffres)
+  const alphanumOnly = value.replace(/[^a-zA-Z0-9]/g, '');
   
-  if (digitsOnly !== value) {
-    input.value = digitsOnly;
+  if (alphanumOnly !== value) {
+    input.value = alphanumOnly;
   }
   
-  if (digitsOnly.length > 13) {
-    input.value = digitsOnly.substring(0, 13);
+  // Convertir en majuscules pour uniformité
+  input.value = input.value.toUpperCase();
+  
+  if (input.value.length > 13) {
+    input.value = input.value.substring(0, 13);
   }
   
-  if (digitsOnly.length === 13) {
+  if (input.value.length === 13) {
     input.style.borderColor = '';
     input.setCustomValidity('');
     return true;
-  } else if (digitsOnly.length > 0) {
+  } else if (input.value.length > 0) {
     input.style.borderColor = '#ff8c00';
-    input.setCustomValidity(`${13 - digitsOnly.length} chiffres manquants`);
+    input.setCustomValidity(`${13 - input.value.length} caractères manquants`);
     return false;
   }
 }
