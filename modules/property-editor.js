@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V18 modificiations aller
+// Gestionnaire de la page de modification de logement - V15 V19
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -48,6 +48,7 @@ class PropertyEditor {
     this.initDiscountManagement();
     this.initIcalManagement();
     this.initExtrasManagement();
+    this.updatePlatformBlocksVisibility();
   }
   this.validationManager = new ValidationManager(this);
     
@@ -262,6 +263,58 @@ setupTimeFormatters() {
     }
     return null;
   }
+  
+  getActivePlatforms() {
+    const activePlatforms = [];
+    
+    // Vérifier chaque plateforme
+    const platforms = [
+      { id: 'airbnb', priceId: 'default-airbnb-price-input', linkId: 'annonce-airbnb-input' },
+      { id: 'booking', priceId: 'default-booking-price-input', linkId: 'annonce-booking-input' },
+      { id: 'other', priceId: 'default-other-price-input', linkId: 'annonce-gites-input' }
+    ];
+    
+    platforms.forEach(({ id, priceId, linkId }) => {
+      const priceInput = document.getElementById(priceId);
+      const linkInput = document.getElementById(linkId);
+      
+      const price = parseInt(this.getRawValue(priceInput)) || 0;
+      const link = linkInput?.value?.trim() || '';
+      
+      // La plateforme est active si elle a un prix ET un lien
+      if (price > 0 && link !== '') {
+        activePlatforms.push(id);
+      }
+    });
+    
+    return activePlatforms;
+  }
+  
+  updatePlatformBlocksVisibility() {
+    const activePlatforms = this.getActivePlatforms();
+    
+    // Pour les deux modales (add et edit)
+    ['add', 'edit'].forEach(modalType => {
+      const mainBloc = document.getElementById(`bloc-plateforme-${modalType}`);
+      
+      if (activePlatforms.length === 0) {
+        // Aucune plateforme active : masquer le bloc entier
+        if (mainBloc) mainBloc.style.display = 'none';
+      } else {
+        // Au moins une plateforme active : afficher le bloc principal
+        if (mainBloc) mainBloc.style.display = 'block';
+        
+        // Gérer chaque plateforme individuellement
+        ['airbnb', 'booking', 'other'].forEach(platform => {
+          const platformBloc = document.getElementById(`bloc-${platform}-${modalType}`);
+          if (platformBloc) {
+            platformBloc.style.display = activePlatforms.includes(platform) ? 'flex' : 'none';
+          }
+        });
+      }
+    });
+  }
+  
   
   prefillForm() {
     console.log('📝 Pré-remplissage des champs...');
@@ -671,9 +724,7 @@ setupTimeFormatters() {
   }
 }
 
-  // Méthode pour ouvrir la modal (vous l'avez déjà, mais au cas où)
   openAddSeasonModal() {
-    
     // Vérifier qu'on a moins de 4 saisons
     if (this.pricingData.seasons.length >= 4) {
       alert('Maximum 4 saisons autorisées');
@@ -682,6 +733,9 @@ setupTimeFormatters() {
     
     // Réinitialiser les champs de la modal
     this.resetSeasonModal();
+    
+    // NOUVEAU : Mettre à jour la visibilité des blocs plateformes
+    this.updatePlatformBlocksVisibility();
     
     // Configurer les listeners de validation
     this.setupSeasonValidationListeners(false);
@@ -705,6 +759,8 @@ openEditSeasonModal(seasonIndex) {
     return;
   }
 
+  this.updatePlatformBlocksVisibility();
+  
   // NOUVEAU : Nettoyer les erreurs de la modal de modification uniquement
   if (this.validationManager) {
     const editModalFields = [
@@ -2313,10 +2369,20 @@ setupFieldListeners() {
         } else if (field.id === 'telephone-input') {
           this.formatTelephone(input);
         }
-        // PAS BESOIN d'ajouter de validation pour annonce-airbnb etc.
+        
+        // NOUVEAU : Si c'est un lien d'annonce, mettre à jour la visibilité
+        if (['annonce-airbnb-input', 'annonce-booking-input', 'annonce-gites-input'].includes(field.id)) {
+          this.updatePlatformBlocksVisibility();
+        }
+        
         this.enableButtons();
       });
       input.addEventListener('blur', () => {
+        // NOUVEAU : Si c'est un lien d'annonce, mettre à jour la visibilité
+        if (['annonce-airbnb-input', 'annonce-booking-input', 'annonce-gites-input'].includes(field.id)) {
+          this.updatePlatformBlocksVisibility();
+        }
+        
         if (this.validationManager) {
           this.validationManager.validateFieldOnBlur(field.id);
         }
@@ -2571,15 +2637,21 @@ setupDefaultPricingListeners() {
       input.addEventListener('input', () => {
         // IMPORTANT : Mettre à jour data-raw-value immédiatement
         const cleanValue = input.value.replace(/[^\d]/g, '');
-        input.setAttribute('data-raw-value', cleanValue || '');
+        input.setAttribute('data-raw-value', cleanValue || '0');
         
         this.updateDefaultPricing();
         this.enableButtons();
+        
+        // NOUVEAU : Mettre à jour la visibilité des blocs
+        this.updatePlatformBlocksVisibility();
       });
       input.addEventListener('blur', () => {
         // Double vérification au blur
         const cleanValue = input.value.replace(/[^\d]/g, '');
-        input.setAttribute('data-raw-value', cleanValue || '');
+        input.setAttribute('data-raw-value', cleanValue || '0');
+        
+        // NOUVEAU : Mettre à jour la visibilité des blocs
+        this.updatePlatformBlocksVisibility();
         
         if (this.validationManager) {
           // Valider le champ individuel
