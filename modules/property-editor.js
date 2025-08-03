@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V18
+// Gestionnaire de la page de modification de logement - V15 V18 szaisons
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -494,7 +494,7 @@ setupTimeFormatters() {
       
       if (discounts && discounts.length > 0) {
         const applicableDiscounts = discounts.filter(discount => discount.nights <= 7);
-
+  
         if (applicableDiscounts.length > 0) {
           // Trier par nombre de nuits décroissant pour prendre la plus élevée
           applicableDiscounts.sort((a, b) => b.nights - a.nights);
@@ -503,10 +503,10 @@ setupTimeFormatters() {
           const weekDiscount = applicableDiscounts[0];
           weekPrice = weekPrice * (1 - weekDiscount.percentage / 100);
         }
+      }
       
       return Math.round(weekPrice);
-    }
-  } 
+  }
   
   setupSeasonButtons() {
   // Bouton ajouter saison
