@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V19
+// Gestionnaire de la page de modification de logement - V15 V19 caution
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -445,7 +445,7 @@ setupTimeFormatters() {
       },
       discounts: [],
       capacity: 0,
-      caution: 0,
+      caution: '',
       acompte: 0
     };
   }
