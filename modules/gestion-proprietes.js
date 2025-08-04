@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V4
+// Gestionnaire principal des propriétés pour la page liste - V5 remove
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -50,7 +50,7 @@ class PropertyManager {
     if (this.templateElement) {
       // Cloner le template et cacher l'original
       this.templateClone = this.templateElement.cloneNode(true);
-      this.templateElement.style.display = 'none';
+      this.templateElement.remove();
     }
     
     // Initialiser les écouteurs d'événements pour les filtres
