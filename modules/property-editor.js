@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V19 caution
+// Gestionnaire de la page de modification de logement - V15 V19 caution V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1306,7 +1306,7 @@ prefillComplexFields() {
 
   prefillCautionAcompte() {  
   // Récupérer les valeurs depuis le JSON pricing
-  const caution = this.pricingData?.caution || 0;
+  const caution = this.pricingData?.caution || '';
   const acompte = this.pricingData?.acompte || 0;
   
   // Remplir les inputs
