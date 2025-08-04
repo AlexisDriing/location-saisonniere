@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V5 remove
+// Gestionnaire principal des propriétés pour la page liste - V6
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -50,7 +50,8 @@ class PropertyManager {
     if (this.templateElement) {
       // Cloner le template et cacher l'original
       this.templateClone = this.templateElement.cloneNode(true);
-      this.templateElement.remove();
+      this.templateElement.style.display = 'none';
+      this.templateElement.setAttribute('data-template', 'true');
     }
     
     // Initialiser les écouteurs d'événements pour les filtres
@@ -708,7 +709,7 @@ if (propData.image) {
 
 // Image de l'hôte
 if (propData.host_image) {
-  const hostImageElement = newCard.querySelector('.image-hote-main');
+  const hostImageElement = newCard.querySelector('.housing-item:not([data-template]) .image-hote-main');
   if (hostImageElement) {
     hostImageElement.src = propData.host_image;
   }
