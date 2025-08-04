@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V8
+// Gestionnaire de validation pour la page modification de logement V4 V9 paiement error
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -808,6 +808,17 @@ class ValidationManager {
   
   // Afficher une erreur sur un champ
   showFieldError(fieldId, message) {
+    if (fieldId === 'payment-methods') {
+      const paymentGroup = document.querySelector('[data-group="payment-methods"]');
+      if (paymentGroup) {
+        let errorDiv = paymentGroup.nextElementSibling;
+        if (errorDiv && errorDiv.classList.contains('error')) {
+          errorDiv.textContent = message;
+          errorDiv.classList.add('show');
+        }
+      }
+      return;
+    }
     const field = document.getElementById(fieldId);
     if (!field) return;
     
@@ -847,6 +858,17 @@ class ValidationManager {
 
   // Masquer l'erreur d'un champ
   hideFieldError(fieldId) {
+    if (fieldId === 'payment-methods') {
+      const paymentGroup = document.querySelector('[data-group="payment-methods"]');
+      if (paymentGroup) {
+        let errorDiv = paymentGroup.nextElementSibling;
+        if (errorDiv && errorDiv.classList.contains('error')) {
+          errorDiv.textContent = '';
+          errorDiv.classList.remove('show');
+        }
+      }
+      return;
+    }
     const field = document.getElementById(fieldId);
     if (!field) return;
     
