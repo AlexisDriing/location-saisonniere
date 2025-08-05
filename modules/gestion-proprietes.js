@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V7
+// Gestionnaire principal des propriétés pour la page liste - V8
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -76,84 +76,68 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
-  // 🆕 NOUVELLE MÉTHODE : Nettoyer le template de toute donnée résiduelle
-    cleanTemplate(template) {
-      console.log('🧹 Nettoyage du template en cours...');
+  cleanTemplate(template) {
+    console.log('🧹 Nettoyage du template en cours...');
+    
+    // Nettoyer TOUTES les images de TOUTES les façons possibles
+    const allImages = template.querySelectorAll('img');
+    allImages.forEach(img => {
+      // Supprimer complètement les attributs d'image
+      img.removeAttribute('src');
+      img.removeAttribute('srcset');
+      img.removeAttribute('data-src');  // Au cas où lazy loading
+      img.removeAttribute('style');
       
-      // Nettoyer toutes les images principales
-      const mainImages = template.querySelectorAll('.image-main');
-      mainImages.forEach(img => {
-        img.src = '';
-        img.style.backgroundImage = '';
-        // Optionnel : mettre une image placeholder
-        // img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3C/svg%3E';
-      });
-      
-      // Nettoyer les images d'hôte
-      const hostImages = template.querySelectorAll('.image-hote-main');
-      hostImages.forEach(img => {
-        img.src = '';
-        img.style.backgroundImage = '';
-      });
-      
-      // Nettoyer TOUTES les autres images (sécurité supplémentaire)
-      const allOtherImages = template.querySelectorAll('img');
-      allOtherImages.forEach(img => {
-        // Si ce n'est pas déjà nettoyé
-        if (img.src && !img.classList.contains('image-main') && !img.classList.contains('image-hote-main')) {
-          img.src = '';
-          img.style.backgroundImage = '';
+      // Alternative : mettre un placeholder transparent
+      // img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    });
+    
+    // Nettoyer aussi tout élément avec background-image
+    template.querySelectorAll('*').forEach(el => {
+      if (el.style.backgroundImage) {
+        el.style.backgroundImage = '';
+      }
+    });
+    
+    // Nettoyer les liens qui pourraient contenir des hrefs
+    const links = template.querySelectorAll('a');
+    links.forEach(link => {
+      link.href = '#';
+      link.removeAttribute('data-property-id');
+    });
+    
+    // Nettoyer les textes
+    const textSelectors = [
+      '.text-nom-logement-card',
+      '.adresse', 
+      '.texte-prix',
+      '.text-total',
+      '.pourcentage',
+      '.distance',
+      '.bloc-h-te-main div:last-child'
+    ];
+    
+    textSelectors.forEach(selector => {
+      const elements = template.querySelectorAll(selector);
+      elements.forEach(el => {
+        el.textContent = '';
+        if (selector === '.text-total' || selector === '.pourcentage' || selector === '.distance') {
+          el.style.display = 'none';
         }
       });
-      
-      // Nettoyer les textes pour un template vraiment neutre
-      const textElements = {
-        '.text-nom-logement-card': '',
-        '.adresse': '',
-        '.texte-prix': '',
-        '.text-total': '',
-        '.pourcentage': '',
-        '.distance': '',
-        '[data-voyageurs]': '',
-        '.bloc-h-te-main div:last-child': ''
-      };
-      
-      Object.entries(textElements).forEach(([selector, defaultValue]) => {
-        const elements = template.querySelectorAll(selector);
-        elements.forEach(el => {
-          el.textContent = defaultValue;
-          // Cacher les éléments qui doivent être cachés par défaut
-          if (selector === '.text-total' || selector === '.pourcentage' || selector === '.distance') {
-            el.style.display = 'none';
-          }
-        });
+    });
+    
+    // Nettoyer tous les attributs data-*
+    template.querySelectorAll('*[data-property-id], *[data-mode-location], *[data-equipements], *[data-option-accueil], *[data-json-tarifs-line], *[data-voyageurs]').forEach(el => {
+      Array.from(el.attributes).forEach(attr => {
+        if (attr.name.startsWith('data-')) {
+          el.removeAttribute(attr.name);
+        }
       });
-      
-      // Nettoyer les attributs data
-      const dataAttributes = [
-        'data-property-id',
-        'data-mode-location', 
-        'data-equipements',
-        'data-option-accueil',
-        'data-json-tarifs-line',
-        'data-voyageurs'
-      ];
-      
-      dataAttributes.forEach(attr => {
-        const elements = template.querySelectorAll(`[${attr}]`);
-        elements.forEach(el => {
-          el.removeAttribute(attr);
-        });
-      });
-      
-      // Nettoyer le href du lien
-      const links = template.querySelectorAll('.lien-logement');
-      links.forEach(link => {
-        link.href = '#';
-      });
-      
-      console.log('✅ Template nettoyé avec succès');
-    }
+    });
+    
+    console.log('✅ Template nettoyé avec succès');
+}
 
   
   // Configuration du nettoyage automatique du cache
@@ -783,11 +767,13 @@ if (priceElement && propData.pricing_data) {
     // Image principale - Webflow utilise img + background-image
 const imageElement = newCard.querySelector('.image-main');
 if (imageElement) {
-  // 🆕 TOUJOURS nettoyer d'abord, puis remplir si on a des données
-  imageElement.src = '';
+  // D'ABORD nettoyer complètement
+  imageElement.removeAttribute('src');
+  imageElement.removeAttribute('srcset');
   imageElement.style.backgroundImage = '';
   
-  if (propData.image) {
+  // PUIS ajouter la nouvelle image si elle existe
+  if (propData.image && propData.image !== '' && propData.image.startsWith('http')) {
     imageElement.src = propData.image;
     imageElement.style.backgroundImage = `url(${propData.image})`;
   }
