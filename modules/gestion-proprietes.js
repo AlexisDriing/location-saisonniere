@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V5
+// Gestionnaire principal des propriétés pour la page liste - V6
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -50,7 +50,6 @@ class PropertyManager {
     if (this.templateElement) {
       // Cloner le template et cacher l'original
       this.templateClone = this.templateElement.cloneNode(true);
-      this.cleanTemplateImages();
       this.templateElement.style.display = 'none';
     }
     
@@ -72,23 +71,6 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
-  cleanTemplateImages() {
-      // Nettoyer l'image principale
-      const mainImage = this.templateClone.querySelector('.image-main');
-      if (mainImage) {
-        mainImage.src = '';
-        mainImage.style.backgroundImage = '';
-      }
-      
-      // Nettoyer l'image de l'hôte
-      const hostImage = this.templateClone.querySelector('.image-hote-main');
-      if (hostImage) {
-        hostImage.src = '';
-      }
-      
-      console.log('✅ Images du template nettoyées');
-    }
-  
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
     // Nettoyer le cache toutes les 5 minutes
@@ -714,21 +696,28 @@ if (priceElement && propData.pricing_data) {
     }
     
     // Image principale - Webflow utilise img + background-image
-if (propData.image) {
-  const imageElement = newCard.querySelector('.image-main');
-  if (imageElement) {
+const imageElement = newCard.querySelector('.image-main');
+if (imageElement) {
+  if (propData.image) {
     // Mettre à jour le src de l'img
     imageElement.src = propData.image;
     // ET aussi le background-image
     imageElement.style.backgroundImage = `url(${propData.image})`;
+  } else {
+    // IMPORTANT : Vider l'image si pas de données
+    imageElement.src = '';
+    imageElement.style.backgroundImage = '';
   }
 }
 
 // Image de l'hôte
-if (propData.host_image) {
-  const hostImageElement = newCard.querySelector('.image-hote-main');
-  if (hostImageElement) {
+const hostImageElement = newCard.querySelector('.image-hote-main');
+if (hostImageElement) {
+  if (propData.host_image) {
     hostImageElement.src = propData.host_image;
+  } else {
+    // IMPORTANT : Vider l'image si pas de données
+    hostImageElement.src = '';
   }
 }
     
