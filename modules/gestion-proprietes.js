@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V6
+// Gestionnaire principal des propriétés pour la page liste - V7
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -50,6 +50,11 @@ class PropertyManager {
     if (this.templateElement) {
       // Cloner le template et cacher l'original
       this.templateClone = this.templateElement.cloneNode(true);
+      
+      // 🆕 NOUVEAU : Nettoyer le template pour éviter la contamination
+      this.cleanTemplate(this.templateClone);
+      console.log('🧹 Template nettoyé pour éviter la contamination des images');
+      
       this.templateElement.style.display = 'none';
     }
     
@@ -71,6 +76,86 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
+  // 🆕 NOUVELLE MÉTHODE : Nettoyer le template de toute donnée résiduelle
+    cleanTemplate(template) {
+      console.log('🧹 Nettoyage du template en cours...');
+      
+      // Nettoyer toutes les images principales
+      const mainImages = template.querySelectorAll('.image-main');
+      mainImages.forEach(img => {
+        img.src = '';
+        img.style.backgroundImage = '';
+        // Optionnel : mettre une image placeholder
+        // img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3C/svg%3E';
+      });
+      
+      // Nettoyer les images d'hôte
+      const hostImages = template.querySelectorAll('.image-hote-main');
+      hostImages.forEach(img => {
+        img.src = '';
+        img.style.backgroundImage = '';
+      });
+      
+      // Nettoyer TOUTES les autres images (sécurité supplémentaire)
+      const allOtherImages = template.querySelectorAll('img');
+      allOtherImages.forEach(img => {
+        // Si ce n'est pas déjà nettoyé
+        if (img.src && !img.classList.contains('image-main') && !img.classList.contains('image-hote-main')) {
+          img.src = '';
+          img.style.backgroundImage = '';
+        }
+      });
+      
+      // Nettoyer les textes pour un template vraiment neutre
+      const textElements = {
+        '.text-nom-logement-card': '',
+        '.adresse': '',
+        '.texte-prix': '',
+        '.text-total': '',
+        '.pourcentage': '',
+        '.distance': '',
+        '[data-voyageurs]': '',
+        '.bloc-h-te-main div:last-child': ''
+      };
+      
+      Object.entries(textElements).forEach(([selector, defaultValue]) => {
+        const elements = template.querySelectorAll(selector);
+        elements.forEach(el => {
+          el.textContent = defaultValue;
+          // Cacher les éléments qui doivent être cachés par défaut
+          if (selector === '.text-total' || selector === '.pourcentage' || selector === '.distance') {
+            el.style.display = 'none';
+          }
+        });
+      });
+      
+      // Nettoyer les attributs data
+      const dataAttributes = [
+        'data-property-id',
+        'data-mode-location', 
+        'data-equipements',
+        'data-option-accueil',
+        'data-json-tarifs-line',
+        'data-voyageurs'
+      ];
+      
+      dataAttributes.forEach(attr => {
+        const elements = template.querySelectorAll(`[${attr}]`);
+        elements.forEach(el => {
+          el.removeAttribute(attr);
+        });
+      });
+      
+      // Nettoyer le href du lien
+      const links = template.querySelectorAll('.lien-logement');
+      links.forEach(link => {
+        link.href = '#';
+      });
+      
+      console.log('✅ Template nettoyé avec succès');
+    }
+
+  
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
     // Nettoyer le cache toutes les 5 minutes
@@ -698,26 +783,25 @@ if (priceElement && propData.pricing_data) {
     // Image principale - Webflow utilise img + background-image
 const imageElement = newCard.querySelector('.image-main');
 if (imageElement) {
+  // 🆕 TOUJOURS nettoyer d'abord, puis remplir si on a des données
+  imageElement.src = '';
+  imageElement.style.backgroundImage = '';
+  
   if (propData.image) {
-    // Mettre à jour le src de l'img
     imageElement.src = propData.image;
-    // ET aussi le background-image
     imageElement.style.backgroundImage = `url(${propData.image})`;
-  } else {
-    // IMPORTANT : Vider l'image si pas de données
-    imageElement.src = '';
-    imageElement.style.backgroundImage = '';
   }
 }
 
 // Image de l'hôte
 const hostImageElement = newCard.querySelector('.image-hote-main');
 if (hostImageElement) {
+  // 🆕 TOUJOURS nettoyer d'abord
+  hostImageElement.src = '';
+  hostImageElement.style.backgroundImage = '';
+  
   if (propData.host_image) {
     hostImageElement.src = propData.host_image;
-  } else {
-    // IMPORTANT : Vider l'image si pas de données
-    hostImageElement.src = '';
   }
 }
     
