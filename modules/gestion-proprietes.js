@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - avant
+// Gestionnaire principal des propriétés pour la page liste - V5
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -50,6 +50,7 @@ class PropertyManager {
     if (this.templateElement) {
       // Cloner le template et cacher l'original
       this.templateClone = this.templateElement.cloneNode(true);
+      this.cleanTemplateImages();
       this.templateElement.style.display = 'none';
     }
     
@@ -71,6 +72,23 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
+  cleanTemplateImages() {
+      // Nettoyer l'image principale
+      const mainImage = this.templateClone.querySelector('.image-main');
+      if (mainImage) {
+        mainImage.src = '';
+        mainImage.style.backgroundImage = '';
+      }
+      
+      // Nettoyer l'image de l'hôte
+      const hostImage = this.templateClone.querySelector('.image-hote-main');
+      if (hostImage) {
+        hostImage.src = '';
+      }
+      
+      console.log('✅ Images du template nettoyées');
+    }
+  
   // Configuration du nettoyage automatique du cache
   setupCacheCleanup() {
     // Nettoyer le cache toutes les 5 minutes
