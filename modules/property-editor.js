@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V19 caution V2
+// Gestionnaire de la page de modification de logement - V15 V19 logement nom
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -325,10 +325,18 @@ setupTimeFormatters() {
       titleElement.textContent = this.propertyData.name;
     }
 
+    // NOUVEAU : Pré-remplir aussi l'input de modification du nom
+    const nameInput = document.getElementById('name-input');
+    if (nameInput && this.propertyData.name) {
+      nameInput.value = this.propertyData.name;
+    }
+
+
     this.displayStatusTag();
     
     // 2. Configuration des champs (facilement extensible)
     const fields = [
+      { id: 'name-input', dataKey: 'name' },
       { id: 'adresse-input', dataKey: 'address' },
       { id: 'cadeaux-input', dataKey: 'cadeaux' },
       { id: 'extras-field', dataKey: 'extras' },
@@ -2339,6 +2347,7 @@ generateExtrasString() {
   
 setupFieldListeners() {
   const fields = [
+    { id: 'name-input' },
     { id: 'adresse-input' },
     { id: 'cadeaux-input' },
     { id: 'description-logement-input' },
@@ -2947,6 +2956,7 @@ setBlockState(element, isActive) {
     }
     // Configuration des champs à réinitialiser
     const fields = [
+      { id: 'name-input', dataKey: 'name' },
       { id: 'adresse-input', dataKey: 'address' },
       { id: 'cadeaux-input', dataKey: 'cadeaux' },
       { id: 'description-logement-input', dataKey: 'description_logement' },
@@ -3053,6 +3063,7 @@ setBlockState(element, isActive) {
     
   // Configuration du mapping des champs
   const fieldMapping = [
+    { id: 'name-input', dataKey: 'name', dbKey: 'name' },
     { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
     { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' },
     { id: 'description-logement-input', dataKey: 'description_logement', dbKey: 'description_logement' },
@@ -3312,8 +3323,17 @@ setBlockState(element, isActive) {
       
       // Mettre à jour les valeurs initiales avec les nouvelles valeurs
       Object.keys(updates).forEach(key => {
-        if (key !== 'pricing_data') { // Pour les champs normaux
+        if (key !== 'pricing_data') {
           this.initialValues[key] = updates[key];
+          
+          // NOUVEAU : Si c'est le nom, mettre à jour aussi l'affichage
+          if (key === 'name') {
+            this.propertyData.name = updates[key];
+            const titleElement = document.getElementById('logement-name-edit');
+            if (titleElement) {
+              titleElement.textContent = updates[key];
+            }
+          }
         }
       });
       
