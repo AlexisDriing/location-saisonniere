@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V9 paiement error
+// Gestionnaire de validation pour la page modification de logement V4 V9 logement name
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -18,6 +18,16 @@ class ValidationManager {
       // TAB 1 : Informations du logement
       tab1: {
         fields: {
+          'name-input': {
+            required: true,
+            minLength: 5,
+            maxLength: 80,
+            messages: {
+              empty: "Le nom du logement est obligatoire",
+              minLength: "Le nom doit contenir au moins 3 caractères",
+              maxLength: "Le nom ne peut pas dépasser 80 caractères"
+            }
+          },
           'adresse-input': {
             required: true,
             messages: { empty: "L'adresse est obligatoire" }
@@ -450,6 +460,16 @@ class ValidationManager {
     // Validation minChecked pour checkbox groups
     if (fieldConfig.minChecked && value.length < fieldConfig.minChecked) {
       return fieldConfig.messages.empty;
+    }
+
+    // Validation min length
+    if (fieldConfig.minLength && value.length < fieldConfig.minLength) {
+      return fieldConfig.messages.minLength;
+    }
+    
+    // Validation max length (déjà existant)
+    if (fieldConfig.maxLength && value.length > fieldConfig.maxLength) {
+      return fieldConfig.messages.maxLength.replace('{count}', value.length);
     }
     
     return null;
