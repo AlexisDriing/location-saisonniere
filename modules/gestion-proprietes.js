@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V8
+// Gestionnaire principal des propriétés pour la page liste - V8 slug
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -634,7 +634,7 @@ class PropertyManager {
     // Lien principal
     const linkElement = newCard.querySelector('.lien-logement');
     if (linkElement) {
-      linkElement.href = `/locations-saisonnieres/${propData.slug || propData.id}`;
+      linkElement.href = `/locations-saisonnieres/${propData.id}`;
       linkElement.setAttribute('data-property-id', propData.id);
     }
     
