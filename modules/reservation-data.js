@@ -1,4 +1,4 @@
-// Gestion des données de réservation et récupération des informations
+// Gestion des données de réservation et récupération des informations - V2 Slug
 class ReservationDataManager {
   constructor() {
     this.init();
@@ -21,14 +21,14 @@ class ReservationDataManager {
       return;
     }
     
-    const slug = window.location.pathname.split("/").pop();
+    const propertyId = window.location.pathname.split("/").pop();
     const currentPageUrl = window.location.href;
     
     bookButtons.forEach(bookButton => {
       // Préparer l'URL du bouton
       let targetUrl = bookButton.getAttribute("href");
       const separator = targetUrl.includes("?") ? "&" : "?";
-      bookButton.setAttribute("href", `${targetUrl}${separator}logement=${slug}`);
+      bookButton.setAttribute("href", `${targetUrl}${separator}logement=${propertyId}`);
       
       // Ajouter les attributs data
       if (logementInfo.nom) bookButton.setAttribute("data-logement-nom", logementInfo.nom);
@@ -39,7 +39,7 @@ class ReservationDataManager {
       
       // Ajouter l'écouteur d'événement
       bookButton.addEventListener("click", (e) => {
-        this.handleReservationClick(e, slug, logementInfo, currentPageUrl);
+        this.handleReservationClick(e, propertyId, logementInfo, currentPageUrl);
       });
     });
     
@@ -118,7 +118,7 @@ class ReservationDataManager {
     return imageUrl;
   }
 
-  handleReservationClick(e, slug, logementInfo, currentPageUrl) {
+  handleReservationClick(e, propertyId, logementInfo, currentPageUrl) {
     // Vérifier que des dates sont sélectionnées
     const datesTexte = Utils.getElementByIdWithFallback("dates-texte")?.textContent || "";
     if (datesTexte === "Sélectionner une date") {
@@ -169,7 +169,7 @@ class ReservationDataManager {
     
     // Créer l'objet de données de réservation
     const reservationData = {
-      logementId: slug,
+      logementId: propertyId,
       logementNom: logementInfo.nom,
       logementImage: logementInfo.image,
       logementAdresse: logementInfo.adresse,
