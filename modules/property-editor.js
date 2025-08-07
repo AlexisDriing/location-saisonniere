@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V19 logement nom
+// Gestionnaire de la page de modification de logement - V15 V20 notification message
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -17,6 +17,37 @@ class PropertyEditor {
     this.init();
   }
 
+  // 📍 À AJOUTER après constructor() et avant init()
+  showNotification(type, message) {
+    // Sélectionner le bon bloc
+    const notificationId = type === 'success' ? 'notification-success' : 'notification-error';
+    const textId = type === 'success' ? 'success-message-text' : 'error-message-text';
+    
+    const notification = document.getElementById(notificationId);
+    const textElement = document.getElementById(textId);
+    
+    if (!notification || !textElement) {
+      // Fallback si les éléments n'existent pas
+      alert(message);
+      return;
+    }
+    
+    // Mettre à jour le texte
+    textElement.textContent = message;
+    
+    // Afficher la notification
+    notification.style.display = 'flex';
+    notification.classList.add('show');
+    
+    // Fermeture automatique après 3 secondes
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 300); // Délai pour l'animation de sortie
+    }, 3000);
+  }
+  
   async init() {
     console.log('✏️ Initialisation PropertyEditor...');
     
@@ -735,7 +766,7 @@ setupTimeFormatters() {
   openAddSeasonModal() {
     // Vérifier qu'on a moins de 4 saisons
     if (this.pricingData.seasons.length >= 4) {
-      alert('Maximum 4 saisons autorisées');
+      this.showNotification('error', 'Maximum 4 saisons autorisées');
       return;
     }
     
@@ -1614,7 +1645,7 @@ addDiscount() {
   
   // Vérifier la limite
   if (this.pricingData.discounts.length >= 10) {
-    alert('Maximum 10 réductions autorisées');
+    this.showNotification('error', 'Maximum 10 réductions autorisées');
     return;
   }
   
@@ -2112,7 +2143,7 @@ addExtra() {
   
   // Vérifier la limite
   if (this.extras.length >= 10) {
-    alert('Maximum 10 extras autorisés');
+    this.showNotification('error', 'Maximum 10 extras autorisés');
     return;
   }
   
@@ -3037,7 +3068,7 @@ setBlockState(element, isActive) {
 
   if (this.validationManager && !this.validationManager.validateAllFields()) {
     console.log('❌ Validation échouée - Sauvegarde annulée');
-    alert('Veuillez corriger les erreurs avant d\'enregistrer');
+    this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
     return;
   }
     
@@ -3294,7 +3325,7 @@ setBlockState(element, isActive) {
     
     // Si aucune modification
     if (Object.keys(updates).length === 0) {
-      alert('Aucune modification détectée');
+      this.showNotification('error', 'Aucune modification détectée');
       return;
     }
     
@@ -3356,16 +3387,15 @@ setBlockState(element, isActive) {
       this.disableButtons();
       
       // Message de succès
-      alert('Modifications enregistrées avec succès !');
-        
+      this.showNotification('success', 'Modifications enregistrées avec succès !');        
         
       } else {
         throw new Error(result.error || 'Erreur lors de la sauvegarde');
       }
       
-    } catch (error) {
-      console.error('❌ Erreur sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde : ' + error.message);
+     } catch (error) {
+    console.error('❌ Erreur sauvegarde:', error);
+    this.showNotification('error', 'Erreur lors de la sauvegarde : ' + error.message);
     } finally {
       // Réactiver le bouton
       saveButton.disabled = false;
