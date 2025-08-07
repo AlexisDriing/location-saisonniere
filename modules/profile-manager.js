@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V9
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V10
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -94,45 +94,86 @@ class ProfileManager {
   displayProperties() {
     console.log('🎨 Affichage des logements...');
     
+    // NOUVEAU : Récupérer le conteneur
+    const container = document.getElementById('all-properties-container');
+    if (!container) {
+      console.error('❌ Conteneur all-properties-container non trouvé');
+      return;
+    }
+    
+    // NOUVEAU : Vider le conteneur
+    container.innerHTML = '';
+    
     if (this.userProperties.length === 0) {
       this.showEmptyState();
       return;
     }
     
-    // Pour commencer, afficher le premier logement
-    const property = this.userProperties[0];
-    this.displayProperty(property);
-
-    this.updateButtonsVisibility(property);
+    // NOUVEAU : Masquer tous les templates originaux
+    ['pending-none', 'pending-verif', 'pending', 'verified', 'published'].forEach(id => {
+      const template = document.getElementById(`template-${id}`);
+      if (template) template.style.display = 'none';
+    });
+    
+    // MODIFIÉ : Au lieu d'afficher UN logement, on les affiche TOUS
+    this.userProperties.forEach((property, index) => {
+      // Récupérer le template correspondant au statut
+      const status = this.getPropertyStatus(property);
+      const template = document.getElementById(`template-${status}`);
+      
+      if (!template) {
+        console.error(`Template template-${status} non trouvé`);
+        return;
+      }
+      
+      // Cloner le template
+      const clone = template.cloneNode(true);
+      clone.id = `property-${index}`;
+      clone.style.display = 'block'; // ou 'flex' selon votre CSS
+      
+      // Ajouter au conteneur
+      container.appendChild(clone);
+      
+      // RÉUTILISER vos méthodes existantes sur le clone
+      this.displayProperty(property, clone); // MODIFIÉ : passer le clone
+    });
+    
+    // Gérer les boutons avec le dernier logement
+    const lastProperty = this.userProperties[this.userProperties.length - 1];
+    this.updateButtonsVisibility(lastProperty);
   }
 
-  displayProperty(property) {
+  displayProperty(property, element = null) {  // AJOUT du paramètre element
   console.log('🏠 Affichage du logement:', property);
   
-    // 1. Afficher le bon bloc selon le statut
+  // Si pas d'élément fourni, utiliser l'ancienne logique (pour compatibilité)
+  if (!element) {
     this.showCorrectStatusBlock(property);
-    
-    // 2. Remplir les informations du logement
-    this.fillPropertyInfo(property);
-    
-    // 3. Remplir les images SEULEMENT pour certains statuts
-    const status = this.getPropertyStatus(property);
-    if (status === 'verified' || status === 'published') {
-      // Remplir les images seulement si on a des vraies images du CMS
-      this.fillPropertyImages(property);
-    }
-    
-    // 4. Configurer le bouton modifier
-    this.setupModifyButton(property);
-    
-    // 5. Désactiver le bouton si pending-none
-    this.setupDisableButton(property);
   }
+  
+  // MODIFIÉ : Utiliser element au lieu de document si fourni
+  const targetElement = element || document;
+  
+  // 2. Remplir les informations - MODIFIÉ pour passer targetElement
+  this.fillPropertyInfo(property, targetElement);
+  
+  // 3. Remplir les images
+  const status = this.getPropertyStatus(property);
+  if (status === 'verified' || status === 'published') {
+    this.fillPropertyImages(property, targetElement);
+  }
+  
+  // 4. Configurer le bouton modifier
+  this.setupModifyButton(property, targetElement);
+  
+  // 5. Désactiver le bouton si pending-none
+  this.setupDisableButton(property, targetElement);
+}
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
-setupModifyButton(property) {
+setupModifyButton(property, targetElement = document) {  // AJOUT du paramètre
   const status = this.getPropertyStatus(property);
-  const modifyButton = document.querySelector(`#${status} .brouillon-modifier`);
+  const modifyButton = targetElement.querySelector('.brouillon-modifier');
   
   if (modifyButton) {
     // 🆕 MODIFIÉ : Utiliser l'ID Webflow
@@ -160,12 +201,11 @@ setupModifyButton(property) {
 }
 
 // 🆕 NOUVELLE MÉTHODE : Désactiver le bouton dans pending-none
-setupDisableButton(property) {
+setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   const status = this.getPropertyStatus(property);
   
-  // Seulement si le statut est pending-none
   if (status === 'pending-none') {
-    const disableButton = document.getElementById('button-disable');
+    const disableButton = targetElement.querySelector('#button-disable');
     
     if (disableButton) {
       // Désactiver le clic sans changer l'apparence
@@ -223,66 +263,62 @@ setupDisableButton(property) {
     }
   }
 
-  fillPropertyInfo(property) {
-    // Déterminer le statut pour construire les IDs corrects
+  fillPropertyInfo(property, targetElement = document) {  // AJOUT du paramètre
     const status = this.getPropertyStatus(property);
   
-    // 🆕 AJOUTER : Afficher l'ID Webflow pour debug
     console.log('🔍 Property data:', {
       webflow_item_id: property.webflow_item_id,
       name: property.name,
       status: status
     });
-    // Remplir le nom du logement avec l'ID spécifique au bloc
-    const nameElement = document.getElementById(`property-name-${status}`);
+    
+    // MODIFIÉ : Utiliser querySelector sur targetElement avec des classes
+    const nameElement = targetElement.querySelector('.property-name');
     if (nameElement) {
       nameElement.textContent = property.name || 'Nom non défini';
-      console.log(`✅ Nom rempli dans #property-name-${status}:`, property.name);
+      console.log(`✅ Nom rempli:`, property.name);
     } else {
-      console.warn(`❌ Élément #property-name-${status} non trouvé`);
+      console.warn(`❌ Élément .property-name non trouvé`);
     }
     
-    // Remplir l'adresse (formatée) avec l'ID spécifique au bloc
-    const addressElement = document.getElementById(`property-address-${status}`);
+    const addressElement = targetElement.querySelector('.adresse-logement');
     if (addressElement) {
       addressElement.textContent = this.formatAddress(property.address);
-      console.log(`✅ Adresse remplie dans #property-address-${status}:`, property.address);
+      console.log(`✅ Adresse remplie:`, property.address);
     } else {
-      console.warn(`❌ Élément #property-address-${status} non trouvé`);
+      console.warn(`❌ Élément .adresse-logement non trouvé`);
     }
   }
 
-  fillPropertyImages(property) {
-    // Déterminer le statut pour construire les IDs corrects
+  fillPropertyImages(property, targetElement = document) {  // AJOUT du paramètre
     const status = this.getPropertyStatus(property);
     
-    // Remplir les 3 images avec les IDs spécifiques au bloc
-    for (let i = 1; i <= 3; i++) {
-      const imageElement = document.getElementById(`image-${i}-${status}`);
-      const imageUrl = property[`image${i}`];
+    // MODIFIÉ : Utiliser les classes main, left, right
+    const imageMapping = [
+      { selector: '.main', property: 'image1' },
+      { selector: '.left', property: 'image2' },
+      { selector: '.right', property: 'image3' }
+    ];
+    
+    imageMapping.forEach(({ selector, property: prop }) => {
+      const imageElement = targetElement.querySelector(selector);
+      const imageUrl = property[prop];
       
       if (imageElement && imageUrl) {
-        // Si c'est un élément img
         if (imageElement.tagName === 'IMG') {
           imageElement.src = imageUrl;
           imageElement.style.display = 'block';
-        } 
-        // Si c'est un div avec background-image (plus courant dans Webflow)
-        else {
+        } else {
           imageElement.style.backgroundImage = `url(${imageUrl})`;
           imageElement.style.backgroundSize = 'cover';
           imageElement.style.backgroundPosition = 'center';
           imageElement.style.display = 'block';
         }
-        
-        console.log(`✅ Image ${i} remplie dans #image-${i}-${status}:`, imageUrl);
-      } else {
-        console.log(`⚠️ Image ${i} non trouvée ou élément #image-${i}-${status} manquant`);
-        if (imageElement) {
-          imageElement.style.display = 'none';
-        }
+        console.log(`✅ Image ${prop} remplie:`, imageUrl);
+      } else if (imageElement) {
+        imageElement.style.display = 'none';
       }
-    }
+    });
   }
 
   formatAddress(address) {
