@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V20 notification message V2
+// Gestionnaire de la page de modification de logement - V15 V20 notification message V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3066,8 +3066,6 @@ setBlockState(element, isActive) {
   async saveModifications() {
   console.log('💾 Sauvegarde des modifications...');
 
-  console.log('Initial values:', this.initialValues);
-  console.log('Current values:', currentValues);
   if (this.validationManager && !this.validationManager.validateAllFields()) {
     console.log('❌ Validation échouée - Sauvegarde annulée');
     this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
@@ -3247,6 +3245,9 @@ setBlockState(element, isActive) {
   }
   
   currentValues.conditions_reservation = conditionsTexte;
+
+  console.log('Initial values:', this.initialValues);
+  console.log('Current values:', currentValues);
     
   const updates = {};
   // Comparer avec les valeurs initiales
