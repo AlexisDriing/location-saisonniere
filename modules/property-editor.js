@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V21
+// Gestionnaire de la page de modification de logement - V15 V21 console
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3256,6 +3256,7 @@ setBlockState(element, isActive) {
   // Comparer avec les valeurs initiales
   Object.keys(currentValues).forEach(key => {
     if (key === 'equipements_principaux' || key === 'options_accueil' || key === 'mode_paiement') {
+      console.log('DEBUG - Clé problématique:', key, '- Valeur:', this.initialValues[key], '- Type:', typeof this.initialValues[key]);
       const currentStr = currentValues[key].join(', ');
       const initialStr = (this.initialValues[key] || []).join(', ');
       if (currentStr !== initialStr) {
