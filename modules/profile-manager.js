@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V10
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -168,6 +168,7 @@ class ProfileManager {
   
   // 5. Désactiver le bouton si pending-none
   this.setupDisableButton(property, targetElement);
+  this.setupVerificationButton(property);
 }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
@@ -329,6 +330,32 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     return parts.length >= 2 ? parts.slice(-2).join(', ') : address;
   }
 
+  setupVerificationButton(property) {
+    // Trouver le bouton de vérification (adaptez le sélecteur selon votre ID/classe)
+    const verificationBtn = document.querySelector('#button-verification');
+    
+    if (!verificationBtn) return;
+    
+    // Récupérer l'ID Memberstack de l'utilisateur connecté
+    const memberstackId = this.currentUser?.id || '';
+    
+    // Construire les paramètres
+    const params = new URLSearchParams({
+      memberstack_id: memberstackId,
+      property_id: property.webflow_item_id || property.id || '',
+      property_name: property.name || '',
+      property_email: property.email || ''
+    });
+    
+    // Récupérer l'URL de base (sans paramètres existants)
+    const baseUrl = verificationBtn.href.split('?')[0];
+    
+    // Mettre à jour le lien avec les paramètres
+    verificationBtn.href = `${baseUrl}?${params.toString()}`;
+    
+    console.log('✅ Bouton vérification configuré:', verificationBtn.href);
+  }
+  
   showEmptyState() {
     console.log('📭 Aucun logement trouvé');
     
