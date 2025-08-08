@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v2
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -331,29 +331,32 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   }
 
   setupVerificationButton(property) {
-    // Trouver le bouton de vérification (adaptez le sélecteur selon votre ID/classe)
+    // Trouver le bouton (adaptez le sélecteur)
     const verificationBtn = document.querySelector('#button-verification');
     
-    if (!verificationBtn) return;
+    if (!verificationBtn) {
+      console.error('❌ Bouton non trouvé');
+      return;
+    }
     
-    // Récupérer l'ID Memberstack de l'utilisateur connecté
-    const memberstackId = this.currentUser?.id || '';
+    // Récupérer l'email depuis Memberstack (pas du CMS)
+    const memberEmail = this.currentUser?.email || 
+                       this.currentUser?.auth?.email || 
+                       '';
+    
+    // L'URL de base Tally (mettez votre vraie URL)
+    const tallyBaseUrl = 'https://tally.so/r/w70vL0';
     
     // Construire les paramètres
     const params = new URLSearchParams({
-      memberstack_id: memberstackId,
+      memberstack_id: this.currentUser?.id || '',
       property_id: property.webflow_item_id || property.id || '',
       property_name: property.name || '',
-      property_email: property.email || ''
+      email: memberEmail  // Email depuis Memberstack
     });
     
-    // Récupérer l'URL de base (sans paramètres existants)
-    const baseUrl = verificationBtn.href.split('?')[0];
-    
-    // Mettre à jour le lien avec les paramètres
-    verificationBtn.href = `${baseUrl}?${params.toString()}`;
-    
-    console.log('✅ Bouton vérification configuré:', verificationBtn.href);
+    // Définir le href complet
+    verificationBtn.href = `${tallyBaseUrl}?${params.toString()}`;
   }
   
   showEmptyState() {
