@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v6
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v7
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -347,8 +347,8 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     
     const finalUrl = `${tallyBaseUrl}?${params.toString()}`;
     
-    // Listener SANS preventDefault (important !)
-    verificationBtn.addEventListener('click', function() {
+    verificationBtn.addEventListener('click', function(e) {  // Ajouter 'e' ici
+      e.preventDefault();  // CRUCIAL : empêche l'ouverture de "#"
       window.open(finalUrl, '_blank');
     });
     
