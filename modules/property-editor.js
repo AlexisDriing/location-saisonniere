@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V20 notification message V3
+// Gestionnaire de la page de modification de logement - V15 V21
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2651,10 +2651,13 @@ formatTelephone(input) {
   
 // 🆕 NOUVELLE MÉTHODE à ajouter après setupFieldListeners()
 setupDefaultPricingListeners() {
-  // Prix par défaut
   const defaultPriceInput = document.getElementById('default-price-input');
   if (defaultPriceInput) {
     defaultPriceInput.addEventListener('input', () => {
+      // AJOUTER : Mise à jour immédiate de data-raw-value
+      const cleanValue = defaultPriceInput.value.replace(/[^\d]/g, '');
+      defaultPriceInput.setAttribute('data-raw-value', cleanValue || '0');
+      
       this.updateDefaultPricing();
       this.enableButtons();
     });
