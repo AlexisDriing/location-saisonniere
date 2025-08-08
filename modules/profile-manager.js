@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v8
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v9
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -168,7 +168,8 @@ class ProfileManager {
   
   // 5. Désactiver le bouton si pending-none
   this.setupDisableButton(property, targetElement);
-  this.setupVerificationButton(property);
+  // Ligne existante qui passe déjà targetElement
+  this.setupVerificationButton(property, targetElement);
 }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
@@ -330,15 +331,16 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     return parts.length >= 2 ? parts.slice(-2).join(', ') : address;
   }
 
-  setupVerificationButton(property) {
+  setupVerificationButton(property, targetElement = document) {
     console.log('⚙️ Setup du bouton vérification pour :', property.name);
     
-    const verificationBtn = document.querySelector('[data-tally-url]');
-    console.log('🔍 Bouton trouvé :', verificationBtn);
+    // IMPORTANT : Chercher dans targetElement, pas dans document !
+    const verificationBtn = targetElement.querySelector('[data-tally-url]');
+    console.log('🔍 Bouton trouvé dans le clone :', verificationBtn);
     
     if (!verificationBtn) {
-      console.error('❌ Bouton non trouvé !');
-      return; // ICI le return est valide car on est dans la fonction
+      console.error('❌ Bouton non trouvé dans ce bloc');
+      return;
     }
     
     const tallyBaseUrl = verificationBtn.dataset.tallyUrl;
@@ -352,17 +354,15 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     });
     
     const finalUrl = `${tallyBaseUrl}?${params.toString()}`;
-    console.log('📍 URL finale construite :', finalUrl);
     
-    // Listener avec logs
+    // Attacher le listener sur le bouton DU CLONE
     verificationBtn.addEventListener('click', function(e) {
       console.log('🖱️ Clic détecté !');
       e.preventDefault();
-      console.log('📍 Ouverture de :', finalUrl);
       window.open(finalUrl, '_blank');
     });
     
-    console.log('✅ Event listener attaché');
+    console.log('✅ Listener attaché au bouton du clone');
   }
   
   showEmptyState() {
