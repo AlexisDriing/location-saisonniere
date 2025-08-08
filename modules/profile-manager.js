@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v3
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v4
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -350,8 +350,19 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
       email: memberEmail
     });
     
-    // Mettre à jour le href
-    verificationBtn.href = `${tallyBaseUrl}?${params.toString()}`;
+    // Construire l'URL finale
+    const finalUrl = `${tallyBaseUrl}?${params.toString()}`;
+    
+    // Mettre à jour le href (au cas où)
+    verificationBtn.href = finalUrl;
+    
+    // IMPORTANT : Ajouter le listener de click
+    verificationBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      window.location.href = finalUrl;
+    });
+    
+    console.log('✅ Bouton configuré avec click listener:', finalUrl);
   }
   
   showEmptyState() {
