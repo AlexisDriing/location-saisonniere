@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v4
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v5
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -331,39 +331,25 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   }
 
   setupVerificationButton(property) {
-    const verificationBtn = document.querySelector('[data-tally-url]');
-    
-    if (!verificationBtn) return;
-    
-    // Récupérer l'URL depuis le data-attribute
-    const tallyBaseUrl = verificationBtn.dataset.tallyUrl;
-    
-    // Email depuis Memberstack
-    const memberEmail = this.currentUser?.email || 
-                       this.currentUser?.auth?.email || 
-                       '';
-    
-    const params = new URLSearchParams({
-      memberstack_id: this.currentUser?.id || '',
-      property_id: property.webflow_item_id || '',
-      property_name: property.name || '',
-      email: memberEmail
-    });
-    
-    // Construire l'URL finale
-    const finalUrl = `${tallyBaseUrl}?${params.toString()}`;
-    
-    // Mettre à jour le href (au cas où)
-    verificationBtn.href = finalUrl;
-    
-    // IMPORTANT : Ajouter le listener de click
-    verificationBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      window.location.href = finalUrl;
-    });
-    
-    console.log('✅ Bouton configuré avec click listener:', finalUrl);
-  }
+  const verificationBtn = document.querySelector('[data-tally-url]');
+  
+  if (!verificationBtn) return;
+  
+  const tallyBaseUrl = verificationBtn.dataset.tallyUrl;
+  const memberEmail = this.currentUser?.email || this.currentUser?.auth?.email || '';
+  
+  const params = new URLSearchParams({
+    memberstack_id: this.currentUser?.id || '',
+    property_id: property.webflow_item_id || '',
+    property_name: property.name || '',
+    email: memberEmail
+  });
+  
+  // JUSTE mettre à jour le href, c'est tout !
+  verificationBtn.href = `${tallyBaseUrl}?${params.toString()}`;
+  
+  console.log('✅ Bouton configuré:', verificationBtn.href);
+}
   
   showEmptyState() {
     console.log('📭 Aucun logement trouvé');
