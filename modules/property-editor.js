@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V21 console
+// Gestionnaire de la page de modification de logement - V15 V21 erreurs 
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3362,7 +3362,13 @@ setBlockState(element, isActive) {
       // Mettre à jour les valeurs initiales avec les nouvelles valeurs
       Object.keys(updates).forEach(key => {
         if (key !== 'pricing_data') {
-          this.initialValues[key] = updates[key];
+          // IMPORTANT : Garder le format Array pour ces champs spécifiques
+          if (key === 'equipements_principaux' || key === 'options_accueil' || key === 'mode_paiement') {
+            // Utiliser currentValues qui a encore le format Array original
+            this.initialValues[key] = currentValues[key];
+          } else {
+            this.initialValues[key] = updates[key];
+          }
           
           // NOUVEAU : Si c'est le nom, mettre à jour aussi l'affichage
           if (key === 'name') {
