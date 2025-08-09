@@ -1,4 +1,4 @@
-// Calculateur de prix principal V5 17%
+// Calculateur de prix principal V5 jours mini
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -352,16 +352,20 @@ class PriceCalculator {
   }
 
   getSeason(date) {
-    if (!this.pricingData || !this.pricingData.seasons || !this.pricingData.seasons.length) {
-      return null;
+    // 🔧 FIX : Si pas de saisons, retourner directement defaultPricing
+    if (!this.pricingData) return null;
+    
+    if (!this.pricingData.seasons || this.pricingData.seasons.length === 0) {
+      // Pas de saisons définies, utiliser defaultPricing
+      return this.pricingData.defaultPricing || null;
     }
     
     const month = date.month() + 1;
     const day = date.date();
     
     for (const season of this.pricingData.seasons) {
-         // 🆕 Vérifier que periods existe
-    if (!season.periods || !Array.isArray(season.periods)) continue;
+      // Vérifier que periods existe
+      if (!season.periods || !Array.isArray(season.periods)) continue;
       for (const period of season.periods) {
         const [startDay, startMonth] = period.start.split("-").map(Number);
         const [endDay, endMonth] = period.end.split("-").map(Number);
@@ -386,7 +390,8 @@ class PriceCalculator {
     if (this.pricingData.defaultPricing) {
       return this.pricingData.defaultPricing;
     }
-    // Fallback sur première saison pour rétrocompatibilité
+    
+    // Fallback seulement si on a des saisons mais aucune ne correspond
     return this.pricingData.seasons[0];
   }
 
