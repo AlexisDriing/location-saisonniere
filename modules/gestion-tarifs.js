@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison v3
+// Gestion de l'affichage des tarifs par saison v4 17%
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -90,15 +90,17 @@ class TariffsDisplayManager {
       if (season.platformPrices) {
         discount = this.calculatePlatformDiscount(season.price, season.platformPrices);
       } 
-      // 🆕 Si pas de prix plateformes, utiliser 17%
-      else if (discounts && Array.isArray(discounts) && discounts.length > 0) {
-        // On a accès à pricingData via le parent
+      // 🆕 MODIFICATION : Si pas de prix plateformes, toujours utiliser 17% par défaut
+      else {
+        // Récupérer la valeur configurée ou utiliser 17% par défaut
         const pricingDataElement = document.querySelector("[data-json-tarifs-line], [data-json-tarifs]");
         if (pricingDataElement) {
           const jsonData = JSON.parse(pricingDataElement.getAttribute("data-json-tarifs-line") || pricingDataElement.getAttribute("data-json-tarifs"));
-          if (jsonData.platformPricing && jsonData.platformPricing.defaultDiscount) {
-            discount = jsonData.platformPricing.defaultDiscount;
-          }
+          discount = (jsonData.platformPricing && jsonData.platformPricing.defaultDiscount) 
+            ? jsonData.platformPricing.defaultDiscount 
+            : 17;
+        } else {
+          discount = 17; // Valeur par défaut si aucune configuration
         }
       }
       
