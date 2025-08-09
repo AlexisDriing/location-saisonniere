@@ -1,4 +1,4 @@
-// Calculateur de prix principal V4 17%
+// Calculateur de prix principal V5 17%
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -391,36 +391,38 @@ class PriceCalculator {
   }
 
   getPlatformPrice(season) {
-  if (!season) return 0;
+    if (!season) return 0;
+    
+    const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
   
-  const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
-
-  // Si c'est defaultPricing ET qu'il a des prix plateformes
-  if (season === this.pricingData.defaultPricing && season.platformPrices) {
-    const prices = Object.values(season.platformPrices);
-    if (prices.length > 0) {
-      return prices.reduce((a, b) => a + b, 0) / prices.length;
+    // Si c'est defaultPricing ET qu'il a des prix plateformes
+    if (season === this.pricingData.defaultPricing && season.platformPrices) {
+      // 🔧 FIX : Filtrer les prix à 0
+      const prices = Object.values(season.platformPrices).filter(price => price > 0);
+      if (prices.length > 0) {
+        return prices.reduce((a, b) => a + b, 0) / prices.length;
+      }
     }
-  }
-  
-  if (!usePercentage && season.platformPrices) {
-    const prices = Object.values(season.platformPrices);
-    if (prices.length > 0) {
-      return prices.reduce((a, b) => a + b, 0) / prices.length;
+    
+    if (!usePercentage && season.platformPrices) {
+      // 🔧 FIX : Filtrer les prix à 0
+      const prices = Object.values(season.platformPrices).filter(price => price > 0);
+      if (prices.length > 0) {
+        return prices.reduce((a, b) => a + b, 0) / prices.length;
+      }
     }
+    
+    if (this.pricingData.platformMarkup && this.pricingData.platformMarkup.percentage) {
+      return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
+    }
+    
+    // Toujours appliquer la réduction par défaut (17% ou valeur configurée)
+    const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
+      ? this.pricingData.platformPricing.defaultDiscount 
+      : 17;
+    
+    return season.price * (100 / (100 - defaultDiscount));
   }
-  
-  if (this.pricingData.platformMarkup && this.pricingData.platformMarkup.percentage) {
-    return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
-  }
-  
-  // 🆕 MODIFICATION : Toujours appliquer la réduction par défaut (17% ou valeur configurée)
-  const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
-    ? this.pricingData.platformPricing.defaultDiscount 
-    : 17;
-  
-  return season.price * (100 / (100 - defaultDiscount));
-}
 
   updateUI(details) {
     // Afficher les blocs de calcul
