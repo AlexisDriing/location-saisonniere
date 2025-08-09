@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v10 adresse
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v11 adresse 
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -463,13 +463,11 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     // Maintenant FormData fonctionnera
     const formData = new FormData(form);
     const nomLogement = formData.get('nom-logement');
-    
-    // 🆕 NOUVEAU : Récupérer les 3 champs d'adresse
-    const ville = formData.get('ville-creation')?.trim() || '';
-    const pays = formData.get('pays-creation')?.trim() || '';
-    const rue = formData.get('rue-creation')?.trim() || '';
-    
-    // 🆕 NOUVEAU : Construire l'adresse complète
+    const ville = document.getElementById('ville-creation')?.value?.trim() || '';
+    const pays = document.getElementById('pays-creation')?.value?.trim() || '';
+    const rue = document.getElementById('rue-creation')?.value?.trim() || '';
+
+    // Construire l'adresse complète
     let adresse = '';
     if (ville && pays) {
       adresse = ville + ', ' + pays;
