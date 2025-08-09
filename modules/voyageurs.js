@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés)
+// Gestion des voyageurs (adultes, enfants, bébés) V2
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -90,10 +90,12 @@ class TravelersManager {
   }
 
   incrementBabies() {
-    this.babies++;
-    this.updateUI();
-    this.notifyPriceCalculator();
-    this.saveCurrentTravelers();
+    if (this.babies < 10) {
+      this.babies++;
+      this.updateUI();
+      this.notifyPriceCalculator();
+      this.saveCurrentTravelers();
+    }
   }
 
   decrementBabies() {
