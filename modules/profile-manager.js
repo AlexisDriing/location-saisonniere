@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v11 adresse 
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v12 format 
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -323,12 +323,12 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     });
   }
 
-  formatAddress(address) {
+   formatAddress(address) {
     if (!address) return 'Adresse non renseignée';
     
     // Formatter l'adresse (garder seulement ville, pays)
     const parts = address.split(',').map(part => part.trim());
-    return parts.length >= 2 ? parts.slice(-2).join(', ') : address;
+    return parts.length >= 2 ? parts.slice(0, 2).join(', ') : address;
   }
 
   setupVerificationButton(property, targetElement = document) {
