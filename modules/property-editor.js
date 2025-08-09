@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V21 erreurs 
+// Gestionnaire de la page de modification de logement - V15 V22 Adresse 3 inputs
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -368,7 +368,6 @@ setupTimeFormatters() {
     // 2. Configuration des champs (facilement extensible)
     const fields = [
       { id: 'name-input', dataKey: 'name' },
-      { id: 'adresse-input', dataKey: 'address' },
       { id: 'cadeaux-input', dataKey: 'cadeaux' },
       { id: 'extras-field', dataKey: 'extras' },
       { id: 'description-logement-input', dataKey: 'description_logement' },
@@ -396,7 +395,8 @@ setupTimeFormatters() {
       }
     });
 
-    this.initialValues.extras = this.propertyData.extras || '';    
+    this.initialValues.extras = this.propertyData.extras || '';
+    this.prefillAddress();
     this.prefillDefaultPricing();
 
      // NOUVEAU : Pré-remplir les options de ménage
@@ -415,6 +415,29 @@ setupTimeFormatters() {
     setTimeout(() => {
       this.setupPriceOpacityHandlers();
     }, 100);
+  }
+
+  prefillAddress() {
+    console.log('📍 Pré-remplissage de l\'adresse...');
+    
+    const address = this.propertyData.address || '';
+    
+    if (address) {
+      // Parser l'adresse "Ville, Pays, Rue"
+      const parts = address.split(',').map(part => part.trim());
+      
+      if (parts.length >= 2) {
+        const villeInput = document.getElementById('ville-input');
+        const paysInput = document.getElementById('pays-input');
+        const rueInput = document.getElementById('rue-input');
+        
+        if (villeInput) villeInput.value = parts[0] || '';
+        if (paysInput) paysInput.value = parts[1] || '';
+        if (rueInput) rueInput.value = parts.slice(2).join(', ') || ''; // Au cas où la rue contient des virgules
+      }
+    }
+    
+    this.initialValues.address = address;
   }
 
   // 🆕 NOUVELLE MÉTHODE : Afficher le bon tag selon le statut
@@ -2379,7 +2402,9 @@ generateExtrasString() {
 setupFieldListeners() {
   const fields = [
     { id: 'name-input' },
-    { id: 'adresse-input' },
+    { id: 'ville-input' },
+    { id: 'pays-input' },
+    { id: 'rue-input' },
     { id: 'cadeaux-input' },
     { id: 'description-logement-input' },
     { id: 'description-alentours-input' },
@@ -2991,7 +3016,6 @@ setBlockState(element, isActive) {
     // Configuration des champs à réinitialiser
     const fields = [
       { id: 'name-input', dataKey: 'name' },
-      { id: 'adresse-input', dataKey: 'address' },
       { id: 'cadeaux-input', dataKey: 'cadeaux' },
       { id: 'description-logement-input', dataKey: 'description_logement' },
       { id: 'description-alentours-input', dataKey: 'description_alentours' },
@@ -3055,6 +3079,7 @@ setBlockState(element, isActive) {
     }
     // Pour réafficher les blocs correctement
     this.displayIcals();
+    this.prefillAddress();
 
     this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
@@ -3098,7 +3123,6 @@ setBlockState(element, isActive) {
   // Configuration du mapping des champs
   const fieldMapping = [
     { id: 'name-input', dataKey: 'name', dbKey: 'name' },
-    { id: 'adresse-input', dataKey: 'address', dbKey: 'adresse' },
     { id: 'cadeaux-input', dataKey: 'cadeaux', dbKey: 'cadeaux' },
     { id: 'description-logement-input', dataKey: 'description_logement', dbKey: 'description_logement' },
     { id: 'description-alentours-input', dataKey: 'description_alentours', dbKey: 'description_alentours' },
@@ -3216,6 +3240,22 @@ setBlockState(element, isActive) {
     currentValues.horaires_arrivee_depart = `${heureArrivee},${heureDepart}`;
   }
 
+  // NOUVEAU : Construire l'adresse à partir des 3 champs
+  const ville = document.getElementById('ville-input')?.value.trim() || '';
+  const pays = document.getElementById('pays-input')?.value.trim() || '';
+  const rue = document.getElementById('rue-input')?.value.trim() || '';
+  
+  // Construire l'adresse complète
+  let adresseComplete = '';
+  if (ville && pays) {
+    adresseComplete = ville + ', ' + pays;
+    if (rue) {
+      adresseComplete += ', ' + rue;
+    }
+  }
+  
+  currentValues.address = adresseComplete;
+    
   // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
   const cautionInput = document.getElementById('caution-input');
   const acompteInput = document.getElementById('acompte-input');
