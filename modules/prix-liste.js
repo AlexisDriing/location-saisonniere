@@ -1,4 +1,4 @@
-// Gestion des prix pour les cartes de logements sur la page liste
+// Gestion des prix pour les cartes de logements sur la page liste V2 17%
 class PriceListCalculator {
   constructor(container) {
     this.container = container;
@@ -47,6 +47,13 @@ class PriceListCalculator {
     let platformPrice = 0;
     let bestSeason = null;
     
+    // 🆕 MODIFICATION : Vérifier aussi defaultPricing
+    if (this.pricingData.defaultPricing && this.pricingData.defaultPricing.price) {
+      minPrice = this.pricingData.defaultPricing.price;
+      bestSeason = this.pricingData.defaultPricing;
+      platformPrice = this.getPlatformPrice(bestSeason);
+    }
+    
     for (const season of this.pricingData.seasons) {
       if (season.price < minPrice) {
         minPrice = season.price;
@@ -57,7 +64,7 @@ class PriceListCalculator {
     
     if (!isFinite(minPrice) || !bestSeason) return;
     
-    // Mise à jour du prix
+    // Mise à jour du prix (toujours avec prix barré grâce à getPlatformPrice modifié)
     if (this.elements.textePrix) {
       const discountText = platformPrice > minPrice ? 
         `<del>${Math.round(platformPrice)}€</del> ` : "";
@@ -69,10 +76,11 @@ class PriceListCalculator {
       this.elements.texteTotal.style.display = "none";
     }
     
-    // Mise à jour du pourcentage
+    // 🆕 MODIFICATION : Toujours afficher le pourcentage
     if (this.elements.pourcentage) {
-      if (platformPrice > minPrice) {
-        this.elements.pourcentage.textContent = `-${Math.round(100 * (platformPrice - minPrice) / platformPrice)}%`;
+      const discount = Math.round(100 * (platformPrice - minPrice) / platformPrice);
+      if (discount > 0) {
+        this.elements.pourcentage.textContent = `-${discount}%`;
         this.elements.pourcentage.style.display = "block";
       } else {
         this.elements.pourcentage.style.display = "none";
@@ -97,7 +105,12 @@ class PriceListCalculator {
       return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
     }
     
-    return season.price;
+    // 🆕 MODIFICATION : Toujours appliquer 17% par défaut
+    const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
+      ? this.pricingData.platformPricing.defaultDiscount 
+      : 17;
+    
+    return season.price * (100 / (100 - defaultDiscount));
   }
 }
 
