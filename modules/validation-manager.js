@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V9 logement name
+// Gestionnaire de validation pour la page modification de logement V4 V10 adresse input
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -28,9 +28,16 @@ class ValidationManager {
               maxLength: "Le nom ne peut pas dépasser 80 caractères"
             }
           },
-          'adresse-input': {
+          'ville-input': {
             required: true,
-            messages: { empty: "L'adresse est obligatoire" }
+            messages: { empty: "La ville est obligatoire" }
+          },
+          'pays-input': {
+            required: true,
+            messages: { empty: "Le pays est obligatoire" }
+          },
+          'rue-input': {
+            required: false  // Pas obligatoire
           },
           'voyageurs-input': {
             required: true,
@@ -400,6 +407,18 @@ class ValidationManager {
       } else {
         this.hideTabError(tabConfig.tabIndicatorId);
       }
+    }
+
+    // NOUVEAU : Validation spéciale de l'adresse combinée
+    const ville = document.getElementById('ville-input')?.value.trim() || '';
+    const pays = document.getElementById('pays-input')?.value.trim() || '';
+    
+    // Si ville ou pays manque, l'adresse sera invalide
+    if (!ville || !pays) {
+      // Les erreurs sont déjà affichées par champ individuel
+      // Mais on s'assure que la tab a l'indicateur d'erreur
+      this.showTabError('error-indicator-tab1');
+      isValid = false;
     }
     
     // Validation spéciale prix plateformes
