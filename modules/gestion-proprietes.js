@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V8 slug
+// Gestionnaire principal des propriétés pour la page liste - V9 17%
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -660,80 +660,78 @@ class PropertyManager {
     }
     
    // Prix avec gestion du prix barré
-const priceElement = newCard.querySelector('.texte-prix');
-const pourcentageElement = newCard.querySelector('.pourcentage');
-
-if (priceElement && propData.pricing_data) {
-  const pricingData = propData.pricing_data;
+  const priceElement = newCard.querySelector('.texte-prix');
+  const pourcentageElement = newCard.querySelector('.pourcentage');
   
-  // 🆕 SIMPLIFICATION : Trouver le prix le plus bas
-  let lowestPrice = Infinity;
-  let lowestPriceData = null;
-  
-  // Vérifier le prix par défaut
-  if (pricingData.defaultPricing && pricingData.defaultPricing.price) {
-    if (pricingData.defaultPricing.price < lowestPrice) {
-      lowestPrice = pricingData.defaultPricing.price;
-      lowestPriceData = pricingData.defaultPricing;
-    }
-  }
-  
-  // Vérifier les saisons
-  if (pricingData.seasons) {
-    for (const season of pricingData.seasons) {
-      if (season.price < lowestPrice) {
-        lowestPrice = season.price;
-        lowestPriceData = season;
+  if (priceElement && propData.pricing_data) {
+    const pricingData = propData.pricing_data;
+    
+    // SIMPLIFICATION : Trouver le prix le plus bas
+    let lowestPrice = Infinity;
+    let lowestPriceData = null;
+    
+    // Vérifier le prix par défaut
+    if (pricingData.defaultPricing && pricingData.defaultPricing.price) {
+      if (pricingData.defaultPricing.price < lowestPrice) {
+        lowestPrice = pricingData.defaultPricing.price;
+        lowestPriceData = pricingData.defaultPricing;
       }
     }
-  }
-  
-  // Si on n'a trouvé aucun prix, utiliser le prix du CMS ou 100
-  const basePrice = lowestPrice !== Infinity ? lowestPrice : (propData.price || 100);
-  
-  // 🆕 Calculer le prix plateforme
-  let platformPrice = basePrice;
-  let hasDiscount = false;
-  
-  if (lowestPriceData) {
-    // Si on a des prix plateformes pour cette donnée
-    if (lowestPriceData.platformPrices) {
-      const prices = Object.values(lowestPriceData.platformPrices);
-      if (prices.length > 0) {
-        platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+    
+    // Vérifier les saisons
+    if (pricingData.seasons) {
+      for (const season of pricingData.seasons) {
+        if (season.price < lowestPrice) {
+          lowestPrice = season.price;
+          lowestPriceData = season;
+        }
+      }
+    }
+    
+    // Si on n'a trouvé aucun prix, utiliser le prix du CMS ou 100
+    const basePrice = lowestPrice !== Infinity ? lowestPrice : (propData.price || 100);
+    
+    // Calculer le prix plateforme
+    let platformPrice = basePrice;
+    let hasDiscount = false;
+    
+    if (lowestPriceData) {
+      // Si on a des prix plateformes pour cette donnée
+      if (lowestPriceData.platformPrices) {
+        const prices = Object.values(lowestPriceData.platformPrices);
+        if (prices.length > 0) {
+          platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+          hasDiscount = true;
+        }
+      }
+      
+      // 🆕 MODIFICATION : Si pas de prix plateformes, appliquer 17% par défaut
+      if (!hasDiscount) {
+        const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
+          ? pricingData.platformPricing.defaultDiscount 
+          : 17;
+        platformPrice = Math.round(basePrice * (100 / (100 - defaultDiscount)));
         hasDiscount = true;
       }
     }
-    // Sinon si on a un defaultDiscount
-    else if (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) {
-      const discount = pricingData.platformPricing.defaultDiscount;
-      platformPrice = Math.round(basePrice * (100 / (100 - discount)));
-      hasDiscount = true;
-    }
-    // Sinon si on a un markup
-    else if (pricingData.platformMarkup && pricingData.platformMarkup.percentage) {
-      platformPrice = Math.round(basePrice * (1 + pricingData.platformMarkup.percentage / 100));
-      hasDiscount = true;
-    }
-  }
-  
-  // Afficher avec prix barré si différent
-  if (hasDiscount && platformPrice > basePrice) {
-    priceElement.innerHTML = `Dès <del>${platformPrice}€</del> <strong>${basePrice}€ / nuit</strong>`;
     
-    // Calculer et afficher le pourcentage
-    if (pourcentageElement) {
-      const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
-      pourcentageElement.textContent = `-${discount}%`;
-      pourcentageElement.style.display = 'block';
+    // Afficher avec prix barré si différent
+    if (hasDiscount && platformPrice > basePrice) {
+      priceElement.innerHTML = `Dès <del>${platformPrice}€</del> <strong>${basePrice}€ / nuit</strong>`;
+      
+      // Calculer et afficher le pourcentage
+      if (pourcentageElement) {
+        const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
+        pourcentageElement.textContent = `-${discount}%`;
+        pourcentageElement.style.display = 'block';
+      }
+    } else {
+      priceElement.innerHTML = `Dès <strong>${basePrice}€ / nuit</strong>`;
+      if (pourcentageElement) {
+        pourcentageElement.style.display = 'none';
+      }
     }
-  } else {
-    priceElement.innerHTML = `Dès <strong>${basePrice}€ / nuit</strong>`;
-    if (pourcentageElement) {
-      pourcentageElement.style.display = 'none';
-    }
-  }
-} else if (priceElement && propData.price) {
+  } else if (priceElement && propData.price) {
   // Fallback si pas de pricing_data
   priceElement.innerHTML = `Dès <strong>${propData.price}€ / nuit</strong>`;
   if (pourcentageElement) {
