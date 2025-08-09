@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V9 17%
+// Gestionnaire principal des propriétés pour la page liste - V10 17%
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -698,14 +698,15 @@ class PropertyManager {
     if (lowestPriceData) {
       // Si on a des prix plateformes pour cette donnée
       if (lowestPriceData.platformPrices) {
-        const prices = Object.values(lowestPriceData.platformPrices);
+        // 🔧 FIX : Filtrer les prix à 0 comme dans les autres modules
+        const prices = Object.values(lowestPriceData.platformPrices).filter(price => price > 0);
         if (prices.length > 0) {
           platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
           hasDiscount = true;
         }
       }
       
-      // 🆕 MODIFICATION : Si pas de prix plateformes, appliquer 17% par défaut
+      // Si pas de prix plateformes valides, appliquer 17% par défaut
       if (!hasDiscount) {
         const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
           ? pricingData.platformPricing.defaultDiscount 
