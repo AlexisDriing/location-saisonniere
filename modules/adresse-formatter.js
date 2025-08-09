@@ -1,4 +1,4 @@
-// Gestionnaire de formatage des adresses
+// Gestionnaire de formatage des adresses V2 adresse
 class AddressFormatterManager {
   constructor() {
     this.init();
@@ -33,8 +33,8 @@ class AddressFormatterManager {
       return;
     }
     
-    // Extraire ville et pays (les 2 dernières parties)
-    const cityCountry = addressParts.slice(-2).join(", ");
+    // Extraire ville et pays (les 2 premières parties)
+    const cityCountry = addressParts.slice(0, 2).join(", ");
     
     // Mettre à jour l'élément avec la version formatée
     element.textContent = cityCountry;
