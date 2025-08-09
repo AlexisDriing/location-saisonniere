@@ -1,4 +1,4 @@
-// Gestion des prix pour les cartes de logements sur la page liste V2 17%
+// Gestion des prix pour les cartes de logements sur la page liste V3 17%
 class PriceListCalculator {
   constructor(container) {
     this.container = container;
@@ -91,11 +91,20 @@ class PriceListCalculator {
   getPlatformPrice(season) {
     if (!season) return 0;
     
-    const usePercentage = this.pricingData.platformPricing && 
-                         this.pricingData.platformPricing.usePercentage === true;
+    const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
+  
+    // Si c'est defaultPricing ET qu'il a des prix plateformes
+    if (season === this.pricingData.defaultPricing && season.platformPrices) {
+      // 🔧 FIX : Filtrer les prix à 0
+      const prices = Object.values(season.platformPrices).filter(price => price > 0);
+      if (prices.length > 0) {
+        return prices.reduce((a, b) => a + b, 0) / prices.length;
+      }
+    }
     
     if (!usePercentage && season.platformPrices) {
-      const prices = Object.values(season.platformPrices);
+      // 🔧 FIX : Filtrer les prix à 0
+      const prices = Object.values(season.platformPrices).filter(price => price > 0);
       if (prices.length > 0) {
         return prices.reduce((a, b) => a + b, 0) / prices.length;
       }
@@ -105,7 +114,7 @@ class PriceListCalculator {
       return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
     }
     
-    // 🆕 MODIFICATION : Toujours appliquer 17% par défaut
+    // Toujours appliquer la réduction par défaut (17% ou valeur configurée)
     const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
       ? this.pricingData.platformPricing.defaultDiscount 
       : 17;
