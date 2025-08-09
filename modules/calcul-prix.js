@@ -1,4 +1,4 @@
-// Calculateur de prix principal V3
+// Calculateur de prix principal V4 17%
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -204,21 +204,12 @@ class PriceCalculator {
           });
         }
         
+        // 🆕 MODIFICATION : Toujours afficher le pourcentage grâce à getPlatformPrice modifié
         if (this.elements.textPourcentage.length) {
-          if (platformPrice > minPrice) {
-            this.elements.textPourcentage.forEach(element => {
-              element.textContent = `-${Math.round(100 * (platformPrice - minPrice) / platformPrice)}%`;
-            });
-          } else {
-            this.elements.textPourcentage.forEach(element => {
-              element.textContent = "";
-            });
-          }
-        }
-      } else {
-        if (this.elements.prixDirect.length) {
-          this.elements.prixDirect.forEach(element => {
-            element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">- € / nuit</strong>`;
+          // platformPrice sera toujours calculé maintenant (17% par défaut)
+          const discount = Math.round(100 * (platformPrice - minPrice) / platformPrice);
+          this.elements.textPourcentage.forEach(element => {
+            element.textContent = discount > 0 ? `-${discount}%` : "";
           });
         }
       }
@@ -400,36 +391,35 @@ class PriceCalculator {
   }
 
   getPlatformPrice(season) {
-    if (!season) return 0;
-    
-    const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
+  if (!season) return 0;
+  
+  const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
 
-    // 🆕 Si c'est defaultPricing ET qu'il a des prix plateformes
-      if (season === this.pricingData.defaultPricing && season.platformPrices) {
-        const prices = Object.values(season.platformPrices);
-        if (prices.length > 0) {
-          return prices.reduce((a, b) => a + b, 0) / prices.length;
-        }
-      }
-    
-    if (!usePercentage && season.platformPrices) {
-      const prices = Object.values(season.platformPrices);
-      if (prices.length > 0) {
-        return prices.reduce((a, b) => a + b, 0) / prices.length;
-      }
+  // Si c'est defaultPricing ET qu'il a des prix plateformes
+  if (season === this.pricingData.defaultPricing && season.platformPrices) {
+    const prices = Object.values(season.platformPrices);
+    if (prices.length > 0) {
+      return prices.reduce((a, b) => a + b, 0) / prices.length;
     }
-    
-    if (this.pricingData.platformMarkup && this.pricingData.platformMarkup.percentage) {
-      return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
-    }
-    
-  // Sinon utiliser la réduction par défaut de 17%
-  if (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) {
-    const discount = this.pricingData.platformPricing.defaultDiscount;
-    return season.price * (100 / (100 - discount));
   }
   
-  return season.price;
+  if (!usePercentage && season.platformPrices) {
+    const prices = Object.values(season.platformPrices);
+    if (prices.length > 0) {
+      return prices.reduce((a, b) => a + b, 0) / prices.length;
+    }
+  }
+  
+  if (this.pricingData.platformMarkup && this.pricingData.platformMarkup.percentage) {
+    return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
+  }
+  
+  // 🆕 MODIFICATION : Toujours appliquer la réduction par défaut (17% ou valeur configurée)
+  const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
+    ? this.pricingData.platformPricing.defaultDiscount 
+    : 17;
+  
+  return season.price * (100 / (100 - defaultDiscount));
 }
 
   updateUI(details) {
