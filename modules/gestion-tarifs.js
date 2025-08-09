@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison v4 17%
+// Gestion de l'affichage des tarifs par saison v5 17%
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -50,7 +50,8 @@ class TariffsDisplayManager {
   calculatePlatformDiscount(basePrice, platformPrices) {
     if (!platformPrices) return 0;
     
-    const prices = Object.values(platformPrices);
+    // 🔧 FIX : Filtrer les prix à 0 pour ne garder que les vrais prix
+    const prices = Object.values(platformPrices).filter(price => price > 0);
     if (prices.length === 0) return 0;
     
     const avgPlatformPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
