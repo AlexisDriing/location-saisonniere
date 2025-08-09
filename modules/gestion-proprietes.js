@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V10 17%
+// Gestionnaire principal des propriétés pour la page liste - V10 adresse
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -655,7 +655,7 @@ class PropertyManager {
     if (addressElement && propData.address) {
       const addressParts = propData.address.split(',').map(part => part.trim());
       const cityCountry = addressParts.length >= 2 ? 
-        addressParts.slice(-2).join(', ') : propData.address;
+        addressParts.slice(0, 2).join(', ') : propData.address;
       addressElement.textContent = cityCountry;
     }
     
