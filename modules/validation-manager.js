@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V10 adresse input
+// Gestionnaire de validation pour la page modification de logement V4 V11
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -205,6 +205,20 @@ class ValidationManager {
               maxLength: "Maximum 1000 caractères (actuellement: {count})"
             }
           },
+          'inclus-reservation-input': {
+            required: false,
+            maxLength: 500,
+            messages: {
+              maxLength: "Maximum 500 caractères (actuellement: {count})"
+            }
+          },
+          'cadeaux-input': {
+            required: false,
+            maxLength: 250,
+            messages: {
+              maxLength: "Maximum 250 caractères (actuellement: {count})"
+            }
+          },
           'payment-methods': {
             required: true,
             type: 'checkbox-group',
@@ -251,7 +265,9 @@ class ValidationManager {
     const textareasWithLimit = [
       { id: 'description-logement-input', limit: 1000 },
       { id: 'description-alentours-input', limit: 1000 },
-      { id: 'conditions-annulation-input', limit: 1000 }
+      { id: 'conditions-annulation-input', limit: 1000 },
+      { id: 'inclus-reservation-input', limit: 500 },
+      { id: 'cadeaux-input', limit: 250 }
     ];
 
     textareasWithLimit.forEach(({ id, limit }) => {
