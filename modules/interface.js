@@ -1,4 +1,4 @@
-// V3 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V4 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -112,7 +112,7 @@ class InterfaceManager {
       'Jacuzzi': 'jacuzzi',
       'Climatisation': 'climatisation',
       'Barbecue': 'barbecue',
-      'Équipement Bébé': 'baby',
+      'Équipement bébé': 'baby',
       'Parking gratuit': 'parking'
     };
     
