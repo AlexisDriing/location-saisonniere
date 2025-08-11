@@ -1,4 +1,4 @@
-// V6 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V7 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -10,7 +10,9 @@ class InterfaceManager {
     this.setupEquipements();
     this.setupOptionsAccueil();
     this.setupHoraires();
-    this.setupReductions();
+    const hasReductions = this.setupReductions();
+    const hasCadeaux = this.setupCadeaux();
+    this.updateBlocentierAvantages(hasReductions, hasCadeaux);
     this.setupTelephone();
     this.setupPlatformLinks();
     this.setupPopins();
@@ -67,7 +69,18 @@ class InterfaceManager {
     if (!extrasGrid || !exampleElement) return;
     
     const extrasData = extrasGrid.getAttribute("data-extras");
-    if (!extrasData || extrasData.trim() === "") return;
+    if (!extrasData || extrasData.trim() === "") {
+      // 🆕 AJOUTER : Laisser le bloc parent caché
+      console.log('📋 Aucun extra défini');
+      return;
+    }
+    
+    // 🆕 AJOUTER : Il y a des extras, afficher le bloc parent
+    const blocExtras = document.querySelector('.blocentier-extras');
+    if (blocExtras) {
+      blocExtras.style.display = 'flex'; // ou 'block' selon votre design
+      console.log('✅ Bloc extras affiché');
+    }
     
     extrasGrid.innerHTML = "";
     const extrasList = extrasData.split(",").map(extra => extra.trim());
@@ -309,7 +322,7 @@ class InterfaceManager {
   if (!jsonElement) {
     console.warn('⚠️ Élément data-json-tarifs-line non trouvé');
     // Le bloc reste caché (état par défaut Webflow)
-    return;
+    return false; // 🆕 MODIFIÉ : return false au lieu de return
   }
   
   // Récupérer et parser le JSON
@@ -319,21 +332,21 @@ class InterfaceManager {
     if (!jsonString || jsonString.trim() === '') {
       console.log('📋 Aucune donnée tarifaire');
       // Le bloc reste caché (état par défaut Webflow)
-      return;
+      return false; // 🆕 MODIFIÉ : return false au lieu de return
     }
     
     pricingData = JSON.parse(jsonString);
   } catch (error) {
     console.error('❌ Erreur parsing JSON:', error);
     // Le bloc reste caché (état par défaut Webflow)
-    return;
+    return false; // 🆕 MODIFIÉ : return false au lieu de return
   }
   
   // Vérifier s'il y a des réductions
   if (!pricingData.discounts || !Array.isArray(pricingData.discounts) || pricingData.discounts.length === 0) {
     console.log('📋 Aucune réduction définie');
     // Le bloc reste caché (état par défaut Webflow)
-    return;
+    return false; // 🆕 MODIFIÉ : return false au lieu de return
   }
   
   // Trier les réductions par nombre de nuits croissant
@@ -393,7 +406,7 @@ class InterfaceManager {
   
   if (!textReducElement) {
     console.warn('⚠️ Élément .text-reduc non trouvé');
-    return;
+    return false; // 🆕 MODIFIÉ : return false au lieu de return
   }
   
   // Mettre à jour le texte
@@ -403,12 +416,58 @@ class InterfaceManager {
   const blocReduc = document.querySelector('.bloc-reduc');
   if (blocReduc) {
     blocReduc.style.display = 'flex'; // Affiche le bloc
-    console.log('✅ Bloc réductions affiché');
   }
   
-  console.log(`✅ Phrase générée: ${phraseReduction}`);
+  return true;
 }
 
+setupCadeaux() {
+console.log('🎁 Configuration des cadeaux...');
+
+// Chercher l'élément qui contient les cadeaux
+const cadeauxElement = document.querySelector('[data-cadeaux]');
+
+if (!cadeauxElement) {
+  console.warn('⚠️ Élément data-cadeaux non trouvé');
+  return false; // Retourne false = pas visible
+}
+
+// Récupérer la valeur
+const cadeauxValue = cadeauxElement.getAttribute('data-cadeaux');
+
+if (!cadeauxValue || cadeauxValue.trim() === '') {
+  console.log('📋 Aucun cadeau défini');
+  return false; // Retourne false = pas visible
+}
+
+// Il y a des cadeaux, afficher le bloc
+const blocCadeaux = document.querySelector('.cadeaux');
+if (blocCadeaux) {
+  blocCadeaux.style.display = 'flex'; // ou 'block' selon votre design
+  console.log('✅ Bloc cadeaux affiché');
+}
+
+return true; // Retourne true = visible
+}
+
+updateBlocentierAvantages(hasReductions, hasCadeaux) {
+  console.log('📦 Mise à jour bloc avantages...');
+  
+  const blocAvantages = document.querySelector('.blocentier-avantages');
+  if (!blocAvantages) {
+    console.warn('⚠️ Bloc .blocentier-avantages non trouvé');
+    return;
+  }
+  
+  // Si au moins un des deux est visible
+  if (hasReductions || hasCadeaux) {
+    blocAvantages.style.display = 'flex'; // ou 'block' selon votre design
+    console.log('✅ Bloc avantages affiché (réductions:', hasReductions, ', cadeaux:', hasCadeaux, ')');
+  } else {
+    // Les deux sont vides, laisser caché (déjà caché par défaut dans Webflow)
+    console.log('❌ Bloc avantages reste caché (aucun contenu)');
+  }
+}
   // Gestion du téléphone cliquable
   setupTelephone() {
     console.log('📞 Configuration du téléphone...');
