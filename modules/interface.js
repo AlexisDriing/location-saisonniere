@@ -1,4 +1,4 @@
-// V5 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V6 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -308,11 +308,7 @@ class InterfaceManager {
   
   if (!jsonElement) {
     console.warn('⚠️ Élément data-json-tarifs-line non trouvé');
-    // Cacher le bloc des réductions
-    const blocReduc = document.getElementById('bloc-reduc');
-    if (blocReduc) {
-      blocReduc.style.display = 'none';
-    }
+    // Le bloc reste caché (état par défaut Webflow)
     return;
   }
   
@@ -322,30 +318,21 @@ class InterfaceManager {
     const jsonString = jsonElement.getAttribute('data-json-tarifs-line');
     if (!jsonString || jsonString.trim() === '') {
       console.log('📋 Aucune donnée tarifaire');
-      const blocReduc = document.getElementById('bloc-reduc');
-      if (blocReduc) {
-        blocReduc.style.display = 'none';
-      }
+      // Le bloc reste caché (état par défaut Webflow)
       return;
     }
     
     pricingData = JSON.parse(jsonString);
   } catch (error) {
     console.error('❌ Erreur parsing JSON:', error);
-    const blocReduc = document.getElementById('bloc-reduc');
-    if (blocReduc) {
-      blocReduc.style.display = 'none';
-    }
+    // Le bloc reste caché (état par défaut Webflow)
     return;
   }
   
   // Vérifier s'il y a des réductions
   if (!pricingData.discounts || !Array.isArray(pricingData.discounts) || pricingData.discounts.length === 0) {
     console.log('📋 Aucune réduction définie');
-    const blocReduc = document.getElementById('bloc-reduc');
-    if (blocReduc) {
-      blocReduc.style.display = 'none';
-    }
+    // Le bloc reste caché (état par défaut Webflow)
     return;
   }
   
@@ -412,13 +399,14 @@ class InterfaceManager {
   // Mettre à jour le texte
   textReducElement.textContent = phraseReduction;
   
-  // S'assurer que le bloc est visible
-  const blocReduc = document.getElementById('bloc-reduc');
+  // Afficher le bloc (qui est caché par défaut dans Webflow)
+  const blocReduc = document.querySelector('.bloc-reduc');
   if (blocReduc) {
-    blocReduc.style.display = ''; // Utiliser le display par défaut
+    blocReduc.style.display = 'flex'; // Affiche le bloc
+    console.log('✅ Bloc réductions affiché');
   }
   
-  console.log(`✅ Réduction affichée: ${phraseReduction}`);
+  console.log(`✅ Phrase générée: ${phraseReduction}`);
 }
 
   // Gestion du téléphone cliquable
