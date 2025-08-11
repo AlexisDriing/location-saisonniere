@@ -1,4 +1,4 @@
-// V7 v2 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V7 v3 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -13,6 +13,8 @@ class InterfaceManager {
     const hasReductions = this.setupReductions();
     const hasCadeaux = this.setupCadeaux();
     this.updateBlocentierAvantages(hasReductions, hasCadeaux);
+    this.setupInclus();
+    this.setupAnnonces();
     this.setupTelephone();
     this.setupPlatformLinks();
     this.setupPopins();
@@ -151,6 +153,11 @@ class InterfaceManager {
     if (!equipementsString || equipementsString.trim() === '') {
       console.log('📋 Aucun équipement défini pour ce logement');
       return;
+    }
+
+    const blocEquipements = document.querySelector('.blocentier-equipements');
+    if (blocEquipements) {
+      blocEquipements.style.display = 'block'; // ou 'block' selon votre design
     }
     
     // Parser les équipements (séparés par des virgules)
@@ -466,6 +473,64 @@ updateBlocentierAvantages(hasReductions, hasCadeaux) {
   } else {
     // Les deux sont vides, laisser caché (déjà caché par défaut dans Webflow)
     console.log('❌ Bloc avantages reste caché (aucun contenu)');
+  }
+}
+
+setupInclus() {
+  console.log('✅ Configuration du bloc inclus...');
+  
+  // Chercher l'élément qui contient les inclus
+  const inclusElement = document.querySelector('[data-inclus-reservation]');
+  
+  if (!inclusElement) {
+    console.warn('⚠️ Élément data-inclus-reservation non trouvé');
+    return;
+  }
+  
+  // Récupérer la valeur
+  const inclusValue = inclusElement.getAttribute('data-inclus-reservation');
+  
+  if (!inclusValue || inclusValue.trim() === '') {
+    console.log('📋 Aucun inclus défini - bloc reste caché');
+    return;
+  }
+  
+  // Il y a du contenu, afficher le bloc
+  const blocInclus = document.querySelector('.inclus');
+  if (blocInclus) {
+    blocInclus.style.display = 'flex'; // ou 'block' selon votre design
+    console.log('✅ Bloc inclus affiché');
+  }
+}
+
+setupAnnonces() {
+  console.log('📢 Configuration du bloc annonces...');
+  
+  // Vérifier les 3 champs d'annonces
+  const airbnbElement = document.querySelector('[data-airbnb-link]');
+  const bookingElement = document.querySelector('[data-booking-link]');
+  const gitesElement = document.querySelector('[data-gites-link]');
+  
+  // Récupérer les valeurs
+  const airbnbValue = airbnbElement ? airbnbElement.getAttribute('data-airbnb-link') : '';
+  const bookingValue = bookingElement ? bookingElement.getAttribute('data-booking-link') : '';
+  const gitesValue = gitesElement ? gitesElement.getAttribute('data-gites-link') : '';
+  
+  // Vérifier si au moins une annonce existe
+  const hasAnnonces = (airbnbValue && airbnbValue.trim() !== '') ||
+                      (bookingValue && bookingValue.trim() !== '') ||
+                      (gitesValue && gitesValue.trim() !== '');
+  
+  if (!hasAnnonces) {
+    console.log('📋 Aucune annonce définie - bloc reste caché');
+    return;
+  }
+  
+  // Au moins une annonce existe, afficher le bloc
+  const blocAnnonces = document.querySelector('.annonces');
+  if (blocAnnonces) {
+    blocAnnonces.style.display = 'block'; // ou 'block' selon votre design
+    console.log('✅ Bloc annonces affiché');
   }
 }
   // Gestion du téléphone cliquable
