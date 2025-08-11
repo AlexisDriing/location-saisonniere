@@ -1,4 +1,4 @@
-// V4 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V5 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -301,57 +301,125 @@ class InterfaceManager {
 
   // Gestion des réductions
   setupReductions() {
-    console.log('💰 Configuration des réductions...');
-    
-    // Chercher l'élément qui contient les réductions
-    const reductionElement = document.querySelector('[data-reduction]');
-    
-    if (!reductionElement) {
-      console.warn('⚠️ Élément data-reduction non trouvé');
-      return;
+  console.log('💰 Configuration des réductions...');
+  
+  // Chercher l'élément qui contient le JSON
+  const jsonElement = document.querySelector('[data-json-tarifs-line]');
+  
+  if (!jsonElement) {
+    console.warn('⚠️ Élément data-json-tarifs-line non trouvé');
+    // Cacher le bloc des réductions
+    const blocReduc = document.getElementById('bloc-reduc');
+    if (blocReduc) {
+      blocReduc.style.display = 'none';
     }
-    
-    // Récupérer la valeur du champ
-    const reductionString = reductionElement.getAttribute('data-reduction');
-    
-    if (!reductionString || reductionString.trim() === '') {
-      console.log('📋 Aucune réduction personnalisée définie');
-      return;
-    }
-    
-    // Parser les valeurs (séparées par une virgule)
-    const valeurs = reductionString.split(',').map(v => v.trim());
-    
-    if (valeurs.length !== 2) {
-      console.warn('⚠️ Format de réduction incorrect. Attendu: "nombreJours,pourcentage"');
-      return;
-    }
-    
-    const [nombreJours, pourcentage] = valeurs;
-    console.log(`📋 Réduction trouvée: ${nombreJours} nuits, ${pourcentage}%`);
-    
-    // Chercher l'élément texte à modifier
-    const textReducElement = document.querySelector('.text-reduc');
-    
-    if (!textReducElement) {
-      console.warn('⚠️ Élément .text-reduc non trouvé');
-      return;
-    }
-    
-    // Remplacer les valeurs dans le texte
-    let texteActuel = textReducElement.textContent;
-    
-    // Remplacer le nombre de nuits (premier nombre suivi de "nuits")
-    texteActuel = texteActuel.replace(/\d+\s*nuits?/, `${nombreJours} nuits`);
-    
-    // Remplacer le pourcentage (nombre suivi de %)
-    texteActuel = texteActuel.replace(/\d+%/, `${pourcentage}%`);
-    
-    // Mettre à jour le texte
-    textReducElement.textContent = texteActuel;
-    
-    console.log(`✅ Réduction mise à jour: ${texteActuel}`);
+    return;
   }
+  
+  // Récupérer et parser le JSON
+  let pricingData;
+  try {
+    const jsonString = jsonElement.getAttribute('data-json-tarifs-line');
+    if (!jsonString || jsonString.trim() === '') {
+      console.log('📋 Aucune donnée tarifaire');
+      const blocReduc = document.getElementById('bloc-reduc');
+      if (blocReduc) {
+        blocReduc.style.display = 'none';
+      }
+      return;
+    }
+    
+    pricingData = JSON.parse(jsonString);
+  } catch (error) {
+    console.error('❌ Erreur parsing JSON:', error);
+    const blocReduc = document.getElementById('bloc-reduc');
+    if (blocReduc) {
+      blocReduc.style.display = 'none';
+    }
+    return;
+  }
+  
+  // Vérifier s'il y a des réductions
+  if (!pricingData.discounts || !Array.isArray(pricingData.discounts) || pricingData.discounts.length === 0) {
+    console.log('📋 Aucune réduction définie');
+    const blocReduc = document.getElementById('bloc-reduc');
+    if (blocReduc) {
+      blocReduc.style.display = 'none';
+    }
+    return;
+  }
+  
+  // Trier les réductions par nombre de nuits croissant
+  const sortedDiscounts = [...pricingData.discounts]
+    .sort((a, b) => a.nights - b.nights)
+    .slice(0, 5); // Limiter à 5 maximum
+  
+  console.log(`📋 ${sortedDiscounts.length} réduction(s) trouvée(s):`, sortedDiscounts);
+  
+  // Construire la phrase dynamique
+  let phraseReduction = '';
+  
+  if (sortedDiscounts.length === 1) {
+    // Une seule réduction
+    const discount = sortedDiscounts[0];
+    const nuitText = discount.nights === 1 ? 'nuit' : 'nuits';
+    phraseReduction = `En réservant ${discount.nights} ${nuitText} ou plus, profitez de ${discount.percentage}% de remise.`;
+    
+  } else {
+    // Plusieurs réductions
+    // Construire la liste des nuits
+    const nightsList = sortedDiscounts.map(d => d.nights);
+    let nightsText = '';
+    
+    if (nightsList.length === 2) {
+      // 2 réductions : "7 ou 14"
+      nightsText = nightsList.join(' ou ');
+    } else {
+      // 3+ réductions : "7, 14 ou 30"
+      const lastNight = nightsList.pop();
+      nightsText = nightsList.join(', ') + ' ou ' + lastNight;
+    }
+    
+    // Construire la liste des pourcentages
+    const percentagesList = sortedDiscounts.map(d => d.percentage + '%');
+    let percentagesText = '';
+    
+    if (percentagesList.length === 2) {
+      // 2 réductions : "10% ou 15%"
+      percentagesText = percentagesList.join(' ou ');
+    } else {
+      // 3+ réductions : "10%, 15% ou 20%"
+      const lastPercentage = percentagesList.pop();
+      percentagesText = percentagesList.join(', ') + ' ou ' + lastPercentage;
+    }
+    
+    // Déterminer le texte pour "nuit(s)"
+    const allSingleNight = sortedDiscounts.every(d => d.nights === 1);
+    const nuitText = allSingleNight ? 'nuit' : 'nuits';
+    
+    // Construire la phrase complète
+    phraseReduction = `En réservant ${nightsText} ${nuitText} ou plus, profitez respectivement de ${percentagesText} de remise.`;
+  }
+  
+  // Chercher l'élément texte à modifier
+  const textReducElement = document.querySelector('.text-reduc');
+  
+  if (!textReducElement) {
+    console.warn('⚠️ Élément .text-reduc non trouvé');
+    return;
+  }
+  
+  // Mettre à jour le texte
+  textReducElement.textContent = phraseReduction;
+  
+  // S'assurer que le bloc est visible
+  const blocReduc = document.getElementById('bloc-reduc');
+  if (blocReduc) {
+    blocReduc.style.display = ''; // Utiliser le display par défaut
+  }
+  
+  console.log(`✅ Réduction affichée: ${phraseReduction}`);
+}
 
   // Gestion du téléphone cliquable
   setupTelephone() {
