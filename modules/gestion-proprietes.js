@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V10 adresse
+// Gestionnaire principal des propriétés pour la page liste - V11 Loader
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -46,7 +46,8 @@ class PropertyManager {
     // Récupérer le template et le container
     this.templateElement = document.querySelector('.housing-item');
     this.containerElement = document.querySelector('.collection-grid');
-    
+    this.createGridPreloader();
+ 
     if (this.templateElement) {
       // Cloner le template et cacher l'original
       this.templateClone = this.templateElement.cloneNode(true);
@@ -76,6 +77,17 @@ class PropertyManager {
     this.setupCacheCleanup();
   }
 
+  createGridPreloader() {
+    const wrapper = document.querySelector('.collection-list-wrapper');
+    if (wrapper && !wrapper.querySelector('.grid-preloader')) {
+      const preloader = document.createElement('div');
+      preloader.className = 'grid-preloader';
+      preloader.innerHTML = '<div class="spinner"></div>';
+      wrapper.appendChild(preloader);
+      console.log('✅ Preloader créé dans la grille');
+    }
+  }
+  
   cleanTemplate(template) {
     console.log('🧹 Nettoyage du template en cours...');
     
@@ -1147,9 +1159,24 @@ if (hostImageElement) {
   // ================================
 
   showLoading(show) {
-    const loadingIndicator = document.querySelector('.loading-indicator');
-    if (loadingIndicator) {
-      loadingIndicator.style.display = show ? 'flex' : 'none';
+    const preloader = document.querySelector('.grid-preloader');
+    if (!preloader) {
+      console.warn('⚠️ Preloader non trouvé');
+      return;
+    }
+    
+    if (show) {
+      // Afficher
+      preloader.classList.add('active');
+      preloader.classList.remove('hiding');
+      console.log('🔄 Preloader affiché');
+    } else {
+      // Masquer avec animation
+      preloader.classList.add('hiding');
+      setTimeout(() => {
+        preloader.classList.remove('active', 'hiding');
+        console.log('✅ Preloader masqué');
+      }, 300);
     }
   }
 
