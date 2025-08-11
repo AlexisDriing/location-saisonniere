@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V15 V22 Adresse 3 inputs
+// Gestionnaire de la page de modification de logement - V16
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1667,8 +1667,8 @@ addDiscount() {
   console.log('➕ Ajout d\'une nouvelle réduction');
   
   // Vérifier la limite
-  if (this.pricingData.discounts.length >= 10) {
-    this.showNotification('error', 'Maximum 10 réductions autorisées');
+  if (this.pricingData.discounts.length >= 5) {
+    this.showNotification('error', 'Maximum 5 réductions autorisées');
     return;
   }
   
@@ -1799,7 +1799,7 @@ setupDiscountListeners(blocElement, index) {
 updateAddButtonState() {
   const addButton = document.getElementById('button-add-reduction');
   if (addButton) {
-    if (this.pricingData.discounts.length >= 10) {
+    if (this.pricingData.discounts.length >= 5) {
       addButton.disabled = true;
       addButton.style.opacity = '0.5';
       addButton.style.cursor = 'not-allowed';
