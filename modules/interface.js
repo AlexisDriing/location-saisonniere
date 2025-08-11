@@ -1,4 +1,4 @@
-// V7 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V7 v2 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -78,7 +78,7 @@ class InterfaceManager {
     // 🆕 AJOUTER : Il y a des extras, afficher le bloc parent
     const blocExtras = document.querySelector('.blocentier-extras');
     if (blocExtras) {
-      blocExtras.style.display = 'flex'; // ou 'block' selon votre design
+      blocExtras.style.display = 'block'; // ou 'block' selon votre design
       console.log('✅ Bloc extras affiché');
     }
     
@@ -461,7 +461,7 @@ updateBlocentierAvantages(hasReductions, hasCadeaux) {
   
   // Si au moins un des deux est visible
   if (hasReductions || hasCadeaux) {
-    blocAvantages.style.display = 'flex'; // ou 'block' selon votre design
+    blocAvantages.style.display = 'block'; // ou 'block' selon votre design
     console.log('✅ Bloc avantages affiché (réductions:', hasReductions, ', cadeaux:', hasCadeaux, ')');
   } else {
     // Les deux sont vides, laisser caché (déjà caché par défaut dans Webflow)
