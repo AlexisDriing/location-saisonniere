@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V11 v12 format 
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V12 stripe
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -170,6 +170,7 @@ class ProfileManager {
   this.setupDisableButton(property, targetElement);
   // Ligne existante qui passe déjà targetElement
   this.setupVerificationButton(property, targetElement);
+  this.setupPaymentButton(property, targetElement);
 }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
@@ -364,6 +365,37 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     
     console.log('✅ Listener attaché au bouton du clone');
   }
+
+  setupPaymentButton(property, targetElement = document) {
+  console.log('💳 Setup du bouton paiement Stripe');
+  
+  // Chercher le bouton de paiement (adaptez le sélecteur selon votre HTML)
+  const paymentBtn = targetElement.querySelector('[data-stripe-payment]'); // ou autre sélecteur
+  
+  if (!paymentBtn) {
+    console.log('Pas de bouton de paiement dans ce bloc');
+    return;
+  }
+  
+  // Configuration simple : juste ajouter le lien Stripe avec l'ID du logement
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_7sY5kCcx16EN8RO1PodEs00';
+  const propertyId = property.webflow_item_id;
+  const userEmail = this.currentUser?.email || '';
+  
+  // Construire l'URL
+  const stripeUrl = new URL(STRIPE_PAYMENT_LINK);
+  stripeUrl.searchParams.set('client_reference_id', propertyId);
+  if (userEmail) {
+    stripeUrl.searchParams.set('prefilled_email', userEmail);
+  }
+  
+  // Simple listener
+  paymentBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    console.log('💳 Paiement pour logement:', propertyId);
+    window.location.href = stripeUrl.toString();
+  });
+}
   
   showEmptyState() {
     console.log('📭 Aucun logement trouvé');
