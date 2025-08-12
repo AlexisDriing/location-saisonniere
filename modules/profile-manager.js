@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V12 stripe
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V12 stripe V2
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -30,6 +30,8 @@ class ProfileManager {
 
     // NOUVEAU : Configurer le formulaire de création
     this.setupCreatePropertyForm();
+    // Vérifier si on revient d'un paiement Stripe
+    this.checkPaymentSuccess();
     
     console.log('✅ ProfileManager initialisé');
     
@@ -396,7 +398,48 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     window.location.href = stripeUrl.toString();
   });
 }
+
+  // Vérifier le retour de paiement
+checkPaymentSuccess() {
+  const urlParams = new URLSearchParams(window.location.search);
   
+  if (urlParams.get('success') !== 'true') return;
+  
+  console.log('🎉 Retour de paiement détecté');
+  
+  // Afficher la notification
+  const notification = document.getElementById('payment-success-notification');
+  if (notification) {
+    notification.style.display = 'flex'; // ou 'flex' selon votre design Webflow
+    notification.classList.add('show');
+    
+    // Masquer après 3 secondes
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 300);
+    }, 3000);
+  }
+  
+  // Lancer les confettis
+  if (typeof confetti !== 'undefined') {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  }
+  
+  // Nettoyer l'URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+  
+  // Recharger après 3 secondes
+  setTimeout(() => {
+    window.location.reload();
+  }, 3000);
+}
+
   showEmptyState() {
     console.log('📭 Aucun logement trouvé');
     
