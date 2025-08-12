@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V12 stripe V3
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V13
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -170,6 +170,7 @@ class ProfileManager {
   
   // 5. Désactiver le bouton si pending-none
   this.setupDisableButton(property, targetElement);
+  this.setupViewPropertyButton(property, targetElement);
   // Ligne existante qui passe déjà targetElement
   this.setupVerificationButton(property, targetElement);
   this.setupPaymentButton(property, targetElement);
@@ -398,7 +399,20 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     window.location.href = stripeUrl.toString();
   });
 }
-
+// 🆕 NOUVELLE MÉTHODE : Configurer le bouton pour voir le logement
+setupViewPropertyButton(property, targetElement = document) {
+  const viewButton = targetElement.querySelector('#logement-link');
+  
+  if (!viewButton) return;
+  
+  // Utiliser webflow_item_id comme dans gestion-proprietes (qui utilise propData.id)
+  const propertyUrl = `/locations-saisonnieres/${property.webflow_item_id}`;
+  
+  viewButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = propertyUrl;
+  });
+}
   // Vérifier le retour de paiement
 checkPaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
