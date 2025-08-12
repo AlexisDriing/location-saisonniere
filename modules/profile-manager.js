@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V13
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V13 v2
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -410,7 +410,7 @@ setupViewPropertyButton(property, targetElement = document) {
   
   viewButton.addEventListener('click', (e) => {
     e.preventDefault();
-    window.location.href = propertyUrl;
+    window.open(propertyUrl, '_blank');
   });
 }
   // Vérifier le retour de paiement
