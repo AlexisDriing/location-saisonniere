@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V12 stripe V2
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V12 stripe V3
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -433,11 +433,6 @@ checkPaymentSuccess() {
   
   // Nettoyer l'URL
   window.history.replaceState({}, document.title, window.location.pathname);
-  
-  // Recharger après 3 secondes
-  setTimeout(() => {
-    window.location.reload();
-  }, 3000);
 }
 
   showEmptyState() {
