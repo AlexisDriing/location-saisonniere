@@ -1,10 +1,13 @@
-// Gestionnaire de la page de modification de logement - V17 v1
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
     this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
     this.editingSeasonIndex = null;
+    this.originalImagesGallery = [];
+    this.currentImagesGallery = [];
+    this.sortableInstance = null;
 
     this.icalUrls = []; // Stockage des URLs iCal
     this.icalFieldMapping = [
@@ -79,6 +82,7 @@ class PropertyEditor {
     this.initDiscountManagement();
     this.initIcalManagement();
     this.initExtrasManagement();
+    this.initImageManagement();
     this.updatePlatformBlocksVisibility();
   }
   this.validationManager = new ValidationManager(this);
@@ -2398,6 +2402,194 @@ generateExtrasString() {
     })
     .join(', ');
 }
+
+
+// ================================
+// 📷 GESTION DES IMAGES
+// ================================
+
+initImageManagement() {
+  console.log('📷 Initialisation gestion des images...');
+  
+  // Copier l'état initial
+  this.originalImagesGallery = JSON.parse(JSON.stringify(this.propertyData.images_gallery || []));
+  this.currentImagesGallery = JSON.parse(JSON.stringify(this.propertyData.images_gallery || []));
+  
+  // Sauvegarder dans initialValues pour le système de cancel
+  this.initialValues.images_gallery = JSON.parse(JSON.stringify(this.originalImagesGallery));
+  
+  // Réafficher avec les contrôles
+  this.displayEditableGallery();
+  
+  // Initialiser SortableJS après un court délai (DOM ready)
+  setTimeout(() => {
+    this.initSortable();
+  }, 100);
+}
+
+initSortable() {
+  const container = document.getElementById('bloc-photos-logement');
+  if (!container || this.currentImagesGallery.length === 0) return;
+  
+  // Détruire l'instance précédente si elle existe
+  if (this.sortableInstance) {
+    this.sortableInstance.destroy();
+  }
+  
+  this.sortableInstance = new Sortable(container, {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    filter: '.button-delete-photo', // Empêcher le drag sur les boutons
+    preventOnFilter: false,
+    
+    onEnd: (evt) => {
+      // Réorganiser le tableau
+      const movedItem = this.currentImagesGallery.splice(evt.oldIndex, 1)[0];
+      this.currentImagesGallery.splice(evt.newIndex, 0, movedItem);
+      
+      console.log('🔄 Nouvel ordre des images:', this.currentImagesGallery);
+      
+      // Activer le bouton save
+      this.enableButtons();
+    }
+  });
+}
+
+displayEditableGallery() {
+  const blocEmpty = document.getElementById('bloc-empty-photos');
+  const blocPhotos = document.getElementById('bloc-photos-logement');
+  
+  // Gérer l'affichage empty/photos
+  if (!Array.isArray(this.currentImagesGallery) || this.currentImagesGallery.length === 0) {
+    if (blocEmpty) blocEmpty.style.display = 'flex';
+    if (blocPhotos) blocPhotos.style.display = 'none';
+    return;
+  } else {
+    if (blocEmpty) blocEmpty.style.display = 'none';
+    if (blocPhotos) blocPhotos.style.display = 'block';
+  }
+  
+  // Masquer tous les blocs d'abord
+  for (let i = 1; i <= 20; i++) {
+    const imageBlock = document.getElementById(`image-block-${i}`);
+    if (imageBlock) {
+      imageBlock.style.display = 'none';
+      // Nettoyer les anciens boutons clonés
+      const oldBtn = imageBlock.querySelector('.button-delete-photo');
+      if (oldBtn) {
+        oldBtn.remove();
+      }
+    }
+  }
+  
+  // Afficher les images avec boutons de suppression
+  const maxImages = Math.min(this.currentImagesGallery.length, 20);
+  
+  for (let i = 0; i < maxImages; i++) {
+    const imageData = this.currentImagesGallery[i];
+    const imageBlock = document.getElementById(`image-block-${i + 1}`);
+    
+    if (imageBlock && imageData) {
+      let imageUrl = null;
+      
+      if (typeof imageData === 'object' && imageData.url) {
+        imageUrl = imageData.url;
+      } else if (typeof imageData === 'string') {
+        imageUrl = imageData;
+      }
+      
+      if (imageUrl) {
+        const imgElement = imageBlock.querySelector('img');
+        
+        if (imgElement) {
+          imgElement.src = imageUrl;
+          imgElement.alt = `Image ${i + 1}`;
+          
+          if (i > 3) {
+            imgElement.loading = 'lazy';
+          }
+        }
+        
+        // 🆕 HYBRIDE : Ajouter le bouton de suppression depuis le template
+        this.addDeleteButtonFromTemplate(imageBlock, i);
+        
+        // Ajouter les classes pour le drag
+        imageBlock.style.cursor = 'move';
+        imageBlock.classList.add('sortable-item');
+        
+        // Afficher le bloc
+        imageBlock.style.display = 'block';
+      }
+    }
+  }
+}
+
+// 🆕 NOUVELLE MÉTHODE : Cloner le template Webflow
+addDeleteButtonFromTemplate(imageBlock, index) {
+  // Vérifier si le bouton existe déjà
+  let deleteBtn = imageBlock.querySelector('.button-delete-photo');
+  
+  if (!deleteBtn) {
+    // Récupérer le template depuis Webflow
+    const template = document.getElementById('template-delete-button');
+    
+    if (template) {
+      // Cloner le template
+      deleteBtn = template.cloneNode(true);
+      deleteBtn.style.display = ''; // Retirer le display:none
+      deleteBtn.id = ''; // Retirer l'ID pour éviter les doublons
+      
+      // S'assurer que le bloc parent est en position relative
+      imageBlock.style.position = 'relative';
+      
+      // Ajouter le bouton cloné au bloc image
+      imageBlock.appendChild(deleteBtn);
+      
+      console.log(`✅ Bouton delete ajouté à image-block-${index + 1}`);
+    } else {
+      console.error('❌ ERREUR : Template de bouton delete (#template-delete-button) non trouvé dans le DOM');
+      return;
+    }
+  }
+  
+  // Ajouter le handler de clic seulement si le bouton existe
+  if (deleteBtn) {
+    deleteBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.removeImage(index);
+    };
+  }
+}
+
+  
+
+removeImage(index) {
+  console.log(`🗑️ Suppression de l'image ${index + 1}`);
+  
+  // Vérifier qu'on garde minimum 3 images
+  if (this.currentImagesGallery.length <= 3) {
+    this.showNotification('error', 'Minimum 3 photos requises pour le logement');
+    return;
+  }
+  
+  // Supprimer l'image
+  this.currentImagesGallery.splice(index, 1);
+  
+  // Réafficher la galerie
+  this.displayEditableGallery();
+  
+  // Réinitialiser SortableJS
+  setTimeout(() => {
+    this.initSortable();
+  }, 100);
+  
+  // Activer les boutons de sauvegarde
+  this.enableButtons();
+}
+  
   
 setupFieldListeners() {
   const fields = [
@@ -3099,6 +3291,13 @@ setBlockState(element, isActive) {
     this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
 
+    // 🆕 NOUVEAU : Restaurer les images
+    this.currentImagesGallery = JSON.parse(JSON.stringify(this.initialValues.images_gallery || []));
+    this.displayEditableGallery();
+    setTimeout(() => {
+      this.initSortable();
+    }, 100);
+    
     setTimeout(() => {
       this.applyInitialStates();
     }, 100);
@@ -3384,6 +3583,25 @@ setBlockState(element, isActive) {
   } else {
     console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
   }
+
+  // 🆕 NOUVEAU : Vérifier si les images ont changé
+  const originalImagesJson = JSON.stringify(this.originalImagesGallery);
+  const currentImagesJson = JSON.stringify(this.currentImagesGallery);
+  
+  if (originalImagesJson !== currentImagesJson) {
+    // Vérifier minimum 3 images avant de sauvegarder
+    if (this.currentImagesGallery.length < 3) {
+      this.showNotification('error', 'Minimum 3 photos requises pour le logement');
+      
+      // Réactiver le bouton
+      saveButton.disabled = false;
+      saveButton.textContent = originalText;
+      return;
+    }
+    
+    updates['photos-du-logement'] = this.currentImagesGallery;
+    console.log('📷 Images modifiées ajoutées aux updates');
+  }
     
     // Si aucune modification
     if (Object.keys(updates).length === 0) {
@@ -3450,7 +3668,14 @@ setBlockState(element, isActive) {
       if (updates.pricing_data) {
         this.propertyData.pricing_data = JSON.parse(JSON.stringify(this.pricingData));
       }
-      
+
+      // 🆕 NOUVEAU : Mettre à jour les images d'origine après sauvegarde réussie
+      if (updates['photos-du-logement']) {
+        this.originalImagesGallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
+        this.propertyData.images_gallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
+        this.initialValues.images_gallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
+      }
+        
       // Désactiver les boutons
       this.disableButtons();
       
