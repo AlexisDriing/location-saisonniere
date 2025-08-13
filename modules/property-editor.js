@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2436,16 +2436,18 @@ initSortable() {
     this.sortableInstance.destroy();
   }
   
+  // 🔧 IMPORTANT : Dire à SortableJS de ne déplacer QUE les image-block visibles
   this.sortableInstance = new Sortable(container, {
     animation: 150,
     ghostClass: 'sortable-ghost',
     chosenClass: 'sortable-chosen',
     dragClass: 'sortable-drag',
+    draggable: '[id^="image-block-"]:not([style*="display: none"])', // 🔧 SEULEMENT les image-block visibles
     filter: '.button-delete-photo', // Empêcher le drag sur les boutons
     preventOnFilter: false,
     
     onEnd: (evt) => {
-      // Réorganiser le tableau
+      // 🔧 Obtenir les bons index basés sur les image-block
       const movedItem = this.currentImagesGallery.splice(evt.oldIndex, 1)[0];
       this.currentImagesGallery.splice(evt.newIndex, 0, movedItem);
       
@@ -2526,7 +2528,6 @@ displayEditableGallery() {
   }
 }
 
-// 🆕 NOUVELLE MÉTHODE : Cloner le template Webflow
 addDeleteButtonFromTemplate(imageBlock, index) {
   // Vérifier si le bouton existe déjà
   let deleteBtn = imageBlock.querySelector('.button-delete-photo');
@@ -2538,8 +2539,14 @@ addDeleteButtonFromTemplate(imageBlock, index) {
     if (template) {
       // Cloner le template
       deleteBtn = template.cloneNode(true);
-      deleteBtn.style.display = ''; // Retirer le display:none
+      deleteBtn.style.display = 'block'; // 🔧 CHANGÉ : 'block' au lieu de ''
       deleteBtn.id = ''; // Retirer l'ID pour éviter les doublons
+      
+      // 🔧 IMPORTANT : S'assurer du positionnement
+      deleteBtn.style.position = 'absolute';
+      deleteBtn.style.top = '8px';
+      deleteBtn.style.right = '8px';
+      deleteBtn.style.zIndex = '20'; // 🔧 z-index plus élevé
       
       // S'assurer que le bloc parent est en position relative
       imageBlock.style.position = 'relative';
@@ -2548,13 +2555,21 @@ addDeleteButtonFromTemplate(imageBlock, index) {
       imageBlock.appendChild(deleteBtn);
       
       console.log(`✅ Bouton delete ajouté à image-block-${index + 1}`);
+      
+      // 🔧 DEBUG : Vérifier la visibilité
+      console.log(`🔍 Bouton visible ?`, {
+        display: deleteBtn.style.display,
+        position: deleteBtn.style.position,
+        parent: imageBlock.style.position,
+        opacity: window.getComputedStyle(deleteBtn).opacity
+      });
     } else {
       console.error('❌ ERREUR : Template de bouton delete (#template-delete-button) non trouvé dans le DOM');
       return;
     }
   }
   
-  // Ajouter le handler de clic seulement si le bouton existe
+  // Ajouter le handler de clic
   if (deleteBtn) {
     deleteBtn.onclick = (e) => {
       e.preventDefault();
