@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V17
+// Gestionnaire de la page de modification de logement - V17 v1
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2402,7 +2402,7 @@ generateExtrasString() {
 setupFieldListeners() {
   const fields = [
     { id: 'name-input' },
-    { id: 'ville-input' },
+    { id: 'ville-input', type: 'no-numbers' },
     { id: 'pays-input' },
     { id: 'rue-input' },
     { id: 'cadeaux-input' },
