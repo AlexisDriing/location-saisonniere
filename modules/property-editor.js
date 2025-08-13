@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V16
+// Gestionnaire de la page de modification de logement - V17
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2423,6 +2423,21 @@ setupFieldListeners() {
   fields.forEach(field => {
     const input = document.getElementById(field.id);
     if (input) {
+      // NOUVEAU : Bloquer les chiffres pour le champ ville
+      if (field.type === 'no-numbers') {
+        input.addEventListener('input', (e) => {
+          // Supprimer tous les chiffres
+          e.target.value = e.target.value.replace(/\d/g, '');
+        });
+        
+        input.addEventListener('keypress', (e) => {
+          // Empêcher la saisie de chiffres
+          if (/\d/.test(e.key)) {
+            e.preventDefault();
+          }
+        });
+      }
+      
       input.addEventListener('input', () => {
         // Validation spéciale pour certains champs
         if (field.id === 'site-internet-input') {
