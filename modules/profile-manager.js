@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V13 v2
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -532,7 +532,24 @@ checkPaymentSuccess() {
     console.error('Formulaire non trouvé dans le wrapper');
     return;
   }
-  
+
+  // NOUVEAU : Bloquer les chiffres dans le champ ville-creation
+  const villeCreationInput = document.getElementById('ville-creation');
+  if (villeCreationInput) {
+    villeCreationInput.addEventListener('input', (e) => {
+      // Supprimer tous les chiffres de la valeur
+      e.target.value = e.target.value.replace(/\d/g, '');
+    });
+    
+    // Bloquer également au keypress pour une meilleure UX
+    villeCreationInput.addEventListener('keypress', (e) => {
+      // Si c'est un chiffre, empêcher la saisie
+      if (/\d/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+  }
+    
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     e.stopPropagation(); // Empêche la soumission Webflow
