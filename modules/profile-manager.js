@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v6 reload
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v7 ms
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -467,7 +467,7 @@ checkPopupTrigger() {
       } else {
         console.error('❌ Bouton empty-button non trouvé');
       }
-    }, 800); // Délai pour laisser Webflow initialiser ses interactions
+    }, 500); // Délai pour laisser Webflow initialiser ses interactions
   }
 }
   
