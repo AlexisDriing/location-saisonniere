@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v4
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v5
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -32,7 +32,8 @@ class ProfileManager {
     this.setupCreatePropertyForm();
     // Vérifier si on revient d'un paiement Stripe
     this.checkPaymentSuccess();
-    
+    this.checkPopupTrigger();
+
     console.log('✅ ProfileManager initialisé');
     
     // Export global
@@ -449,6 +450,27 @@ checkPaymentSuccess() {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
+// 🆕 NOUVELLE MÉTHODE : Vérifier si on doit ouvrir la popup
+checkPopupTrigger() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (urlParams.get('popup') === 'true') {
+    console.log('🎯 Ouverture automatique de la popup détectée');
+    
+    // Attendre que Webflow Interactions soit prêt
+    setTimeout(() => {
+      const bouton = document.getElementById('empty-button');
+      if (bouton) {
+        console.log('✅ Déclenchement du clic sur empty-button');
+        bouton.click();
+        // Pas de nettoyage URL - elle se nettoiera après création
+      } else {
+        console.error('❌ Bouton empty-button non trouvé');
+      }
+    }, 800); // Délai pour laisser Webflow initialiser ses interactions
+  }
+}
+  
   showEmptyState() {
     console.log('📭 Aucun logement trouvé');
     
