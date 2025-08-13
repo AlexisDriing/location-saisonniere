@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v2
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2436,24 +2436,20 @@ initSortable() {
     this.sortableInstance.destroy();
   }
   
-  // 🔧 IMPORTANT : Dire à SortableJS de ne déplacer QUE les image-block visibles
+  // 🎯 SIMPLE comme la démo : juste l'essentiel
   this.sortableInstance = new Sortable(container, {
     animation: 150,
     ghostClass: 'sortable-ghost',
-    chosenClass: 'sortable-chosen',
-    dragClass: 'sortable-drag',
-    draggable: '[id^="image-block-"]:not([style*="display: none"])', // 🔧 SEULEMENT les image-block visibles
-    filter: '.button-delete-photo', // Empêcher le drag sur les boutons
-    preventOnFilter: false,
+    filter: '.button-delete-photo', 
     
     onEnd: (evt) => {
-      // 🔧 Obtenir les bons index basés sur les image-block
+      // Réorganiser notre tableau de données
       const movedItem = this.currentImagesGallery.splice(evt.oldIndex, 1)[0];
       this.currentImagesGallery.splice(evt.newIndex, 0, movedItem);
       
-      console.log('🔄 Nouvel ordre des images:', this.currentImagesGallery);
+      console.log('🔄 Nouvel ordre sauvé');
       
-      // Activer le bouton save
+      // Juste activer le bouton save
       this.enableButtons();
     }
   });
@@ -2579,8 +2575,6 @@ addDeleteButtonFromTemplate(imageBlock, index) {
   }
 }
 
-  
-
 removeImage(index) {
   console.log(`🗑️ Suppression de l'image ${index + 1}`);
   
@@ -2596,10 +2590,8 @@ removeImage(index) {
   // Réafficher la galerie
   this.displayEditableGallery();
   
-  // Réinitialiser SortableJS
-  setTimeout(() => {
-    this.initSortable();
-  }, 100);
+  // 🔧 CHANGÉ : Réinitialiser SortableJS SANS délai
+  this.initSortable(); // Pas de setTimeout
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
