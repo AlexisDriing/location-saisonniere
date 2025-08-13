@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V4 V11
+// Gestionnaire de validation pour la page modification de logement V5
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -175,18 +175,14 @@ class ValidationManager {
         fields: {
           'heure-arrivee-input': {
             required: true,
-            pattern: /^\d{2}:\d{2}$/,
             messages: {
-              empty: "L'heure d'arrivée est obligatoire",
-              invalid: "Format attendu: HH:MM"
+              empty: "L'heure d'arrivée est obligatoire"
             }
           },
           'heure-depart-input': {
             required: true,
-            pattern: /^\d{2}:\d{2}$/,
             messages: {
-              empty: "L'heure de départ est obligatoire",
-              invalid: "Format attendu: HH:MM"
+              empty: "L'heure de départ est obligatoire"
             }
           },
           'caution-input': {
