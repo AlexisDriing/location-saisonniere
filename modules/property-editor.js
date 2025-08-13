@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v3
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v4
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2428,7 +2428,7 @@ initImageManagement() {
 }
 
 initSortable() {
-  const container = document.getElementById('bloc-photos-logement');
+  const container = document.querySelector('.images-grid');
   if (!container || this.currentImagesGallery.length === 0) return;
   
   // Détruire l'instance précédente si elle existe
