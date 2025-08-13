@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v2
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v3
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -474,26 +474,29 @@ checkPaymentSuccess() {
   }
 
   updateButtonsVisibility(property) {
-  const status = property.verification_status || 'pending-none';
-  
   // Masquer les éléments vides
   const emptyState = document.getElementById('empty-state');
   const emptyButton = document.getElementById('empty-button');
   if (emptyState) emptyState.style.display = 'none';
   if (emptyButton) emptyButton.style.display = 'none';
   
-  // Bouton link-plans : visible seulement si published
+  // 🆕 NOUVEAU : link-plans visible si AU MOINS UN published dans la liste
+  const hasAnyPublished = this.userProperties.some(prop => 
+    prop.verification_status === 'published'
+  );
+  
   const linkPlans = document.getElementById('link-plans');
   if (linkPlans) {
-    linkPlans.style.display = status === 'published' ? 'flex' : 'none';
+    linkPlans.style.display = hasAnyPublished ? 'flex' : 'none';
   }
   
-  // Bouton add-property : toujours visible, mais ACTIVÉ seulement si published
+  // 🆕 add-property : vérifier le statut du plus récent (passé en paramètre)
+  const newestStatus = newestProperty?.verification_status || 'pending-none';
   const addProperty = document.getElementById('add-property');
   if (addProperty) {
     addProperty.style.display = 'flex';
     
-    if (status === 'published') {
+    if (newestStatus === 'published') {
       addProperty.style.opacity = '1';
       addProperty.style.pointerEvents = 'auto';
       addProperty.style.cursor = 'pointer';
