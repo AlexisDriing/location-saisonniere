@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v3
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v4
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -473,7 +473,7 @@ checkPaymentSuccess() {
     if (addProperty) addProperty.style.display = 'none';
   }
 
-  updateButtonsVisibility(property) {
+  updateButtonsVisibility(newestProperty) {
   // Masquer les éléments vides
   const emptyState = document.getElementById('empty-state');
   const emptyButton = document.getElementById('empty-button');
