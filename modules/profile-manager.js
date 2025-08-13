@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v1
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v2
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -142,7 +142,7 @@ class ProfileManager {
     
     // Gérer les boutons avec le PREMIER logement (le plus récent après tri)
     const newestProperty = this.userProperties[0];
-    this.updateButtonsVisibility(lastProperty);
+    this.updateButtonsVisibility(newestProperty);
   }
 
   displayProperty(property, element = null) {  // AJOUT du paramètre element
