@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v5
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v6 reload
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -620,7 +620,7 @@ checkPopupTrigger() {
       });
       
       if (response.ok) {
-        window.location.reload();
+      window.location.href = window.location.pathname;
       }
       
     } catch (error) {
