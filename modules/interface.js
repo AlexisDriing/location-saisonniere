@@ -1,10 +1,11 @@
-// V7 v3 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V9 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
   }
 
   init() {
+    this.setupMainImages();
     this.setupPlatformLogos();
     this.setupExtras();
     this.setupEquipements();
@@ -19,6 +20,52 @@ class InterfaceManager {
     this.setupPlatformLinks();
     this.setupPopins();
   }
+
+  setupMainImages() {
+  console.log('📸 Configuration des images principales...');
+  
+  // Utiliser les classes que vous avez données
+  const allImages = document.querySelectorAll('.collection-item-2 .image-list-logement');
+  
+  console.log(`📸 ${allImages.length} images trouvées dans la collection`);
+  
+  if (allImages.length < 3) {
+    console.warn(`⚠️ Seulement ${allImages.length} images trouvées (minimum 3 requis)`);
+    return;
+  }
+  
+  // Récupérer les URLs des 3 premières images
+  const imageUrls = [
+    allImages[0]?.src || allImages[0]?.getAttribute('src'),
+    allImages[1]?.src || allImages[1]?.getAttribute('src'),
+    allImages[2]?.src || allImages[2]?.getAttribute('src')
+  ];
+  
+  console.log('📸 URLs récupérées:', imageUrls);
+  
+  // 1️⃣ Première image → background-image de .main-image
+  const mainImage = document.querySelector('.main-image');
+  if (mainImage && imageUrls[0]) {
+    mainImage.style.backgroundImage = `url('${imageUrls[0]}')`;
+    mainImage.style.backgroundSize = 'cover';
+    mainImage.style.backgroundPosition = 'center';
+    console.log('✅ Image principale mise à jour');
+  }
+  
+  // 2️⃣ Deuxième image → src de .secondary-image
+  const secondaryImage = document.querySelector('.secondary-image');
+  if (secondaryImage && imageUrls[1]) {
+    secondaryImage.src = imageUrls[1];
+    console.log('✅ Image secondaire mise à jour');
+  }
+  
+  // 3️⃣ Troisième image → src de .third-image  
+  const thirdImage = document.querySelector('.third-image');
+  if (thirdImage && imageUrls[2]) {
+    thirdImage.src = imageUrls[2];
+    console.log('✅ Troisième image mise à jour');
+  }
+}
 
   // Gestion des logos des plateformes
   setupPlatformLogos() {
