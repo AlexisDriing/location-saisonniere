@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v5
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v6
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3329,31 +3329,37 @@ setBlockState(element, isActive) {
     this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
 
-    // 🆕 NOUVEAU : Restaurer les images ET forcer le réordonnancement visuel
+    // 🆕 NOUVEAU : Restaurer les images
     this.currentImagesGallery = JSON.parse(JSON.stringify(this.initialValues.images_gallery || []));
     
-    // IMPORTANT : Masquer TOUS les blocs d'abord pour forcer le reset complet
-    for (let i = 1; i <= 20; i++) {
-      const imageBlock = document.getElementById(`image-block-${i}`);
-      if (imageBlock) {
-        imageBlock.style.display = 'none';
-        // Retirer aussi les classes de SortableJS
-        imageBlock.classList.remove('sortable-ghost', 'sortable-chosen', 'sortable-drag');
-        // Et reset l'ordre dans le DOM
-        imageBlock.style.order = '';
-      }
-    }
-    
-    // Détruire l'instance SortableJS existante
+    // IMPORTANT : Détruire SortableJS pour annuler ses modifications DOM
     if (this.sortableInstance) {
       this.sortableInstance.destroy();
       this.sortableInstance = null;
     }
     
-    // Maintenant réafficher dans le bon ordre
+    // Forcer un reset complet du DOM
+    const container = document.querySelector('.images-grid');
+    if (container) {
+      // Sauvegarder tous les image-blocks
+      const blocks = [];
+      for (let i = 1; i <= 20; i++) {
+        const block = document.getElementById(`image-block-${i}`);
+        if (block) {
+          blocks.push(block);
+        }
+      }
+      
+      // Les remettre dans l'ordre numérique original (1, 2, 3, etc.)
+      blocks.forEach(block => {
+        container.appendChild(block); // appendChild déplace l'élément
+      });
+    }
+    
+    // Maintenant réafficher avec les bonnes images
     this.displayEditableGallery();
     
-    // Réinitialiser SortableJS après le réaffichage
+    // Recréer SortableJS
     setTimeout(() => {
       this.initSortable();
     }, 100);
