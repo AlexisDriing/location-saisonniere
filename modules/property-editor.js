@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v4
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v5
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2535,14 +2535,14 @@ addDeleteButtonFromTemplate(imageBlock, index) {
     if (template) {
       // Cloner le template
       deleteBtn = template.cloneNode(true);
-      deleteBtn.style.display = 'block'; // 🔧 CHANGÉ : 'block' au lieu de ''
-      deleteBtn.id = ''; // Retirer l'ID pour éviter les doublons
+      deleteBtn.style.display = 'block';
+      deleteBtn.id = '';
       
-      // 🔧 IMPORTANT : S'assurer du positionnement
+      // Position et style
       deleteBtn.style.position = 'absolute';
       deleteBtn.style.top = '8px';
       deleteBtn.style.right = '8px';
-      deleteBtn.style.zIndex = '20'; // 🔧 z-index plus élevé
+      deleteBtn.style.zIndex = '20';
       
       // S'assurer que le bloc parent est en position relative
       imageBlock.style.position = 'relative';
@@ -2551,28 +2551,59 @@ addDeleteButtonFromTemplate(imageBlock, index) {
       imageBlock.appendChild(deleteBtn);
       
       console.log(`✅ Bouton delete ajouté à image-block-${index + 1}`);
-      
-      // 🔧 DEBUG : Vérifier la visibilité
-      console.log(`🔍 Bouton visible ?`, {
-        display: deleteBtn.style.display,
-        position: deleteBtn.style.position,
-        parent: imageBlock.style.position,
-        opacity: window.getComputedStyle(deleteBtn).opacity
-      });
     } else {
-      console.error('❌ ERREUR : Template de bouton delete (#template-delete-button) non trouvé dans le DOM');
+      console.error('❌ ERREUR : Template de bouton delete non trouvé');
       return;
     }
   }
   
-  // Ajouter le handler de clic
-  if (deleteBtn) {
-    deleteBtn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.removeImage(index);
+  // 🆕 NOUVEAU : Détecter si on est sur mobile
+  const isMobile = window.matchMedia('(max-width: 768px)').matches || 
+                   'ontouchstart' in window;
+  
+  if (isMobile) {
+    // 📱 MOBILE : Système de clic
+    let clickTimeout;
+    let isDragging = false;
+    
+    imageBlock.onclick = (e) => {
+      if (e.target.closest('.button-delete-photo')) return;
+      if (isDragging) {
+        isDragging = false;
+        return;
+      }
+      
+      // Toggle le bouton delete de cette image
+      deleteBtn.classList.toggle('show-delete');
+      
+      // Masquer les autres boutons
+      document.querySelectorAll('.button-delete-photo').forEach(btn => {
+        if (btn !== deleteBtn) {
+          btn.classList.remove('show-delete');
+        }
+      });
     };
-  }
+    
+    // Détecter le drag
+    imageBlock.addEventListener('touchstart', () => {
+      clickTimeout = setTimeout(() => {
+        isDragging = true;
+      }, 200);
+    });
+    
+    imageBlock.addEventListener('touchend', () => {
+      clearTimeout(clickTimeout);
+      setTimeout(() => {
+        isDragging = false;
+      }, 100);
+    });
+  }  
+  // Handler pour le bouton delete (mobile + desktop)
+  deleteBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    this.removeImage(index);
+  };
 }
 
 removeImage(index) {
@@ -3298,15 +3329,33 @@ setBlockState(element, isActive) {
     this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
 
-    // 🆕 NOUVEAU : Restaurer les images
+    // 🆕 NOUVEAU : Restaurer les images ET forcer le réordonnancement visuel
     this.currentImagesGallery = JSON.parse(JSON.stringify(this.initialValues.images_gallery || []));
+    
+    // IMPORTANT : Masquer TOUS les blocs d'abord pour forcer le reset complet
+    for (let i = 1; i <= 20; i++) {
+      const imageBlock = document.getElementById(`image-block-${i}`);
+      if (imageBlock) {
+        imageBlock.style.display = 'none';
+        // Retirer aussi les classes de SortableJS
+        imageBlock.classList.remove('sortable-ghost', 'sortable-chosen', 'sortable-drag');
+        // Et reset l'ordre dans le DOM
+        imageBlock.style.order = '';
+      }
+    }
+    
+    // Détruire l'instance SortableJS existante
+    if (this.sortableInstance) {
+      this.sortableInstance.destroy();
+      this.sortableInstance = null;
+    }
+    
+    // Maintenant réafficher dans le bon ordre
     this.displayEditableGallery();
+    
+    // Réinitialiser SortableJS après le réaffichage
     setTimeout(() => {
       this.initSortable();
-    }, 100);
-    
-    setTimeout(() => {
-      this.applyInitialStates();
     }, 100);
     // Désactiver les boutons
     this.disableButtons();
