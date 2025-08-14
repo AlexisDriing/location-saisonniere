@@ -1,11 +1,10 @@
-// V8 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V7 v3 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
   }
 
   init() {
-    this.setupMainImages();
     this.setupPlatformLogos();
     this.setupExtras();
     this.setupEquipements();
@@ -19,54 +18,6 @@ class InterfaceManager {
     this.setupTelephone();
     this.setupPlatformLinks();
     this.setupPopins();
-  }
-  // 🆕 NOUVELLE MÉTHODE À AJOUTER JUSTE APRÈS init()
-  setupMainImages() {
-    console.log('🖼️ Configuration des images principales depuis la galerie...');
-    
-    // Chercher l'élément qui contient la galerie
-    const galerieElement = document.querySelector('[data-photos-du-logement]');
-    
-    if (!galerieElement) {
-      console.warn('⚠️ Élément data-photos-du-logement non trouvé');
-      return;
-    }
-    
-    // Récupérer et parser le JSON de la galerie
-    let images = [];
-    try {
-      const galerieData = galerieElement.getAttribute('data-photos-du-logement');
-      images = JSON.parse(galerieData);
-    } catch (e) {
-      console.error('❌ Erreur parsing galerie:', e);
-      return;
-    }
-    
-    if (!Array.isArray(images) || images.length === 0) {
-      console.log('📋 Galerie vide');
-      return;
-    }
-    
-    console.log(`📸 ${images.length} image(s) dans la galerie`);
-    
-    // Remplacer les 3 images principales
-    for (let i = 1; i <= 3; i++) {
-      const imageElements = document.querySelectorAll(`[data-main-image="${i}"]`);
-      
-      if (images[i - 1] && images[i - 1].url) {
-        const imageUrl = images[i - 1].url;
-        
-        imageElements.forEach(element => {
-          if (element.tagName === 'IMG') {
-            element.src = imageUrl;
-          } else {
-            element.style.backgroundImage = `url('${imageUrl}')`;
-          }
-        });
-        
-        console.log(`✅ Image ${i} mise à jour`);
-      }
-    }
   }
 
   // Gestion des logos des plateformes
