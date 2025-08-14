@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v6
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v7
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2606,8 +2606,31 @@ addDeleteButtonFromTemplate(imageBlock, index) {
   };
 }
 
-removeImage(index) {
-  console.log(`🗑️ Suppression de l'image ${index + 1}`);
+removeImage(index) {  
+  // 🆕 NOUVEAU : Récupérer l'image-block qui contient le bouton cliqué
+  const imageBlock = document.getElementById(`image-block-${index + 1}`);
+  if (!imageBlock) return;
+  
+  // Récupérer l'URL de l'image dans ce bloc
+  const imgElement = imageBlock.querySelector('img');
+  if (!imgElement) return;
+  
+  const imageUrl = imgElement.src;
+  
+  // 🆕 Trouver le VRAI index de cette image dans le tableau actuel
+  const realIndex = this.currentImagesGallery.findIndex(img => {
+    if (typeof img === 'string') {
+      return img === imageUrl;
+    } else if (img && img.url) {
+      return img.url === imageUrl;
+    }
+    return false;
+  });
+    
+  if (realIndex === -1) {
+    console.error('❌ Image non trouvée dans le tableau');
+    return;
+  }
   
   // Vérifier qu'on garde minimum 3 images
   if (this.currentImagesGallery.length <= 3) {
@@ -2615,14 +2638,14 @@ removeImage(index) {
     return;
   }
   
-  // Supprimer l'image
-  this.currentImagesGallery.splice(index, 1);
+  // 🆕 Supprimer au BON index
+  this.currentImagesGallery.splice(realIndex, 1);
   
   // Réafficher la galerie
   this.displayEditableGallery();
   
-  // 🔧 CHANGÉ : Réinitialiser SortableJS SANS délai
-  this.initSortable(); // Pas de setTimeout
+  // Réinitialiser SortableJS
+  this.initSortable();
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
