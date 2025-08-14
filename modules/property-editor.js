@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v8
+// Gestionnaire de la page de modification de logement - V18 Drag and Drop v9
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2423,9 +2423,10 @@ initImageManagement() {
   
   // Initialiser SortableJS après un court délai (DOM ready)
   if (window.innerWidth > 768) {
-  setTimeout(() => {
-    this.initSortable();
-  }, 100);
+    setTimeout(() => {
+      this.initSortable();
+    }, 100);
+  }
 }
 
 initSortable() {
