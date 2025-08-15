@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V18 Drag and Drop v9
+// Gestionnaire de la page de modification de logement - V19
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -421,6 +421,36 @@ setupTimeFormatters() {
     }, 100);
   }
 
+  // Configurer le bouton Tally avec les paramètres
+  setupTallyButton() {    
+    // Chercher le bouton avec l'attribut data-tally-url
+    const tallyButton = document.querySelector('[data-tally-url]');
+    
+    if (!tallyButton) {
+      console.log('Pas de bouton Tally sur cette page');
+      return;
+    }
+    
+    // Récupérer l'URL de base depuis l'attribut
+    const tallyBaseUrl = tallyButton.dataset.tallyUrl || 'https://tally.so/r/w57x2v';
+    
+    // Préparer les paramètres à passer au formulaire
+    const params = new URLSearchParams({
+      property_id: this.propertyId || '',
+      property_name: this.propertyData.name || '',
+      email: this.propertyData.email || ''
+    });
+    
+    // Construire l'URL finale avec les paramètres
+    const finalUrl = `${tallyBaseUrl}?${params.toString()}`;
+    
+    // Ajouter le listener pour ouvrir le formulaire avec les paramètres
+    tallyButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      window.open(finalUrl, '_blank');
+    });
+  }
+  
   prefillAddress() {
     console.log('📍 Pré-remplissage de l\'adresse...');
     
