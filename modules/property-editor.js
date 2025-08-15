@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V20
+// Gestionnaire de la page de modification de logement - V21
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -421,35 +421,45 @@ setupTimeFormatters() {
     }, 100);
   }
 
-  // Configurer le bouton Tally avec les paramètres
-  setupTallyButton() {    
-    // Chercher le bouton avec l'attribut data-tally-url
-    const tallyButton = document.querySelector('[data-tally-url]');
+  // 🆕 NOUVELLE MÉTHODE : Configurer TOUS les boutons Tally avec les paramètres
+setupTallyButton() {
+  console.log('📝 Configuration des boutons Tally...');
+  
+  // Chercher TOUS les boutons avec l'attribut data-tally-url
+  const tallyButtons = document.querySelectorAll('[data-tally-url]');
+  
+  if (tallyButtons.length === 0) {
+    console.log('Pas de bouton Tally sur cette page');
+    return;
+  }
+  
+  // Préparer les paramètres à passer aux formulaires
+  const params = new URLSearchParams({
+    property_id: this.propertyId || '',
+    property_name: this.propertyData.name || '',
+    email: this.propertyData.email || ''
+  });
+  
+  // Configurer chaque bouton
+  tallyButtons.forEach((button, index) => {
+    // Récupérer l'URL de base depuis l'attribut de CE bouton
+    const tallyBaseUrl = button.dataset.tallyUrl;
     
-    if (!tallyButton) {
-      console.log('Pas de bouton Tally sur cette page');
+    if (!tallyBaseUrl) {
+      console.warn(`⚠️ Bouton ${index + 1} sans URL Tally`);
       return;
     }
-    
-    // Récupérer l'URL de base depuis l'attribut
-    const tallyBaseUrl = tallyButton.dataset.tallyUrl || 'https://tally.so/r/w57x2v';
-    
-    // Préparer les paramètres à passer au formulaire
-    const params = new URLSearchParams({
-      property_id: this.propertyId || '',
-      property_name: this.propertyData.name || '',
-      email: this.propertyData.email || ''
-    });
     
     // Construire l'URL finale avec les paramètres
     const finalUrl = `${tallyBaseUrl}?${params.toString()}`;
     
     // Ajouter le listener pour ouvrir le formulaire avec les paramètres
-    tallyButton.addEventListener('click', function(e) {
+    button.addEventListener('click', function(e) {
       e.preventDefault();
       window.open(finalUrl, '_blank');
     });
-  }
+  });
+}
   
   prefillAddress() {
     console.log('📍 Pré-remplissage de l\'adresse...');
