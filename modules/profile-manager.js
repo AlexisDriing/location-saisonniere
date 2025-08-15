@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V14 v7 ms
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V15
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -297,36 +297,53 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     }
   }
 
-  fillPropertyImages(property, targetElement = document) {  // AJOUT du paramètre
-    const status = this.getPropertyStatus(property);
+  fillPropertyImages(property, targetElement = document) {
+  const status = this.getPropertyStatus(property);
+  
+  // 🆕 NOUVEAU : Utiliser images_gallery au lieu de image1, image2, image3
+  const imagesGallery = property.images_gallery || [];
+  
+  // Extraire les URLs des 3 premières images
+  const imageUrls = imagesGallery.slice(0, 3).map(img => {
+    // Si c'est un objet avec url
+    if (typeof img === 'object' && img.url) {
+      return img.url;
+    }
+    // Si c'est directement une string
+    if (typeof img === 'string') {
+      return img;
+    }
+    return null;
+  }).filter(url => url !== null);
+  
+  // Mapper les images aux sélecteurs
+  const imageMapping = [
+    { selector: '.main', url: imageUrls[0] },
+    { selector: '.left', url: imageUrls[1] },
+    { selector: '.right', url: imageUrls[2] }
+  ];
+  
+  // Injecter les images
+  imageMapping.forEach(({ selector, url }) => {
+    const imageElement = targetElement.querySelector(selector);
     
-    // MODIFIÉ : Utiliser les classes main, left, right
-    const imageMapping = [
-      { selector: '.main', property: 'image1' },
-      { selector: '.left', property: 'image2' },
-      { selector: '.right', property: 'image3' }
-    ];
-    
-    imageMapping.forEach(({ selector, property: prop }) => {
-      const imageElement = targetElement.querySelector(selector);
-      const imageUrl = property[prop];
-      
-      if (imageElement && imageUrl) {
-        if (imageElement.tagName === 'IMG') {
-          imageElement.src = imageUrl;
-          imageElement.style.display = 'block';
-        } else {
-          imageElement.style.backgroundImage = `url(${imageUrl})`;
-          imageElement.style.backgroundSize = 'cover';
-          imageElement.style.backgroundPosition = 'center';
-          imageElement.style.display = 'block';
-        }
-        console.log(`✅ Image ${prop} remplie:`, imageUrl);
-      } else if (imageElement) {
-        imageElement.style.display = 'none';
+    if (imageElement && url) {
+      if (imageElement.tagName === 'IMG') {
+        imageElement.src = url;
+        imageElement.style.display = 'block';
+      } else {
+        // Si c'est une div avec background-image
+        imageElement.style.backgroundImage = `url(${url})`;
+        imageElement.style.backgroundSize = 'cover';
+        imageElement.style.backgroundPosition = 'center';
+        imageElement.style.display = 'block';
       }
-    });
-  }
+      console.log(`✅ Image injectée dans ${selector}`);
+    } else if (imageElement) {
+      imageElement.style.display = 'none';
+    }
+  });
+}
 
    formatAddress(address) {
     if (!address) return 'Adresse non renseignée';
