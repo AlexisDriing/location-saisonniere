@@ -1,4 +1,4 @@
-// V9 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V10 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -7,6 +7,8 @@ class InterfaceManager {
   init() {
     this.setupMainImages();
     this.setupPlatformLogos();
+    this.setupAdresse();
+    this.setupConditionsReservation();
     this.setupExtras();
     this.setupEquipements();
     this.setupOptionsAccueil();
@@ -21,6 +23,42 @@ class InterfaceManager {
     this.setupPopins();
   }
 
+  setupAdresse() {
+    const adresseElement = document.getElementById('adresse-logement');
+    
+    if (!adresseElement) {
+      return;
+    }
+    
+    const adresseOriginale = adresseElement.textContent.trim();
+    const parties = adresseOriginale.split(',').map(p => p.trim());
+    
+    // Réorganiser SEULEMENT si on a exactement 3 parties
+    if (parties.length === 3) {
+      // Ordre actuel : [ville, pays, rue]
+      // Ordre voulu : [rue, ville, pays]
+      const adresseReorganisee = `${parties[2]}, ${parties[0]}, ${parties[1]}`;
+      adresseElement.textContent = adresseReorganisee;
+    }
+  }
+
+  // Nouvelle méthode à ajouter dans la classe :
+  setupConditionsReservation() {
+    const conditionsElement = document.querySelector('[data-conditions-reservation]');
+    
+    if (!conditionsElement) {
+      return;
+    }
+    
+    const conditionsText = conditionsElement.textContent.trim();
+    
+    // Vérifier si on a "Caution" ET "Acompte" dans le texte
+    if (conditionsText.includes('Caution') && conditionsText.includes('Acompte')) {
+      // Remplacer le \n par un <br> pour l'affichage HTML
+      const htmlContent = conditionsText.replace(/\n/g, '<br>');
+      conditionsElement.innerHTML = htmlContent;
+    }
+  }
   setupMainImages() {
   console.log('📸 Configuration des images principales...');
   
