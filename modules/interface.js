@@ -1,4 +1,4 @@
-// V10 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V11 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
 class InterfaceManager {
   constructor() {
     this.init();
@@ -8,6 +8,7 @@ class InterfaceManager {
     this.setupMainImages();
     this.setupPlatformLogos();
     this.setupAdresse();
+    this.setupSeasonButton();
     this.setupConditionsReservation();
     this.setupExtras();
     this.setupEquipements();
@@ -23,6 +24,41 @@ class InterfaceManager {
     this.setupPopins();
   }
 
+  // Gestion du bouton saisons
+  setupSeasonButton() {
+    const btnSeason = document.getElementById('btn-season');
+    if (!btnSeason) return;
+    
+    // Récupérer le JSON des tarifs
+    const jsonElement = document.querySelector('[data-json-tarifs-line]');
+    if (!jsonElement) {
+      btnSeason.style.display = 'none';
+      return;
+    }
+    
+    try {
+      const jsonString = jsonElement.getAttribute('data-json-tarifs-line');
+      if (!jsonString || jsonString.trim() === '') {
+        btnSeason.style.display = 'none';
+        return;
+      }
+      
+      const pricingData = JSON.parse(jsonString);
+      
+      // Vérifier s'il y a des saisons
+      if (pricingData.seasons && pricingData.seasons.length > 0) {
+        // Il y a des saisons, laisser le bouton visible
+        btnSeason.style.display = ''; // ou 'block' selon votre CSS
+      } else {
+        // Pas de saisons, cacher le bouton
+        btnSeason.style.display = 'none';
+      }
+    } catch (error) {
+      // En cas d'erreur, cacher le bouton
+      btnSeason.style.display = 'none';
+    }
+  }
+  
   setupAdresse() {
     const adresseElement = document.getElementById('adresse-logement');
     
