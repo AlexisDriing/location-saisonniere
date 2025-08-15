@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V11 Loader
+// Gestionnaire principal des propriétés pour la page liste - V12
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -775,7 +775,7 @@ class PropertyManager {
       }
     }
     
-    // Image principale - Webflow utilise img + background-image
+// Utiliser la première image de images_gallery
 const imageElement = newCard.querySelector('.image-main');
 if (imageElement) {
   // D'ABORD nettoyer complètement
@@ -783,10 +783,25 @@ if (imageElement) {
   imageElement.removeAttribute('srcset');
   imageElement.style.backgroundImage = '';
   
+  // Récupérer la première image depuis images_gallery
+  let firstImageUrl = null;
+  
+  if (propData.images_gallery && propData.images_gallery.length > 0) {
+    const firstImage = propData.images_gallery[0];
+    
+    // Extraire l'URL selon le format
+    if (typeof firstImage === 'object' && firstImage.url) {
+      firstImageUrl = firstImage.url;
+    } else if (typeof firstImage === 'string') {
+      firstImageUrl = firstImage;
+    }
+  }
+  
   // PUIS ajouter la nouvelle image si elle existe
-  if (propData.image && propData.image !== '' && propData.image.startsWith('http')) {
-    imageElement.src = propData.image;
-    imageElement.style.backgroundImage = `url(${propData.image})`;
+  if (firstImageUrl && firstImageUrl.startsWith('http')) {
+    imageElement.src = firstImageUrl;
+    imageElement.style.backgroundImage = `url(${firstImageUrl})`;
+    console.log('✅ Première image affichée depuis images_gallery');
   }
 }
 
