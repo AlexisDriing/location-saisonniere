@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - V19
+// Gestionnaire de la page de modification de logement - V20
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -75,7 +75,7 @@ class PropertyEditor {
     // ENSUITE seulement pré-remplir les champs
     this.prefillForm();
     this.setupSaveButton();
-    
+    this.setupTallyButton();
     // Et finir par l'init des saisons
     this.initSeasonManagement();
 
