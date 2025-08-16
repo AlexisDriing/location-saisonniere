@@ -1,11 +1,10 @@
-// Calculateur de prix principal V5 jours mini
+// Calculateur de prix principal V6 taxe out
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
     this.elements = {
       calcNuit: Utils.getAllElementsById("calcul-nuit"),
       prixNuit: Utils.getAllElementsById("prix-nuit"),
-      prixTaxe: Utils.getAllElementsById("prix-taxe"),
       prixMenage: Utils.getAllElementsById("prix-menage"),
       totalPrix: Utils.getAllElementsById("total-prix"),
       textPourcentage: Utils.getAllElementsById("text-pourcentage"),
@@ -151,12 +150,6 @@ class PriceCalculator {
     
     if (this.elements.prixNuit.length) {
       this.elements.prixNuit.forEach(element => {
-        element.textContent = "-";
-      });
-    }
-    
-    if (this.elements.prixTaxe.length) {
-      this.elements.prixTaxe.forEach(element => {
         element.textContent = "-";
       });
     }
@@ -320,24 +313,8 @@ class PriceCalculator {
         details.cleaningFee = this.pricingData.cleaning.price || 0;
       }
       
-      // Taxe de séjour
-      const adultsElement = Utils.getElementByIdWithFallback("chiffres-adultes");
-      const childrenElement = Utils.getElementByIdWithFallback("chiffres-enfants");
-      const adultsCount = parseInt(adultsElement?.textContent || "1");
-      const childrenCount = parseInt(childrenElement?.textContent || "0");
-      
-      if (this.logementType === "Maison d'hôte") {
-        details.touristTax = 0.75 * adultsCount * details.nights;
-      } else {
-        const priceAfterDiscount = details.originalNightsPrice - details.discountAmount;
-        details.touristTax = 0.05 * priceAfterDiscount * adultsCount;
-      }
-      
-      details.touristTax = Math.round(details.touristTax * 100) / 100;
-      
       // Prix total
-      details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee + details.touristTax;
-      details.platformPrice += details.touristTax;
+      details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee;
       
       if (details.cleaningFee > 0) {
         details.platformPrice += details.cleaningFee;
@@ -496,13 +473,6 @@ class PriceCalculator {
       });
       
       console.log('✅ Réduction masquée sur tous les éléments');
-    }
-    
-    // Taxe de séjour
-    if (this.elements.prixTaxe.length) {
-      this.elements.prixTaxe.forEach(element => {
-        element.textContent = `${formatPrice(details.touristTax)}€`;
-      });
     }
     
     // Frais de ménage
