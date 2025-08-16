@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - VERSION CORRIGÉE
+// Gestion complète du calendrier : iCal + DateRangePicker - V2 max
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -57,7 +57,8 @@ class CalendarManager {
           monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
           firstDay: 1
         },
-        minDate: moment().startOf('day')
+        minDate: moment().startOf('day'),
+        maxDate: moment().add(2, 'years').endOf('day')
       });
 
       this.picker = $('#input-calendar').data('daterangepicker');
