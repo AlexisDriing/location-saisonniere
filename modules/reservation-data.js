@@ -1,4 +1,4 @@
-// Gestion des données de réservation et récupération des informations - V2 Slug
+// Gestion des données de réservation et récupération des informations - V3 taxes
 class ReservationDataManager {
   constructor() {
     this.init();
@@ -150,7 +150,6 @@ class ReservationDataManager {
         calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
         prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
         prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
-        prixTaxe: Utils.getElementByIdWithFallback("prix-taxe")?.textContent || "",
         prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.textContent || "",
         totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
         dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
