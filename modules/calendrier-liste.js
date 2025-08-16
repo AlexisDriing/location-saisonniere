@@ -1,4 +1,4 @@
-// Gestion du calendrier pour la page liste des logements
+// Gestion du calendrier pour la page liste des logements V2 max
 class CalendarListManager {
   constructor() {
     this.dateButton = null;
@@ -50,7 +50,8 @@ class CalendarListManager {
         monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
         firstDay: 1
       },
-      minDate: moment().startOf('day')
+      minDate: moment().startOf('day'),
+      maxDate: moment().add(2, 'years').endOf('day')
     });
     
     // Améliorer l'interface du picker
