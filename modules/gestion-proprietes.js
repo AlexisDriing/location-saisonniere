@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V12
+// Gestionnaire principal des propriétés pour la page liste - V13 Accueil
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -61,6 +61,8 @@ class PropertyManager {
     
     // Initialiser les écouteurs d'événements pour les filtres
     this.setupFilterListeners();
+    this.loadHomeSearchData();
+
     
     const initTime = Math.round(performance.now() - startTime);
     console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
@@ -1106,6 +1108,72 @@ if (hostImageElement) {
       });
     } else {
       console.warn('⚠️ DateRangePicker non trouvé, les filtres de dates ne fonctionneront pas');
+    }
+  }
+
+  // 🆕 NOUVELLE MÉTHODE À AJOUTER
+  loadHomeSearchData() {
+    const homeSearchData = localStorage.getItem('home_search_data');
+    if (!homeSearchData) return;
+    
+    try {
+      const data = JSON.parse(homeSearchData);
+      console.log('🏠 Données reçues de la page d\'accueil:', data);
+      
+      // 1. Appliquer le lieu si fourni
+      if (data.location) {
+        if (data.location.needsGeocoding) {
+          // Géocoder le texte
+          console.log('📍 Géocodage nécessaire pour:', data.location.name);
+          window.searchMapManager?.searchLocation(data.location.name).then(coords => {
+            if (coords) {
+              this.setSearchLocation(coords);
+              this.applyFilters();
+            }
+          });
+        } else if (data.location.lat && data.location.lng) {
+          // Coordonnées déjà disponibles
+          this.setSearchLocation(data.location);
+        }
+      }
+      
+      // 2. Appliquer les dates
+      if (data.startDate && data.endDate && window.calendarListManager) {
+        console.log('📅 Application des dates:', data.startDate, 'à', data.endDate);
+        
+        // Mettre à jour les variables
+        this.startDate = data.startDate;
+        this.endDate = data.endDate;
+        
+        // Mettre à jour le calendrier
+        setTimeout(() => {
+          window.calendarListManager.setDates(data.startDate, data.endDate);
+        }, 500);
+      }
+      
+      // 3. Appliquer le nombre de voyageurs
+      if ((data.adultes || data.enfants) && window.filtersManager) {
+        console.log('👥 Application des voyageurs:', data.adultes, 'adultes,', data.enfants, 'enfants');
+        
+        // Mettre à jour FiltersManager
+        window.filtersManager.state.adultes = data.adultes || 1;
+        window.filtersManager.state.enfants = data.enfants || 0;
+        
+        // Mettre à jour l'interface
+        window.filtersManager.updateVoyageursFilter();
+      }
+      
+      // Nettoyer après utilisation
+      localStorage.removeItem('home_search_data');
+      
+      // Lancer la recherche après un court délai pour laisser tout s'initialiser
+      setTimeout(() => {
+        this.applyFilters();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('❌ Erreur traitement données page accueil:', error);
+      localStorage.removeItem('home_search_data');
     }
   }
 
