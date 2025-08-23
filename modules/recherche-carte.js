@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - VERSION SÉCURISÉE
+// Gestionnaire de recherche géographique avec Mapbox - V2 accueil
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -24,12 +24,16 @@ class SearchMapManager {
   hideSuggestionsOnLoad() {
     const suggestionsList = document.querySelector('#suggestions');
     const suggestionsListMobile = document.querySelector('#suggestions-mobile');
+    const suggestionsListHome = document.querySelector('#suggestions-home');
     
     if (suggestionsList) {
       suggestionsList.style.display = 'none';
     }
     if (suggestionsListMobile) {
       suggestionsListMobile.style.display = 'none';
+    }
+    if (suggestionsListHome) {
+      suggestionsListHome.style.display = 'none';
     }
   }
 
@@ -61,54 +65,81 @@ class SearchMapManager {
   // ================================
 
   setupSearchForms() {
-  // Desktop
-  const searchForm = document.querySelector('form');
-  const searchInput = document.querySelector('#search-input');
-  const suggestionsList = document.querySelector('#suggestions');
-
-  // Mobile
-  const searchInputMobile = document.querySelector('#search-input-mobile');
-  const suggestionsListMobile = document.querySelector('#suggestions-mobile');
-  const searchFormMobile = searchInputMobile ? searchInputMobile.closest('form') : null;
-
-  // Prévenir la soumission des formulaires
-  if (searchForm) {
-    searchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.handleSearch(searchInput);
-    });
+    // Desktop - Page liste
+    const searchInput = document.querySelector('#search-input');
+    const suggestionsList = document.querySelector('#suggestions');
+    
+    // Desktop - Page accueil  
+    const searchInputHome = document.querySelector('#search-input-home');
+    const suggestionsListHome = document.querySelector('#suggestions-home');
+    
+    // Mobile - Page liste
+    const searchInputMobile = document.querySelector('#search-input-mobile');
+    const suggestionsListMobile = document.querySelector('#suggestions-mobile');
+    
+    // Utiliser les éléments disponibles
+    const searchForm = searchInput?.closest('form');  // ⚠️ MODIFICATION ICI
+    const searchFormHome = searchInputHome?.closest('form');  // 🆕 AJOUT
+    const searchFormMobile = searchInputMobile ? searchInputMobile.closest('form') : null;
+    
+    // Prévenir la soumission des formulaires - Page liste
+    if (searchForm) {
+      searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleSearch(searchInput);
+      });
+    }
+    
+    // 🆕 AJOUT - Prévenir la soumission - Page accueil
+    if (searchFormHome) {
+      searchFormHome.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Pas de handleSearch ici, c'est HomeSearch qui gère
+      });
+    }
+    
+    if (searchFormMobile) {
+      searchFormMobile.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleSearch(searchInputMobile);
+      });
+    }
+    
+    // 🚀 NOUVEAU : Gestionnaires de saisie avec debounce
+    if (searchInput) {
+      let searchTimeout;
+      searchInput.addEventListener('input', async (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+          await this.handleSearchInput(e.target, suggestionsList);
+        }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
+      });
+    }
+    
+    // 🆕 AJOUT - Gestionnaire pour la page d'accueil
+    if (searchInputHome) {
+      let searchTimeoutHome;
+      searchInputHome.addEventListener('input', async (e) => {
+        clearTimeout(searchTimeoutHome);
+        searchTimeoutHome = setTimeout(async () => {
+          await this.handleSearchInput(e.target, suggestionsListHome);
+        }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
+      });
+    }
+    
+    if (searchInputMobile) {
+      let searchTimeoutMobile;
+      searchInputMobile.addEventListener('input', async (e) => {
+        clearTimeout(searchTimeoutMobile);
+        searchTimeoutMobile = setTimeout(async () => {
+          await this.handleSearchInput(e.target, suggestionsListMobile);
+        }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
+      });
+    }
   }
-
-  if (searchFormMobile) {
-    searchFormMobile.addEventListener('submit', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.handleSearch(searchInputMobile);
-    });
-  }
-
-  // 🚀 NOUVEAU : Gestionnaires de saisie avec debounce
-  if (searchInput) {
-    let searchTimeout;
-    searchInput.addEventListener('input', async (e) => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(async () => {
-        await this.handleSearchInput(e.target, suggestionsList);
-      }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
-    });
-  }
-
-  if (searchInputMobile) {
-    let searchTimeoutMobile;
-    searchInputMobile.addEventListener('input', async (e) => {
-      clearTimeout(searchTimeoutMobile);
-      searchTimeoutMobile = setTimeout(async () => {
-        await this.handleSearchInput(e.target, suggestionsListMobile);
-      }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
-    });
-  }
-}
 
   // ================================
   // GESTION DE LA SAISIE
