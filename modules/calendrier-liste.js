@@ -1,4 +1,4 @@
-// Gestion du calendrier pour la page liste des logements V2 max
+// Gestion du calendrier pour la page liste des logements V3 accueil
 class CalendarListManager {
   constructor() {
     this.dateButton = null;
@@ -23,14 +23,15 @@ class CalendarListManager {
   }
 
   setupDateRangePicker() {
-    const $ = jQuery;
-    this.dateButton = $('.dates-button-search');
-    this.textDatesSearch = $('#text-dates-search');
-    
-    if (this.dateButton.length === 0) {
-      console.warn("Élément avec classe 'dates-button-search' non trouvé");
-      return;
-    }
+  const $ = jQuery;
+  // Support des deux pages : liste et accueil
+  this.dateButton = $('.dates-button-search, .dates-button-home');
+  this.textDatesSearch = $('#text-dates-search, #text-dates-home');
+  
+  if (this.dateButton.length === 0) {
+    console.warn("Élément avec classe 'dates-button-search' ou 'dates-button-home' non trouvé");
+    return;
+  }
     
     // Configuration du DateRangePicker
     this.dateButton.daterangepicker({
