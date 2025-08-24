@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil
+// Gestionnaire de recherche pour la page d'accueil V2
 class HomeSearch {
   constructor() {
     this.adultes = 1;
@@ -66,6 +66,20 @@ class HomeSearch {
     
     if (adulteElement) adulteElement.textContent = this.adultes;
     if (enfantElement) enfantElement.textContent = this.enfants;
+
+    const textFiltreVoyageurs = document.getElementById('text-filtre-voyageurs-home');
+      if (textFiltreVoyageurs) {
+        const totalVoyageurs = this.adultes + this.enfants;
+        let texte = '';
+        
+        if (totalVoyageurs === 1) {
+          texte = '1 voyageur';
+        } else {
+          texte = `${totalVoyageurs} voyageurs`;
+        }
+        
+        textFiltreVoyageurs.textContent = texte;
+      }
     
     // Mettre à jour les opacités des boutons
     const adulteMoins = document.getElementById('adultes-moins-home');
