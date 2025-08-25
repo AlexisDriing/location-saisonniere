@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - V5
+// Gestionnaire de recherche géographique avec Mapbox - V6
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -75,6 +75,7 @@ class SearchMapManager {
     
     // Mobile - Page accueil
     const searchInputHomeMobile = document.querySelector('#search-input-home-mobile');
+    const suggestionsListHomeMobile = document.querySelector('#suggestions-home-mobile');
     // On réutilise suggestionsListHome pour mobile aussi
     
     // Mobile - Page liste
@@ -135,12 +136,12 @@ class SearchMapManager {
     }
     
     // Gestionnaire pour la page d'accueil (mobile)
-    if (searchInputHomeMobile) {
+    if (searchInputHomeMobile && suggestionsListHomeMobile) {
       let searchTimeoutHomeMobile;
       searchInputHomeMobile.addEventListener('input', async (e) => {
         clearTimeout(searchTimeoutHomeMobile);
         searchTimeoutHomeMobile = setTimeout(async () => {
-          await this.handleSearchInput(e.target, suggestionsListHome); // Même liste de suggestions
+          await this.handleSearchInput(e.target, suggestionsListHomeMobile);
         }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
       });
     }
