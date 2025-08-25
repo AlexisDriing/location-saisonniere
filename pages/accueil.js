@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal VF 3
+// Page accueil - Point d'entrée principal VF 4
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -57,7 +57,6 @@ class AccueilPage {
     try {
       // Initialiser les modules
       this.managers.searchMap = new SearchMapManager();
-      this.managers.calendarList = new CalendarListManager();
       this.managers.homeSearch = new HomeSearch();
       
       console.log('✅ Modules initialisés:', Object.keys(this.managers));
