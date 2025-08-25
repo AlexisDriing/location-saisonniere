@@ -74,8 +74,7 @@ class SearchMapManager {
     const suggestionsListHome = document.querySelector('#suggestions-home');
     
     // Mobile - Page liste
-    const searchInputMobile = document.querySelector('#search-input-mobile');
-    const suggestionsListMobile = document.querySelector('#suggestions-mobile');
+    const searchInputHomeMobile = document.querySelector('#search-input-home-mobile');
     
     // Utiliser les éléments disponibles
     const searchForm = searchInput?.closest('form');  // ⚠️ MODIFICATION ICI
@@ -119,7 +118,7 @@ class SearchMapManager {
       });
     }
     
-    // 🆕 AJOUT - Gestionnaire pour la page d'accueil
+    // 🆕 AJOUT - Gestionnaire pour la page d'accueil (desktop)
     if (searchInputHome) {
       let searchTimeoutHome;
       searchInputHome.addEventListener('input', async (e) => {
@@ -130,16 +129,16 @@ class SearchMapManager {
       });
     }
     
-    if (searchInputMobile) {
-      let searchTimeoutMobile;
-      searchInputMobile.addEventListener('input', async (e) => {
-        clearTimeout(searchTimeoutMobile);
-        searchTimeoutMobile = setTimeout(async () => {
-          await this.handleSearchInput(e.target, suggestionsListMobile);
+    // 🆕 AJOUT - Gestionnaire pour la page d'accueil (mobile)
+    if (searchInputHomeMobile) {
+      let searchTimeoutHomeMobile;
+      searchInputHomeMobile.addEventListener('input', async (e) => {
+        clearTimeout(searchTimeoutHomeMobile);
+        searchTimeoutHomeMobile = setTimeout(async () => {
+          await this.handleSearchInput(e.target, suggestionsListHome); // Même liste de suggestions
         }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
       });
     }
-  }
 
   // ================================
   // GESTION DE LA SAISIE
