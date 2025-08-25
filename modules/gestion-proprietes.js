@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V14 Accueil
+// Gestionnaire principal des propriétés pour la page liste - V15 accueil 
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -1123,16 +1123,26 @@ if (hostImageElement) {
     // 🆕 NOUVEAU : Mettre le texte du lieu dans l'input et lancer la recherche
     if (data.locationText) {
       const searchInput = document.getElementById('search-input');
+      const searchInputMobile = document.getElementById('search-input-mobile');
+      
       if (searchInput) {
-        searchInput.value = data.locationText; // Afficher le texte
-        
-        // Déclencher la recherche après un court délai
-        setTimeout(() => {
-          if (window.searchMapManager) {
-            window.searchMapManager.handleSearch(searchInput);
-          }
-        }, 1000);
+        searchInput.value = data.locationText; // Afficher le texte desktop
       }
+      
+      if (searchInputMobile) {
+        searchInputMobile.value = data.locationText; // Afficher le texte mobile
+      }
+      
+      // Déclencher la recherche après un court délai
+      setTimeout(() => {
+        if (window.searchMapManager) {
+          // Utiliser l'input visible (mobile ou desktop)
+          const activeInput = searchInputMobile && window.innerWidth < 768 ? searchInputMobile : searchInput;
+          if (activeInput) {
+            window.searchMapManager.handleSearch(activeInput);
+          }
+        }
+      }, 1000);
     }
     
     // 2. Appliquer les dates (INCHANGÉ)
