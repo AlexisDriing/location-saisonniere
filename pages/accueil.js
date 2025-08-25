@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal V2
+// Page accueil - Point d'entrée principal V3
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -67,9 +67,8 @@ class AccueilPage {
       console.error('❌ Erreur initialisation:', error);
     }
   }
-}
 
-fixCalendarPosition() {
+  fixCalendarPosition() {
     if (typeof jQuery === 'undefined') return;
     
     const $ = jQuery;
@@ -112,7 +111,7 @@ fixCalendarPosition() {
       }
     });
   }
-
+} // Fin de la classe AccueilPage
 
 // Initialisation automatique
 document.addEventListener('DOMContentLoaded', () => {
