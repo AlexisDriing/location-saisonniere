@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - V3 accueil
+// Gestionnaire de recherche géographique avec Mapbox - V4 accueil
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -75,7 +75,10 @@ class SearchMapManager {
     
     // Mobile - Page liste
     const searchInputHomeMobile = document.querySelector('#search-input-home-mobile');
-    
+
+    // Mobile - Page liste
+    const searchInputMobile = document.querySelector('#search-input-mobile');
+    const suggestionsListMobile = document.querySelector('#suggestions-mobile');
     // Utiliser les éléments disponibles
     const searchForm = searchInput?.closest('form');  // ⚠️ MODIFICATION ICI
     const searchFormHome = searchInputHome?.closest('form');  // 🆕 AJOUT
