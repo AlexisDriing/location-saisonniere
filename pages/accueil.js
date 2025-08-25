@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal
+// Page accueil - Point d'entrée principal V2
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -59,6 +59,7 @@ class AccueilPage {
       this.managers.searchMap = new SearchMapManager();
       this.managers.calendarList = new CalendarListManager();
       this.managers.homeSearch = new HomeSearch();
+      this.fixCalendarPosition();
       
       console.log('✅ Modules initialisés:', Object.keys(this.managers));
       
@@ -67,6 +68,51 @@ class AccueilPage {
     }
   }
 }
+
+fixCalendarPosition() {
+    if (typeof jQuery === 'undefined') return;
+    
+    const $ = jQuery;
+    
+    $('.dates-button-home').on('show.daterangepicker', function(e, picker) {
+      // Récupérer le bouton et le bloc parent
+      const button = $('.dates-button-home')[0];
+      const locationBlock = $('.location-accueil')[0];
+      
+      if (button && locationBlock) {
+        const buttonRect = button.getBoundingClientRect();
+        const blockRect = locationBlock.getBoundingClientRect();
+        
+        // Calculer la position
+        const spacing = 50; // 🎯 CHANGEZ CE NOMBRE pour ajuster l'espacement (en pixels)
+        
+        picker.container.css({
+          position: 'fixed',
+          top: (blockRect.bottom + spacing) + 'px',
+          left: blockRect.left + 'px',
+          transform: 'none'
+        });
+      }
+    });
+    
+    // Repositionner au scroll
+    $(window).on('scroll.daterangepicker', function() {
+      const picker = $('.dates-button-home').data('daterangepicker');
+      if (picker && picker.isShowing) {
+        const locationBlock = $('.location-accueil')[0];
+        if (locationBlock) {
+          const blockRect = locationBlock.getBoundingClientRect();
+          const spacing = 50; // 🎯 MÊME VALEUR QU'AU-DESSUS
+          
+          picker.container.css({
+            top: (blockRect.bottom + spacing) + 'px',
+            left: blockRect.left + 'px'
+          });
+        }
+      }
+    });
+  }
+
 
 // Initialisation automatique
 document.addEventListener('DOMContentLoaded', () => {
