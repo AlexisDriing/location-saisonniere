@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal V4
+// Page accueil - Point d'entrée principal V5
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -81,7 +81,7 @@ class AccueilPage {
     // Positionner directement sous le bouton
     picker.container.css({
       position: 'fixed',
-      top: (buttonRect.bottom + 20) + 'px', // 20px d'espacement sous le bouton
+      top: (buttonRect.bottom + 10) + 'px',
       left: buttonRect.left + 'px',
       transform: 'none'
     });
@@ -101,7 +101,7 @@ class AccueilPage {
             const buttonRect = picker.anchorButton.getBoundingClientRect();
             
             $picker.css({
-              top: (buttonRect.bottom + 20) + 'px',
+              top: (buttonRect.bottom + 10) + 'px',
               left: buttonRect.left + 'px'
             });
           }
