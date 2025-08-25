@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil V2
+// Gestionnaire de recherche pour la page d'accueil V3
 class HomeSearch {
   constructor() {
     this.adultes = 1;
@@ -79,6 +79,12 @@ class HomeSearch {
         }
         
         textFiltreVoyageurs.textContent = texte;
+        // 🆕 NOUVEAU : Changer la couleur si différent de la valeur par défaut
+        if (this.adultes !== 1 || this.enfants !== 0) {
+          textFiltreVoyageurs.style.color = '#272A2B';
+        } else {
+          textFiltreVoyageurs.style.color = ''; // Retour à la couleur par défaut
+        }
       }
     
     // Mettre à jour les opacités des boutons
