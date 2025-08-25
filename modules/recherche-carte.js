@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - V4 accueil
+// Gestionnaire de recherche géographique avec Mapbox - V5
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -73,15 +73,17 @@ class SearchMapManager {
     const searchInputHome = document.querySelector('#search-input-home');
     const suggestionsListHome = document.querySelector('#suggestions-home');
     
-    // Mobile - Page liste
+    // Mobile - Page accueil
     const searchInputHomeMobile = document.querySelector('#search-input-home-mobile');
-
+    // On réutilise suggestionsListHome pour mobile aussi
+    
     // Mobile - Page liste
     const searchInputMobile = document.querySelector('#search-input-mobile');
     const suggestionsListMobile = document.querySelector('#suggestions-mobile');
+    
     // Utiliser les éléments disponibles
-    const searchForm = searchInput?.closest('form');  // ⚠️ MODIFICATION ICI
-    const searchFormHome = searchInputHome?.closest('form');  // 🆕 AJOUT
+    const searchForm = searchInput?.closest('form');
+    const searchFormHome = searchInputHome?.closest('form');
     const searchFormMobile = searchInputMobile ? searchInputMobile.closest('form') : null;
     
     // Prévenir la soumission des formulaires - Page liste
@@ -93,7 +95,7 @@ class SearchMapManager {
       });
     }
     
-    // 🆕 AJOUT - Prévenir la soumission - Page accueil
+    // Prévenir la soumission - Page accueil
     if (searchFormHome) {
       searchFormHome.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -110,7 +112,7 @@ class SearchMapManager {
       });
     }
     
-    // 🚀 NOUVEAU : Gestionnaires de saisie avec debounce
+    // Gestionnaires de saisie avec debounce
     if (searchInput) {
       let searchTimeout;
       searchInput.addEventListener('input', async (e) => {
@@ -121,7 +123,7 @@ class SearchMapManager {
       });
     }
     
-    // 🆕 AJOUT - Gestionnaire pour la page d'accueil (desktop)
+    // Gestionnaire pour la page d'accueil (desktop)
     if (searchInputHome) {
       let searchTimeoutHome;
       searchInputHome.addEventListener('input', async (e) => {
@@ -132,7 +134,7 @@ class SearchMapManager {
       });
     }
     
-    // 🆕 AJOUT - Gestionnaire pour la page d'accueil (mobile)
+    // Gestionnaire pour la page d'accueil (mobile)
     if (searchInputHomeMobile) {
       let searchTimeoutHomeMobile;
       searchInputHomeMobile.addEventListener('input', async (e) => {
@@ -142,6 +144,17 @@ class SearchMapManager {
         }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
       });
     }
+    
+    if (searchInputMobile) {
+      let searchTimeoutMobile;
+      searchInputMobile.addEventListener('input', async (e) => {
+        clearTimeout(searchTimeoutMobile);
+        searchTimeoutMobile = setTimeout(async () => {
+          await this.handleSearchInput(e.target, suggestionsListMobile);
+        }, window.CONFIG?.PERFORMANCE?.debounceDelay || 300);
+      });
+    }
+  }
 
   // ================================
   // GESTION DE LA SAISIE
