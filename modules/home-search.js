@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil V6
+// Gestionnaire de recherche pour la page d'accueil V7
 class HomeSearch {
   constructor() {
     this.adultes = 1;
@@ -202,19 +202,57 @@ class HomeSearch {
         console.log('📅 Dates desktop effacées');
       });
       
-      // Mobile - Configurer le fullscreen
+
+     // Mobile - Configurer le fullscreen
       const mobileButton = $('.dates-button-home.mobile');
       if (mobileButton.length > 0 && window.innerWidth < 768) {
         // Attendre que le picker soit initialisé
         setTimeout(() => {
           const picker = mobileButton.data('daterangepicker');
           if (picker) {
-            // Ajouter le comportement fullscreen
+            // Ajouter le comportement fullscreen avec structure complète
             const originalShow = picker.show;
             picker.show = function() {
               originalShow.call(this);
               document.body.classList.add("no-scroll");
               $(this.container).addClass('mobile-fullscreen');
+              
+              // Créer la structure mobile si nécessaire
+              if (!$(this.container).find('.drp-calendars').length) {
+                const calendars = $(this.container).find('.drp-calendar');
+                const calendarsContainer = $('<div class="drp-calendars"></div>');
+                calendars.first().before(calendarsContainer);
+                calendarsContainer.append(calendars);
+              }
+              
+              // Ajouter le header mobile si nécessaire
+              if (!$(this.container).find('.mobile-calendar-header').length) {
+                const header = $('<div class="mobile-calendar-header"></div>');
+                const title = $('<div class="mobile-calendar-title">Vos dates de séjour</div>');
+                const closeBtn = $('<div class="mobile-calendar-close">×</div>');
+                
+                closeBtn.css({
+                  'font-size': '24px',
+                  'cursor': 'pointer',
+                  'padding': '0 10px'
+                });
+                
+                closeBtn.on('click', (e) => {
+                  e.preventDefault();
+                  e.stopImmediatePropagation();
+                  this.hide();
+                  document.body.classList.remove("no-scroll");
+                  $(this.container).removeClass('mobile-fullscreen');
+                });
+                
+                header.append(title);
+                header.append(closeBtn);
+                $(this.container).prepend(header);
+              }
+              
+              // Gérer les boutons fixes en bas
+              const buttons = $(this.container).find('.drp-buttons');
+              buttons.addClass('mobile-fixed-buttons');
             };
             
             const originalHide = picker.hide;
