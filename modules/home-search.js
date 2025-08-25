@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil V3
+// Gestionnaire de recherche pour la page d'accueil V4
 class HomeSearch {
   constructor() {
     this.adultes = 1;
@@ -146,7 +146,7 @@ class HomeSearch {
     
     // Construire l'objet de données
     const searchData = {
-      location: location,
+      locationText: searchInput ? searchInput.value : '',
       startDate: this.startDate,
       endDate: this.endDate,
       adultes: this.adultes,
