@@ -1,17 +1,25 @@
-// Gestionnaire de recherche pour la page d'accueil V7
+// Gestionnaire de recherche pour la page d'accueil V8
 class HomeSearch {
   constructor() {
+    // Protection contre double initialisation
+    if (window.homeSearchInstance) {
+      console.warn('⚠️ HomeSearch déjà initialisé');
+      return window.homeSearchInstance;
+    }
+    
     this.adultes = 1;
     this.enfants = 0;
     this.startDate = null;
     this.endDate = null;
-    this.init();
-
+    // Version mobile
     this.adultesMobile = 1;
     this.enfantsMobile = 0;
     this.startDateMobile = null;
     this.endDateMobile = null;
     this.init();
+    
+    // Stocker l'instance globalement
+    window.homeSearchInstance = this;
   }
 
   init() {
