@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil V5
+// Gestionnaire de recherche pour la page d'accueil V6
 class HomeSearch {
   constructor() {
     this.adultes = 1;
@@ -187,27 +187,54 @@ class HomeSearch {
   setupDateListener() {
     // Écouter les changements du DateRangePicker
     if (typeof jQuery !== 'undefined') {
+      const $ = jQuery;
+      
       // Desktop
-      jQuery('.dates-button-home:not(.mobile)').on('apply.daterangepicker', (e, picker) => {
+      $('.dates-button-home:not(.mobile)').on('apply.daterangepicker', (e, picker) => {
         this.startDate = picker.startDate.format('YYYY-MM-DD');
         this.endDate = picker.endDate.format('YYYY-MM-DD');
         console.log('📅 Dates desktop sélectionnées:', this.startDate, 'à', this.endDate);
       });
       
-      jQuery('.dates-button-home:not(.mobile)').on('cancel.daterangepicker', () => {
+      $('.dates-button-home:not(.mobile)').on('cancel.daterangepicker', () => {
         this.startDate = null;
         this.endDate = null;
         console.log('📅 Dates desktop effacées');
       });
       
-      // Mobile
-      jQuery('.dates-button-home.mobile').on('apply.daterangepicker', (e, picker) => {
+      // Mobile - Configurer le fullscreen
+      const mobileButton = $('.dates-button-home.mobile');
+      if (mobileButton.length > 0 && window.innerWidth < 768) {
+        // Attendre que le picker soit initialisé
+        setTimeout(() => {
+          const picker = mobileButton.data('daterangepicker');
+          if (picker) {
+            // Ajouter le comportement fullscreen
+            const originalShow = picker.show;
+            picker.show = function() {
+              originalShow.call(this);
+              document.body.classList.add("no-scroll");
+              $(this.container).addClass('mobile-fullscreen');
+            };
+            
+            const originalHide = picker.hide;
+            picker.hide = function() {
+              originalHide.call(this);
+              document.body.classList.remove("no-scroll");
+              $(this.container).removeClass('mobile-fullscreen');
+            };
+          }
+        }, 500); // Attendre que CalendarListManager ait initialisé le picker
+      }
+      
+      // Mobile - Events
+      $('.dates-button-home.mobile').on('apply.daterangepicker', (e, picker) => {
         this.startDateMobile = picker.startDate.format('YYYY-MM-DD');
         this.endDateMobile = picker.endDate.format('YYYY-MM-DD');
         console.log('📅 Dates mobile sélectionnées:', this.startDateMobile, 'à', this.endDateMobile);
       });
       
-      jQuery('.dates-button-home.mobile').on('cancel.daterangepicker', () => {
+      $('.dates-button-home.mobile').on('cancel.daterangepicker', () => {
         this.startDateMobile = null;
         this.endDateMobile = null;
         console.log('📅 Dates mobile effacées');
