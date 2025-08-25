@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal VF
+// Page accueil - Point d'entrée principal VF 2
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -67,7 +67,16 @@ class AccueilPage {
     }
   }
 }
-
+// Après l'initialisation des managers
+jQuery('.dates-button-home').on('show.daterangepicker', function() {
+  setTimeout(() => {
+    // Scroll simple jusqu'au calendrier
+    document.querySelector('.daterangepicker').scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'end' 
+    });
+  }, 100);
+});
 // Initialisation automatique
 document.addEventListener('DOMContentLoaded', () => {
   // Vérifier qu'on est sur la page d'accueil
