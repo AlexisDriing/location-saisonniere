@@ -1,10 +1,16 @@
-// Gestionnaire de recherche pour la page d'accueil V4
+// Gestionnaire de recherche pour la page d'accueil V5
 class HomeSearch {
   constructor() {
     this.adultes = 1;
     this.enfants = 0;
     this.startDate = null;
     this.endDate = null;
+    this.init();
+
+    this.adultesMobile = 1;
+    this.enfantsMobile = 0;
+    this.startDateMobile = null;
+    this.endDateMobile = null;
     this.init();
   }
 
@@ -19,6 +25,7 @@ class HomeSearch {
     }
     
     this.setupVoyageurs();
+    this.setupVoyageursMobile();
     this.setupDateListener();
     this.setupSearchButton();
     
@@ -101,39 +108,139 @@ class HomeSearch {
     if (enfantPlus) enfantPlus.style.opacity = isMax ? '0.3' : '1';
   }
 
+  setupVoyageursMobile() {
+    // Adultes mobile
+    document.getElementById('adultes-plus-home-mobile')?.addEventListener('click', () => {
+      if (this.adultesMobile + this.enfantsMobile < 10) {
+        this.adultesMobile++;
+        this.updateVoyageursDisplayMobile();
+      }
+    });
+    
+    document.getElementById('adultes-moins-home-mobile')?.addEventListener('click', () => {
+      if (this.adultesMobile > 1) {
+        this.adultesMobile--;
+        this.updateVoyageursDisplayMobile();
+      }
+    });
+    
+    // Enfants mobile
+    document.getElementById('enfants-plus-home-mobile')?.addEventListener('click', () => {
+      if (this.adultesMobile + this.enfantsMobile < 10) {
+        this.enfantsMobile++;
+        this.updateVoyageursDisplayMobile();
+      }
+    });
+    
+    document.getElementById('enfants-moins-home-mobile')?.addEventListener('click', () => {
+      if (this.enfantsMobile > 0) {
+        this.enfantsMobile--;
+        this.updateVoyageursDisplayMobile();
+      }
+    });
+    
+    // Affichage initial mobile
+    this.updateVoyageursDisplayMobile();
+  }
+
+  updateVoyageursDisplayMobile() {
+    const adulteElement = document.getElementById('chiffres-adultes-home-mobile');
+    const enfantElement = document.getElementById('chiffres-enfants-home-mobile');
+    
+    if (adulteElement) adulteElement.textContent = this.adultesMobile;
+    if (enfantElement) enfantElement.textContent = this.enfantsMobile;
+
+    const textFiltreVoyageurs = document.getElementById('text-filtre-voyageurs-home-mobile');
+    if (textFiltreVoyageurs) {
+      const totalVoyageurs = this.adultesMobile + this.enfantsMobile;
+      let texte = '';
+      
+      if (totalVoyageurs === 1) {
+        texte = '1 voyageur';
+      } else {
+        texte = `${totalVoyageurs} voyageurs`;
+      }
+      
+      textFiltreVoyageurs.textContent = texte;
+      // Changer la couleur si différent de la valeur par défaut
+      if (this.adultesMobile !== 1 || this.enfantsMobile !== 0) {
+        textFiltreVoyageurs.style.color = '#272A2B';
+      } else {
+        textFiltreVoyageurs.style.color = ''; // Retour à la couleur par défaut
+      }
+    }
+    
+    // Mettre à jour les opacités des boutons
+    const adulteMoins = document.getElementById('adultes-moins-home-mobile');
+    const enfantMoins = document.getElementById('enfants-moins-home-mobile');
+    const adultePlus = document.getElementById('adultes-plus-home-mobile');
+    const enfantPlus = document.getElementById('enfants-plus-home-mobile');
+    
+    if (adulteMoins) adulteMoins.style.opacity = this.adultesMobile <= 1 ? '0.3' : '1';
+    if (enfantMoins) enfantMoins.style.opacity = this.enfantsMobile <= 0 ? '0.3' : '1';
+    
+    const isMax = this.adultesMobile + this.enfantsMobile >= 10;
+    if (adultePlus) adultePlus.style.opacity = isMax ? '0.3' : '1';
+    if (enfantPlus) enfantPlus.style.opacity = isMax ? '0.3' : '1';
+  }
+
   setupDateListener() {
     // Écouter les changements du DateRangePicker
     if (typeof jQuery !== 'undefined') {
-      jQuery('.dates-button-home').on('apply.daterangepicker', (e, picker) => {
+      // Desktop
+      jQuery('.dates-button-home:not(.mobile)').on('apply.daterangepicker', (e, picker) => {
         this.startDate = picker.startDate.format('YYYY-MM-DD');
         this.endDate = picker.endDate.format('YYYY-MM-DD');
-        console.log('📅 Dates sélectionnées:', this.startDate, 'à', this.endDate);
+        console.log('📅 Dates desktop sélectionnées:', this.startDate, 'à', this.endDate);
       });
       
-      jQuery('.dates-button-home').on('cancel.daterangepicker', () => {
+      jQuery('.dates-button-home:not(.mobile)').on('cancel.daterangepicker', () => {
         this.startDate = null;
         this.endDate = null;
-        console.log('📅 Dates effacées');
+        console.log('📅 Dates desktop effacées');
+      });
+      
+      // Mobile
+      jQuery('.dates-button-home.mobile').on('apply.daterangepicker', (e, picker) => {
+        this.startDateMobile = picker.startDate.format('YYYY-MM-DD');
+        this.endDateMobile = picker.endDate.format('YYYY-MM-DD');
+        console.log('📅 Dates mobile sélectionnées:', this.startDateMobile, 'à', this.endDateMobile);
+      });
+      
+      jQuery('.dates-button-home.mobile').on('cancel.daterangepicker', () => {
+        this.startDateMobile = null;
+        this.endDateMobile = null;
+        console.log('📅 Dates mobile effacées');
       });
     }
   }
 
   setupSearchButton() {
+    // Desktop
     const searchButton = document.getElementById('button-search-home');
-    if (!searchButton) return;
+    if (searchButton) {
+      searchButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSearch(false); // false = desktop
+      });
+    }
     
-    searchButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.handleSearch();
-    });
+    // Mobile
+    const searchButtonMobile = document.getElementById('button-search-home-mobile');
+    if (searchButtonMobile) {
+      searchButtonMobile.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSearch(true); // true = mobile
+      });
+    }
   }
 
-  handleSearch() {
-    console.log('🔍 Recherche lancée depuis la page d\'accueil');
+  handleSearch(isMobile = false) {
+    console.log(`🔍 Recherche lancée depuis la page d'accueil (${isMobile ? 'mobile' : 'desktop'})`);
     
-    // Récupérer le lieu depuis SearchMapManager
+    // Récupérer le lieu selon la version
     let location = null;
-    const searchInput = document.getElementById('search-input-home');
+    const searchInput = document.getElementById(isMobile ? 'search-input-home-mobile' : 'search-input-home');
     if (searchInput && searchInput.value.trim()) {
       // SearchMapManager aura déjà géocodé via getCurrentSearch()
       location = window.searchMapManager?.getCurrentSearch();
@@ -144,13 +251,13 @@ class HomeSearch {
       }
     }
     
-    // Construire l'objet de données
+    // Construire l'objet de données selon la version
     const searchData = {
       locationText: searchInput ? searchInput.value : '',
-      startDate: this.startDate,
-      endDate: this.endDate,
-      adultes: this.adultes,
-      enfants: this.enfants,
+      startDate: isMobile ? this.startDateMobile : this.startDate,
+      endDate: isMobile ? this.endDateMobile : this.endDate,
+      adultes: isMobile ? this.adultesMobile : this.adultes,
+      enfants: isMobile ? this.enfantsMobile : this.enfants,
       timestamp: Date.now()
     };
     
