@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - V2 accueil
+// Gestionnaire de recherche géographique avec Mapbox - V3 accueil
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
