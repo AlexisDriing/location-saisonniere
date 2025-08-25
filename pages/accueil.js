@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal V3
+// Page accueil - Point d'entrée principal V4
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -69,49 +69,47 @@ class AccueilPage {
   }
 
   fixCalendarPosition() {
-    if (typeof jQuery === 'undefined') return;
+  if (typeof jQuery === 'undefined') return;
+  
+  const $ = jQuery;
+  
+  // Au moment où le calendrier s'ouvre
+  $('.dates-button-home').on('show.daterangepicker', function(e, picker) {
+    const button = this; // Le bouton qui a déclenché l'ouverture
+    const buttonRect = button.getBoundingClientRect();
     
-    const $ = jQuery;
-    
-    $('.dates-button-home').on('show.daterangepicker', function(e, picker) {
-      // Récupérer le bouton et le bloc parent
-      const button = $('.dates-button-home')[0];
-      const locationBlock = $('.location-accueil')[0];
-      
-      if (button && locationBlock) {
-        const buttonRect = button.getBoundingClientRect();
-        const blockRect = locationBlock.getBoundingClientRect();
-        
-        // Calculer la position
-        const spacing = 50; // 🎯 CHANGEZ CE NOMBRE pour ajuster l'espacement (en pixels)
-        
-        picker.container.css({
-          position: 'fixed',
-          top: (blockRect.bottom + spacing) + 'px',
-          left: blockRect.left + 'px',
-          transform: 'none'
-        });
-      }
+    // Positionner directement sous le bouton
+    picker.container.css({
+      position: 'fixed',
+      top: (buttonRect.bottom + 20) + 'px', // 20px d'espacement sous le bouton
+      left: buttonRect.left + 'px',
+      transform: 'none'
     });
     
-    // Repositionner au scroll
-    $(window).on('scroll.daterangepicker', function() {
-      const picker = $('.dates-button-home').data('daterangepicker');
-      if (picker && picker.isShowing) {
-        const locationBlock = $('.location-accueil')[0];
-        if (locationBlock) {
-          const blockRect = locationBlock.getBoundingClientRect();
-          const spacing = 50; // 🎯 MÊME VALEUR QU'AU-DESSUS
-          
-          picker.container.css({
-            top: (blockRect.bottom + spacing) + 'px',
-            left: blockRect.left + 'px'
-          });
+    // Sauvegarder la référence du bouton pour le repositionnement
+    picker.anchorButton = button;
+  });
+    
+     // Repositionner lors du scroll
+    $(window).on('scroll resize', function() {
+      $('.daterangepicker').each(function() {
+        const $picker = $(this);
+        if ($picker.is(':visible')) {
+          // Retrouver le picker via le bouton
+          const picker = $('.dates-button-home').data('daterangepicker');
+          if (picker && picker.anchorButton) {
+            const buttonRect = picker.anchorButton.getBoundingClientRect();
+            
+            $picker.css({
+              top: (buttonRect.bottom + 20) + 'px',
+              left: buttonRect.left + 'px'
+            });
+          }
         }
-      }
+      });
     });
   }
-} // Fin de la classe AccueilPage
+}// Fin de la classe AccueilPage
 
 // Initialisation automatique
 document.addEventListener('DOMContentLoaded', () => {
