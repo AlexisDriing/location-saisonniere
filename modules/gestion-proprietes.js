@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V13 Accueil
+// Gestionnaire principal des propriétés pour la page liste - V14 Accueil
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -1117,39 +1117,37 @@ if (hostImageElement) {
     if (!homeSearchData) return;
     
     try {
-      const data = JSON.parse(homeSearchData);
-      console.log('🏠 Données reçues de la page d\'accueil:', data);
-      
-      // 1. Appliquer le lieu si fourni
-      if (data.location) {
-        if (data.location.needsGeocoding) {
-          // Géocoder le texte
-          console.log('📍 Géocodage nécessaire pour:', data.location.name);
-          window.searchMapManager?.searchLocation(data.location.name).then(coords => {
-            if (coords) {
-              this.setSearchLocation(coords);
-              this.applyFilters();
-            }
-          });
-        } else if (data.location.lat && data.location.lng) {
-          // Coordonnées déjà disponibles
-          this.setSearchLocation(data.location);
-        }
-      }
-      
-      // 2. Appliquer les dates
-      if (data.startDate && data.endDate && window.calendarListManager) {
-        console.log('📅 Application des dates:', data.startDate, 'à', data.endDate);
+    const data = JSON.parse(homeSearchData);
+    console.log('🏠 Données reçues de la page d\'accueil:', data);
+    
+    // 🆕 NOUVEAU : Mettre le texte du lieu dans l'input et lancer la recherche
+    if (data.locationText) {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = data.locationText; // Afficher le texte
         
-        // Mettre à jour les variables
-        this.startDate = data.startDate;
-        this.endDate = data.endDate;
-        
-        // Mettre à jour le calendrier
+        // Déclencher la recherche après un court délai
         setTimeout(() => {
-          window.calendarListManager.setDates(data.startDate, data.endDate);
-        }, 500);
+          if (window.searchMapManager) {
+            window.searchMapManager.handleSearch(searchInput);
+          }
+        }, 1000);
       }
+    }
+    
+    // 2. Appliquer les dates (INCHANGÉ)
+    if (data.startDate && data.endDate && window.calendarListManager) {
+      console.log('📅 Application des dates:', data.startDate, 'à', data.endDate);
+      
+      // Mettre à jour les variables
+      this.startDate = data.startDate;
+      this.endDate = data.endDate;
+      
+      // Mettre à jour le calendrier
+      setTimeout(() => {
+        window.calendarListManager.setDates(data.startDate, data.endDate);
+      }, 500);
+    }
       
       // 3. Appliquer le nombre de voyageurs
       if ((data.adultes || data.enfants) && window.filtersManager) {
