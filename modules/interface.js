@@ -1,4 +1,4 @@
-// V12 mode location
+// V12v2 mode location
 class InterfaceManager {
   constructor() {
     this.init();
@@ -381,7 +381,7 @@ class InterfaceManager {
       const chambreHoteElement = document.querySelector('.chambres-hote');
       if (chambreHoteElement) {
         if (typeLogement === "Chambre d'hôtes") {
-          chambreHoteElement.style.display = 'block'; // ou 'flex' selon votre CSS
+          chambreHoteElement.style.display = 'inline-flex'; // ou 'flex' selon votre CSS
         } else {
           chambreHoteElement.style.display = 'none';
         }
