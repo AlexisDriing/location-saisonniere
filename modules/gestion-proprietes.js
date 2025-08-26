@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V15 accueil 
+// Gestionnaire principal des propriétés pour la page liste - V16 mode loc
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -823,6 +823,16 @@ if (hostImageElement) {
     const typeElement = newCard.querySelector('[data-mode-location]');
     if (typeElement && propData.type) {
       typeElement.setAttribute('data-mode-location', propData.type);
+    }
+
+    // Afficher/masquer l'élément chambre d'hôtes
+    const chambreHoteElement = newCard.querySelector('.chambres-hote');
+    if (chambreHoteElement) {
+      if (propData.type === "Chambre d'hôtes") {
+        chambreHoteElement.style.display = 'block'; // ou 'flex' selon votre CSS
+      } else {
+        chambreHoteElement.style.display = 'none';
+      }
     }
     
     // Équipements
