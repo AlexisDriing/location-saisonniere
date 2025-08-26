@@ -1,4 +1,4 @@
-// V11 Gestion des interfaces : popins, logos, extras, equip, option, horaires, téléphone bouton etc
+// V12 mode location
 class InterfaceManager {
   constructor() {
     this.init();
@@ -14,6 +14,7 @@ class InterfaceManager {
     this.setupEquipements();
     this.setupOptionsAccueil();
     this.setupHoraires();
+    this.setupChambreHoteDisplay();
     const hasReductions = this.setupReductions();
     const hasCadeaux = this.setupCadeaux();
     this.updateBlocentierAvantages(hasReductions, hasCadeaux);
@@ -368,6 +369,26 @@ class InterfaceManager {
     console.log(`✅ ${optionsAffichees} options d'accueil affichées`);
   }
 
+  // Gestion de l'affichage conditionnel pour Chambre d'hôtes
+  setupChambreHoteDisplay() {
+    // Récupérer le type de logement
+    const typeElement = document.querySelector('[data-mode-location]');
+    
+    if (typeElement) {
+      const typeLogement = typeElement.getAttribute('data-mode-location');
+      
+      // Afficher/masquer l'élément chambre d'hôtes
+      const chambreHoteElement = document.querySelector('.chambres-hote');
+      if (chambreHoteElement) {
+        if (typeLogement === "Chambre d'hôtes") {
+          chambreHoteElement.style.display = 'block'; // ou 'flex' selon votre CSS
+        } else {
+          chambreHoteElement.style.display = 'none';
+        }
+      }
+    }
+  }
+  
   // Gestion des horaires d'arrivée et de départ
   setupHoraires() {
     const horairesElement = document.querySelector('[data-heure-arrivee-depart]');
