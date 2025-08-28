@@ -1,4 +1,4 @@
-// V12v2 mode location
+// V13
 class InterfaceManager {
   constructor() {
     this.init();
@@ -8,6 +8,7 @@ class InterfaceManager {
     this.setupMainImages();
     this.setupPlatformLogos();
     this.setupAdresse();
+    this.setupItineraireButton();
     this.setupSeasonButton();
     this.setupConditionsReservation();
     this.setupExtras();
@@ -77,6 +78,28 @@ class InterfaceManager {
       const adresseReorganisee = `${parties[2]}, ${parties[0]}, ${parties[1]}`;
       adresseElement.textContent = adresseReorganisee;
     }
+  }
+
+  setupItineraireButton() {
+    const button = document.getElementById('lien-itineraire');
+    const adresseElement = document.getElementById('adresse-logement');
+    
+    if (!button || !adresseElement) {
+      return;
+    }
+    
+    const adresse = adresseElement.textContent.trim();
+    if (!adresse) {
+      return;
+    }
+    
+    // Créer l'URL Google Maps
+    const googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(adresse);
+    
+    // Configurer le bouton
+    button.href = googleMapsUrl;
+    button.target = '_blank';
+    button.rel = 'noopener noreferrer';
   }
 
   // Nouvelle méthode à ajouter dans la classe :
