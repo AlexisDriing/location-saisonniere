@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - VERSION CORRIGÉE V3
+// Gestionnaire complet des filtres - VERSION CORRIGÉE V4
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -322,8 +322,8 @@ class FiltersManager {
   // ================================
 
   updateTempEquipements() {
-    // IMPORTANT : Toujours réinitialiser l'état temporaire pour éviter les doublons
-    this.tempState.equipements = [];
+    // Utiliser un Set pour éviter automatiquement les doublons
+    const equipementsSet = new Set();
     
     this.equipementCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
@@ -331,20 +331,20 @@ class FiltersManager {
       
       if (checkbox && label && checkbox.checked) {
         const equipementName = label.textContent.trim();
-        // Vérifier qu'on n'ajoute pas de doublon
-        if (!this.tempState.equipements.includes(equipementName)) {
-          this.tempState.equipements.push(equipementName);
-        }
+        equipementsSet.add(equipementName); // Set n'ajoute que si pas déjà présent
       }
     });
+    
+    // Convertir le Set en array
+    this.tempState.equipements = Array.from(equipementsSet);
     
     console.log('État temporaire équipements:', this.tempState.equipements);
   }
 
   updateTempPreferences() {
-    // IMPORTANT : Toujours réinitialiser l'état temporaire pour éviter les doublons
-    this.tempState.optionsAccueil = [];
-    this.tempState.modesLocation = [];
+    // Utiliser des Sets pour éviter automatiquement les doublons
+    const optionsSet = new Set();
+    const modesSet = new Set();
     
     this.optionAccueilCheckboxes.forEach(container => {
       const checkbox = container.querySelector('input[type="checkbox"]');
@@ -352,10 +352,7 @@ class FiltersManager {
       
       if (checkbox && label && checkbox.checked) {
         const optionName = label.textContent.trim();
-        // Vérifier qu'on n'ajoute pas de doublon
-        if (!this.tempState.optionsAccueil.includes(optionName)) {
-          this.tempState.optionsAccueil.push(optionName);
-        }
+        optionsSet.add(optionName); // Set n'ajoute que si pas déjà présent
       }
     });
     
@@ -365,12 +362,13 @@ class FiltersManager {
       
       if (checkbox && label && checkbox.checked) {
         const modeName = label.textContent.trim();
-        // Vérifier qu'on n'ajoute pas de doublon
-        if (!this.tempState.modesLocation.includes(modeName)) {
-          this.tempState.modesLocation.push(modeName);
-        }
+        modesSet.add(modeName); // Set n'ajoute que si pas déjà présent
       }
     });
+    
+    // Convertir les Sets en arrays
+    this.tempState.optionsAccueil = Array.from(optionsSet);
+    this.tempState.modesLocation = Array.from(modesSet);
     
     console.log('État temporaire préférences:', {
       options: this.tempState.optionsAccueil,
