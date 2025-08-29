@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - VERSION CORRIGÉE V4
+// Gestionnaire complet des filtres - VERSION CORRIGÉE V5
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -322,51 +322,61 @@ class FiltersManager {
   // ================================
 
   updateTempEquipements() {
-    // Utiliser un Set pour éviter automatiquement les doublons
     const equipementsSet = new Set();
     
     this.equipementCheckboxes.forEach(container => {
+      // IMPORTANT : Ne traiter que les éléments visibles
+      if (container.offsetParent === null) {
+        return; // Ignorer les éléments invisibles
+      }
+      
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
         const equipementName = label.textContent.trim();
-        equipementsSet.add(equipementName); // Set n'ajoute que si pas déjà présent
+        equipementsSet.add(equipementName);
       }
     });
     
-    // Convertir le Set en array
     this.tempState.equipements = Array.from(equipementsSet);
-    
     console.log('État temporaire équipements:', this.tempState.equipements);
   }
 
   updateTempPreferences() {
-    // Utiliser des Sets pour éviter automatiquement les doublons
     const optionsSet = new Set();
     const modesSet = new Set();
     
     this.optionAccueilCheckboxes.forEach(container => {
+      // IMPORTANT : Ne traiter que les éléments visibles
+      if (container.offsetParent === null) {
+        return; // Ignorer les éléments invisibles
+      }
+      
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
         const optionName = label.textContent.trim();
-        optionsSet.add(optionName); // Set n'ajoute que si pas déjà présent
+        optionsSet.add(optionName);
       }
     });
     
     this.modeLocationCheckboxes.forEach(container => {
+      // IMPORTANT : Ne traiter que les éléments visibles
+      if (container.offsetParent === null) {
+        return; // Ignorer les éléments invisibles
+      }
+      
       const checkbox = container.querySelector('input[type="checkbox"]');
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
         const modeName = label.textContent.trim();
-        modesSet.add(modeName); // Set n'ajoute que si pas déjà présent
+        modesSet.add(modeName);
       }
     });
     
-    // Convertir les Sets en arrays
     this.tempState.optionsAccueil = Array.from(optionsSet);
     this.tempState.modesLocation = Array.from(modesSet);
     
