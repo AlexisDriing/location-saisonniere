@@ -1,4 +1,39 @@
-// Gestionnaire principal des propriétés pour la page liste - V16 mode loc
+// Gestionnaire principal des propriétés pour la page liste - V17 securisé
+
+// 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
+function setPriceDisplay(element, price, unit = '') {
+  element.textContent = ''; // Nettoyer
+  const strong = document.createElement('strong');
+  strong.textContent = `${price}€`;
+  element.appendChild(strong);
+  if (unit) {
+    element.appendChild(document.createTextNode(` ${unit}`));
+  }
+}
+
+function setPriceWithStrike(element, oldPrice, newPrice, prefix = '', suffix = '') {
+  element.textContent = ''; // Nettoyer
+  
+  if (prefix) {
+    element.appendChild(document.createTextNode(prefix + ' '));
+  }
+  
+  if (oldPrice) {
+    const del = document.createElement('del');
+    del.textContent = `${oldPrice}€`;
+    element.appendChild(del);
+    element.appendChild(document.createTextNode(' '));
+  }
+  
+  const strong = document.createElement('strong');
+  strong.textContent = `${newPrice}€`;
+  element.appendChild(strong);
+  
+  if (suffix) {
+    element.appendChild(document.createTextNode(' ' + suffix));
+  }
+}
+
 class PropertyManager {
   constructor() {
     // Templates et containers
@@ -246,27 +281,34 @@ class PropertyManager {
     
     if (nights > 1) {
       if (textePrix) {
-        textePrix.innerHTML = `<strong>${priceInfo.price_per_night}€</strong> / nuit`;
+        setPriceDisplay(textePrix, priceInfo.price_per_night, '/ nuit');  // ✅ SÉCURISÉ
       }
       
       if (texteTotal) {
         const totalPrice = priceInfo.total_price;
         const totalPlatformPrice = priceInfo.platform_price;
         
-        const totalText = totalPlatformPrice > totalPrice ? 
-          `<del>${totalPlatformPrice}€</del> <strong>${totalPrice}€</strong> au total` : 
-          `<strong>${totalPrice}€</strong> au total`;
-        
-        texteTotal.innerHTML = totalText;
+        // ✅ SÉCURISÉ : Utilisation des helpers
+        if (totalPlatformPrice > totalPrice) {
+          setPriceWithStrike(texteTotal, totalPlatformPrice, totalPrice, '', 'au total');
+        } else {
+          setPriceDisplay(texteTotal, totalPrice, 'au total');
+        }
         texteTotal.style.display = 'block';
       }
     } else {
-      if (textePrix) {
-        const discountText = priceInfo.platform_price_per_night > priceInfo.price_per_night ? 
-          `<del>${priceInfo.platform_price_per_night}€</del> ` : '';
-        
-        textePrix.innerHTML = `Dès ${discountText}<strong>${priceInfo.price_per_night}€ / nuit</strong>`;
+    if (textePrix) {
+      if (priceInfo.platform_price_per_night > priceInfo.price_per_night) {
+        setPriceWithStrike(textePrix, priceInfo.platform_price_per_night, priceInfo.price_per_night, 'Dès', '/ nuit');  // ✅ SÉCURISÉ
+      } else {
+        // Créer manuellement pour le cas sans réduction
+        textePrix.textContent = '';
+        textePrix.appendChild(document.createTextNode('Dès '));
+        const strong = document.createElement('strong');
+        strong.textContent = `${priceInfo.price_per_night}€ / nuit`;
+        textePrix.appendChild(strong);
       }
+    }
       
       if (texteTotal) {
         texteTotal.style.display = 'none';
@@ -732,7 +774,7 @@ class PropertyManager {
     
     // Afficher avec prix barré si différent
     if (hasDiscount && platformPrice > basePrice) {
-      priceElement.innerHTML = `Dès <del>${platformPrice}€</del> <strong>${basePrice}€ / nuit</strong>`;
+      setPriceWithStrike(priceElement, platformPrice, basePrice, 'Dès', '/ nuit');  // ✅ SÉCURISÉ
       
       // Calculer et afficher le pourcentage
       if (pourcentageElement) {
@@ -741,18 +783,31 @@ class PropertyManager {
         pourcentageElement.style.display = 'block';
       }
     } else {
-      priceElement.innerHTML = `Dès <strong>${basePrice}€ / nuit</strong>`;
+      setPriceDisplay(priceElement, basePrice, '/ nuit');  // ✅ SÉCURISÉ
+      // Ajouter "Dès" manuellement
+      const currentContent = priceElement.innerHTML;
+      priceElement.textContent = '';
+      priceElement.appendChild(document.createTextNode('Dès '));
+      const strong = document.createElement('strong');
+      strong.textContent = `${basePrice}€ / nuit`;
+      priceElement.appendChild(strong);
+      
       if (pourcentageElement) {
         pourcentageElement.style.display = 'none';
       }
     }
   } else if (priceElement && propData.price) {
-  // Fallback si pas de pricing_data
-  priceElement.innerHTML = `Dès <strong>${propData.price}€ / nuit</strong>`;
-  if (pourcentageElement) {
-    pourcentageElement.style.display = 'none';
+    // Fallback si pas de pricing_data
+    priceElement.textContent = '';  // ✅ SÉCURISÉ
+    priceElement.appendChild(document.createTextNode('Dès '));
+    const strong = document.createElement('strong');
+    strong.textContent = `${propData.price}€ / nuit`;
+    priceElement.appendChild(strong);
+    
+    if (pourcentageElement) {
+      pourcentageElement.style.display = 'none';
+    }
   }
-}
     
     // Capacité
     const capacityElement = newCard.querySelector('[data-voyageurs]');
