@@ -1,4 +1,4 @@
-// Calculateur de prix principal V6 taxe out
+// Calculateur de prix principal V7 secu
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -486,13 +486,36 @@ class PriceCalculator {
       });
     }
     
-    // Prix total
+    // SOLUTION SIMPLE : Créer les éléments au lieu d'innerHTML
     if (this.elements.totalPrix.length) {
       this.elements.totalPrix.forEach(element => {
+        // Vider l'élément
+        element.textContent = '';
+        
         if (details.platformPrice > details.totalPrice) {
-          element.innerHTML = `<span style="text-decoration:line-through;font-weight:normal;font-family:Inter;font-size:16px;color:#778183">${formatPrice(details.platformPrice)}€</span><span style="display:inline-block;width:4px"></span><span style="font-weight:600;font-family:Inter;font-size:16px;color:#272A2B">${formatPrice(details.totalPrice)}€</span>`;
+          // Créer le prix barré
+          const strikeSpan = document.createElement('span');
+          strikeSpan.style.cssText = 'text-decoration:line-through;font-weight:normal;font-family:Inter;font-size:16px;color:#778183';
+          strikeSpan.textContent = `${formatPrice(details.platformPrice)}€`;
+          
+          // Créer l'espace
+          const spaceSpan = document.createElement('span');
+          spaceSpan.style.cssText = 'display:inline-block;width:4px';
+          
+          // Créer le prix final
+          const priceSpan = document.createElement('span');
+          priceSpan.style.cssText = 'font-weight:600;font-family:Inter;font-size:16px;color:#272A2B';
+          priceSpan.textContent = `${formatPrice(details.totalPrice)}€`;
+          
+          // Ajouter tout
+          element.appendChild(strikeSpan);
+          element.appendChild(spaceSpan);
+          element.appendChild(priceSpan);
         } else {
-          element.innerHTML = `<span style="font-weight:600;font-family:Inter;font-size:16px;color:#272A2B">${formatPrice(details.totalPrice)}€</span>`;
+          const priceSpan = document.createElement('span');
+          priceSpan.style.cssText = 'font-weight:600;font-family:Inter;font-size:16px;color:#272A2B';
+          priceSpan.textContent = `${formatPrice(details.totalPrice)}€`;
+          element.appendChild(priceSpan);
         }
       });
     }
