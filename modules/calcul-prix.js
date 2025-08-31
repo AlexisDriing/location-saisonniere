@@ -1,4 +1,4 @@
-// Calculateur de prix principal V7 secu
+// Calculateur de prix principal V8 securite
 class PriceCalculator {
   constructor() {
     console.log('🔧 PriceCalculator constructor appelé');
@@ -193,7 +193,23 @@ class PriceCalculator {
       if (isFinite(minPrice) && bestSeason) {
         if (this.elements.prixDirect.length) {
           this.elements.prixDirect.forEach(element => {
-            element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">${Math.round(minPrice)}€ / nuit</strong>`;
+            // ✅ SÉCURISÉ : Vider et reconstruire
+            element.textContent = '';
+            
+            // Ajouter "À partir de"
+            element.appendChild(document.createTextNode('À partir de'));
+            
+            // Ajouter le saut de ligne
+            element.appendChild(document.createElement('br'));
+            
+            // Créer et styler le strong
+            const strong = document.createElement('strong');
+            strong.style.fontWeight = 'bold';
+            strong.style.fontFamily = 'Inter';
+            strong.style.fontSize = '24px';
+            strong.textContent = `${Math.round(minPrice)}€ / nuit`;
+            
+            element.appendChild(strong);
           });
         }
         
@@ -520,7 +536,7 @@ class PriceCalculator {
       });
     }
     
-    // Mettre à jour prix direct et pourcentage
+   // Mettre à jour prix direct et pourcentage
     if (this.elements.prixDirect.length || this.elements.textPourcentage.length) {
       const avgPricePerNight = Math.round(details.originalNightsPrice / details.nights);
       
@@ -532,7 +548,23 @@ class PriceCalculator {
       
       if (this.elements.prixDirect.length) {
         this.elements.prixDirect.forEach(element => {
-          element.innerHTML = `À partir de<br><strong style="font-weight:bold;font-family:Inter;font-size:24px">${avgPricePerNight}€ / nuit</strong>`;
+          // ✅ SÉCURISÉ : Vider et reconstruire
+          element.textContent = '';
+          
+          // Ajouter "À partir de"
+          element.appendChild(document.createTextNode('À partir de'));
+          
+          // Ajouter le saut de ligne
+          element.appendChild(document.createElement('br'));
+          
+          // Créer et styler le strong
+          const strong = document.createElement('strong');
+          strong.style.fontWeight = 'bold';
+          strong.style.fontFamily = 'Inter';
+          strong.style.fontSize = '24px';
+          strong.textContent = `${avgPricePerNight}€ / nuit`;
+          
+          element.appendChild(strong);
         });
       }
       
