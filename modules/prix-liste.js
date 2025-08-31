@@ -1,4 +1,20 @@
-// Gestion des prix pour les cartes de logements sur la page liste V3 17%
+// Gestion des prix pour les cartes de logements sur la page liste V4 Sécurité
+function setPriceListDisplay(element, price, oldPrice = null) {
+  element.textContent = '';
+  element.appendChild(document.createTextNode('Dès '));
+  
+  if (oldPrice) {
+    const del = document.createElement('del');
+    del.textContent = `${Math.round(oldPrice)}€`;
+    element.appendChild(del);
+    element.appendChild(document.createTextNode(' '));
+  }
+  
+  const strong = document.createElement('strong');
+  strong.textContent = `${Math.round(price)}€ / nuit`;
+  element.appendChild(strong);
+}
+
 class PriceListCalculator {
   constructor(container) {
     this.container = container;
@@ -66,9 +82,7 @@ class PriceListCalculator {
     
     // Mise à jour du prix (toujours avec prix barré grâce à getPlatformPrice modifié)
     if (this.elements.textePrix) {
-      const discountText = platformPrice > minPrice ? 
-        `<del>${Math.round(platformPrice)}€</del> ` : "";
-      this.elements.textePrix.innerHTML = `Dès ${discountText}<strong>${Math.round(minPrice)}€ / nuit</strong>`;
+      setPriceListDisplay(this.elements.textePrix, minPrice, platformPrice > minPrice ? platformPrice : null);  // ✅ SÉCURISÉ
     }
     
     // Masquer le total par défaut
