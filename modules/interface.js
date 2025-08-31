@@ -1,9 +1,18 @@
-// V13
+// V14 secu
 class InterfaceManager {
   constructor() {
     this.init();
   }
 
+  setTextWithBreak(element, text1, text2) {
+    element.textContent = ''; // Vider
+    element.appendChild(document.createTextNode(text1));
+    element.appendChild(document.createElement('br'));
+    const strong = document.createElement('strong');
+    strong.textContent = text2;
+    element.appendChild(strong);
+  }
+  
   init() {
     this.setupMainImages();
     this.setupPlatformLogos();
@@ -252,7 +261,7 @@ class InterfaceManager {
         
         const namePriceElement = extraElement.querySelector("#name-price-extras");
         if (namePriceElement) {
-          namePriceElement.innerHTML = `${title} <br> <strong>${price}</strong>`;
+          this.setTextWithBreak(namePriceElement, title, price);
         }
         
         extrasGrid.appendChild(extraElement);
