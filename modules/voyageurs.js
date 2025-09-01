@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) V3
+// Gestion des voyageurs (adultes, enfants, bébés) - LOG production
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -187,7 +187,6 @@ saveCurrentTravelers() {
   currentData.timestamp = Date.now();
   
   localStorage.setItem('current_detail_dates', JSON.stringify(currentData));
-  console.log('👥 Voyageurs modifiés sauvegardés pour retour navigation');
 }
   
   getTravelersData() {
