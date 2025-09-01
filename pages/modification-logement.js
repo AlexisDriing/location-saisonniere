@@ -1,16 +1,14 @@
-// Page modification de logement
+// Page modification de logement - LOG production
 class ModificationLogementPage {
   constructor() {
     this.init();
   }
 
   async init() {
-    console.log('📝 Initialisation page modification logement...');
     
     // Initialiser le gestionnaire d'édition
     this.propertyEditor = new PropertyEditor();
     
-    console.log('✅ Page modification initialisée');
   }
 }
 
