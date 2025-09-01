@@ -1,13 +1,11 @@
-// Gestionnaire des éléments d'interface utilisateur
+// Gestionnaire des éléments d'interface utilisateur - LOG production
 class UIElementsManager {
   constructor() {
     this.init();
   }
 
   init() {
-    console.log('🎨 Initialisation UIElementsManager...');
     this.setupUIElements();
-    console.log('✅ UIElementsManager initialisé');
     
     // Export global
     window.uiElementsManager = this;
@@ -28,7 +26,6 @@ class UIElementsManager {
         const paginationContainer = document.createElement('div');
         paginationContainer.className = 'custom-pagination';
         collectionList.parentNode.insertBefore(paginationContainer, collectionList.nextSibling);
-        console.log('✅ Conteneur de pagination créé');
       }
     }
   }
@@ -42,7 +39,6 @@ class UIElementsManager {
         loadingIndicator.innerHTML = '<div class="spinner"></div>';
         loadingIndicator.style.display = 'none';
         collectionList.parentNode.insertBefore(loadingIndicator, collectionList);
-        console.log('✅ Indicateur de chargement créé');
       }
     }
   }
@@ -56,7 +52,6 @@ class UIElementsManager {
         noResultsMessage.innerHTML = 'Aucun logement ne correspond à vos critères de recherche.<br>Essayez de modifier vos filtres.';
         noResultsMessage.style.display = 'none';
         collectionList.parentNode.insertBefore(noResultsMessage, collectionList);
-        console.log('✅ Message "aucun résultat" créé');
       }
     }
   }
@@ -70,7 +65,6 @@ class UIElementsManager {
         errorMessage.innerHTML = 'Une erreur est survenue lors du chargement des logements.<br>Veuillez réessayer ultérieurement.';
         errorMessage.style.display = 'none';
         collectionList.parentNode.insertBefore(errorMessage, collectionList);
-        console.log('✅ Message d\'erreur créé');
       }
     }
   }
