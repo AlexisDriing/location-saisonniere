@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production
+// Gestionnaire principal des propriétés pour la page liste - Production
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -455,9 +455,6 @@ class PropertyManager {
     const requestStartTime = performance.now();
     
     try {
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log(`🌐 Exécution requête (${this.activeRequests}/${window.CONFIG?.PERFORMANCE?.maxConcurrentRequests || 5})`);
-      }
       
       const response = await fetch(url);
       
@@ -586,21 +583,14 @@ class PropertyManager {
       }
       
       url += `page=${this.currentPage}&limit=${this.pageSize}`;
-      
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log('🌐 URL requête:', url);
-      }
-      
+
       // Afficher indicateur de chargement
       this.showLoading(true);
       
       // Utiliser la queue de requêtes
       const response = await this.queueRequest(url);
       const data = await response.json();
-      
-      if (window.CONFIG?.PERFORMANCE?.logTimings) {
-        console.log('📊 Réponse serveur:', data);
-      }
+    
       
       // Mettre en cache la réponse
       this.setInCache(cacheKey, data);
