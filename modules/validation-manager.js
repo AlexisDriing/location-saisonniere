@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V5
+// Gestionnaire de validation pour la page modification de logement - LOG production
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -9,7 +9,6 @@ class ValidationManager {
   }
 
   init() {
-    console.log('✅ ValidationManager initialisé');
     this.setupCharacterCounters();
   }
 
@@ -388,7 +387,6 @@ class ValidationManager {
   
   // Validation complète (au save)
   validateAllFields() {
-    console.log('🔍 Validation complète des champs...');
     
     this.errors.clear();
     this.tabErrors.clear();
@@ -701,7 +699,6 @@ class ValidationManager {
 
   // Validation d'une saison (ajout ou modification)
   validateSeason(isEdit = false) {
-    console.log('🌞 Validation saison:', isEdit ? 'modification' : 'ajout');
     
     const suffix = isEdit ? '-edit' : '';
     let hasError = false;
