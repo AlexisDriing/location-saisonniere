@@ -1,4 +1,4 @@
-// Page détail - Point d'entrée principal qui orchestre tous les modules
+// Page détail - Point d'entrée principal qui orchestre tous les modules - LOG production
 class DetailLogementPage {
   constructor() {
     this.managers = {};
@@ -6,7 +6,6 @@ class DetailLogementPage {
   }
 
   async init() {
-    console.log('🏠 Initialisation de la page détail du logement...');
     
     // Charger les dépendances externes si nécessaires
     await this.loadExternalDependencies();
@@ -17,7 +16,6 @@ class DetailLogementPage {
     // 🆕 NOUVEAU : Configurer le nettoyage
     this.setupPageUnloadHandler();
     
-    console.log('✅ Page détail initialisée avec succès');
   }
 
   async loadExternalDependencies() {
@@ -85,7 +83,6 @@ class DetailLogementPage {
       // 7. Améliorations mobile - DERNIER
       this.managers.mobileEnhancements = new MobileEnhancementsManager();
       
-      console.log('✅ Tous les gestionnaires initialisés:', Object.keys(this.managers));
       
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
@@ -109,7 +106,6 @@ class DetailLogementPage {
     window.addEventListener('beforeunload', () => {
       if (!isNavigatingToReservation) {
         localStorage.removeItem("current_detail_dates");
-        console.log("🧹 Dates modifiées nettoyées (sortie de page)");
       }
     });
   }
@@ -123,7 +119,6 @@ class DetailLogementPage {
   }
 
   restart() {
-    console.log('🔄 Redémarrage de la page...');
     this.managers = {};
     this.initializeManagers();
   }
