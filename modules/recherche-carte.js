@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - V6
+// Gestionnaire de recherche géographique avec Mapbox - LOG production
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -7,11 +7,9 @@ class SearchMapManager {
   }
 
   init() {
-    console.log('🗺️ Initialisation SearchMapManager...');
     this.setupSearchForms();
     this.hideSuggestionsOnLoad();
     this.setupClickOutside();
-    console.log('✅ SearchMapManager initialisé');
     
     // Export global
     window.searchMapManager = this;
