@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V16 stripe
+// Gestionnaire de profil - gestion de boutons intégré et création de logement - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -7,7 +7,6 @@ class ProfileManager {
   }
 
   async init() {
-    console.log('👤 Initialisation ProfileManager...');
     
     // Attendre Memberstack
     await this.waitForMemberstack();
@@ -20,7 +19,6 @@ class ProfileManager {
       return;
     }
     
-    console.log('✅ Utilisateur connecté:', this.currentUser);
     
     // Charger les logements de l'utilisateur
     await this.loadUserProperties();
@@ -34,7 +32,6 @@ class ProfileManager {
     this.checkPaymentSuccess();
     this.checkPopupTrigger();
 
-    console.log('✅ ProfileManager initialisé');
     
     // Export global
     window.profileManager = this;
@@ -59,7 +56,6 @@ class ProfileManager {
         const member = await window.$memberstackDom.getCurrentMember();
         if (member && member.data) {
           this.currentUser = member.data;
-          console.log('📊 Données utilisateur:', this.currentUser);
         }
       }
     } catch (error) {
@@ -74,7 +70,6 @@ class ProfileManager {
     }
     
     try {
-      console.log('🔍 Recherche des logements pour l\'utilisateur:', this.currentUser.id);
       
       // Appel à votre API pour récupérer les logements de l'utilisateur
       const response = await fetch(`${window.CONFIG.API_URL}/user-properties?member_id=${this.currentUser.id}`);
@@ -86,7 +81,6 @@ class ProfileManager {
       const data = await response.json();
       this.userProperties = data.properties || data || [];
       
-      console.log('🏠 Logements trouvés:', this.userProperties);
       
     } catch (error) {
       console.error('❌ Erreur chargement logements:', error);
@@ -95,7 +89,6 @@ class ProfileManager {
   }
 
   displayProperties() {
-    console.log('🎨 Affichage des logements...');
     
     // NOUVEAU : Récupérer le conteneur
     const container = document.getElementById('all-properties-container');
@@ -147,7 +140,6 @@ class ProfileManager {
   }
 
   displayProperty(property, element = null) {  // AJOUT du paramètre element
-  console.log('🏠 Affichage du logement:', property);
   
   // Si pas d'élément fourni, utiliser l'ancienne logique (pour compatibilité)
   if (!element) {
@@ -201,7 +193,6 @@ setupModifyButton(property, targetElement = document) {  // AJOUT du paramètre
       });
     }
     
-    console.log(`✅ Bouton modifier configuré avec ID Webflow: ${webflowId}`);
   } else {
     console.warn(`❌ Bouton .brouillon-modifier non trouvé dans le bloc ${status}`);
   }
@@ -241,13 +232,11 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     
     // Déterminer le statut actuel
     const status = this.getPropertyStatus(property);
-    console.log('📊 Statut du logement:', status);
     
     // Afficher le bon bloc
     const targetBlock = document.getElementById(status);
     if (targetBlock) {
       targetBlock.style.display = 'block';
-      console.log(`✅ Bloc ${status} affiché`);
     } else {
       console.error(`❌ Bloc ${status} non trouvé`);
     }
@@ -257,7 +246,6 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     // Utiliser directement la valeur du champ CMS "verification_status"
     const status = property.verification_status;
     
-    console.log('📊 Statut du champ CMS verification_status:', status);
     
     // Vérifier que le statut existe et correspond à un de vos blocs
     const validStatuses = ['pending-none', 'pending-verif', 'pending', 'verified', 'published'];
@@ -273,17 +261,11 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   fillPropertyInfo(property, targetElement = document) {  // AJOUT du paramètre
     const status = this.getPropertyStatus(property);
   
-    console.log('🔍 Property data:', {
-      webflow_item_id: property.webflow_item_id,
-      name: property.name,
-      status: status
-    });
     
     // MODIFIÉ : Utiliser querySelector sur targetElement avec des classes
     const nameElement = targetElement.querySelector('.property-name');
     if (nameElement) {
       nameElement.textContent = property.name || 'Nom non défini';
-      console.log(`✅ Nom rempli:`, property.name);
     } else {
       console.warn(`❌ Élément .property-name non trouvé`);
     }
@@ -291,7 +273,6 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     const addressElement = targetElement.querySelector('.adresse-logement');
     if (addressElement) {
       addressElement.textContent = this.formatAddress(property.address);
-      console.log(`✅ Adresse remplie:`, property.address);
     } else {
       console.warn(`❌ Élément .adresse-logement non trouvé`);
     }
@@ -338,7 +319,6 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
         imageElement.style.backgroundPosition = 'center';
         imageElement.style.display = 'block';
       }
-      console.log(`✅ Image injectée dans ${selector}`);
     } else if (imageElement) {
       imageElement.style.display = 'none';
     }
@@ -354,11 +334,9 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   }
 
   setupVerificationButton(property, targetElement = document) {
-    console.log('⚙️ Setup du bouton vérification pour :', property.name);
     
     // IMPORTANT : Chercher dans targetElement, pas dans document !
     const verificationBtn = targetElement.querySelector('[data-tally-url]');
-    console.log('🔍 Bouton trouvé dans le clone :', verificationBtn);
     
     if (!verificationBtn) {
       console.error('❌ Bouton non trouvé dans ce bloc');
@@ -379,22 +357,18 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
     
     // Attacher le listener sur le bouton DU CLONE
     verificationBtn.addEventListener('click', function(e) {
-      console.log('🖱️ Clic détecté !');
       e.preventDefault();
       window.open(finalUrl, '_blank');
     });
     
-    console.log('✅ Listener attaché au bouton du clone');
   }
 
   setupPaymentButton(property, targetElement = document) {
-  console.log('💳 Setup du bouton paiement Stripe');
   
   // Chercher le bouton de paiement (adaptez le sélecteur selon votre HTML)
   const paymentBtn = targetElement.querySelector('[data-stripe-payment]'); // ou autre sélecteur
   
   if (!paymentBtn) {
-    console.log('Pas de bouton de paiement dans ce bloc');
     return;
   }
   
@@ -413,7 +387,6 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   // Simple listener
   paymentBtn.addEventListener('click', function(e) {
     e.preventDefault();
-    console.log('💳 Paiement pour logement:', propertyId);
     window.location.href = stripeUrl.toString();
   });
 }
@@ -437,7 +410,6 @@ checkPaymentSuccess() {
   
   if (urlParams.get('success') !== 'true') return;
   
-  console.log('🎉 Retour de paiement détecté');
   
   // Afficher la notification
   const notification = document.getElementById('payment-success-notification');
@@ -472,13 +444,11 @@ checkPopupTrigger() {
   const urlParams = new URLSearchParams(window.location.search);
   
   if (urlParams.get('popup') === 'true') {
-    console.log('🎯 Ouverture automatique de la popup détectée');
     
     // Attendre que Webflow Interactions soit prêt
     setTimeout(() => {
       const bouton = document.getElementById('empty-button');
       if (bouton) {
-        console.log('✅ Déclenchement du clic sur empty-button');
         bouton.click();
         // Pas de nettoyage URL - elle se nettoiera après création
       } else {
@@ -489,7 +459,6 @@ checkPopupTrigger() {
 }
   
   showEmptyState() {
-    console.log('📭 Aucun logement trouvé');
     
     // Masquer tous les blocs de statut
     const allStatusBlocks = ['pending-none', 'pending-verif', 'pending', 'verified', 'published'];
@@ -619,7 +588,6 @@ checkPopupTrigger() {
       }
     }
     
-    console.log('Données récupérées:', { nomLogement, adresse }); // Debug
     
     // Désactiver le bouton
     submitButton.disabled = true;
