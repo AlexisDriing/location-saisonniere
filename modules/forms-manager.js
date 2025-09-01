@@ -1,13 +1,11 @@
-// Gestionnaire des formulaires
+// Gestionnaire des formulaires - LOG production
 class FormsManager {
   constructor() {
     this.init();
   }
 
   init() {
-    console.log('📝 Initialisation FormsManager...');
     this.preventFormSubmission();
-    console.log('✅ FormsManager initialisé');
     
     // Export global
     window.formsManager = this;
@@ -21,7 +19,6 @@ class FormsManager {
       form.onsubmit = function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Soumission du formulaire desktop bloquée");
         return false;
       };
     } else {
@@ -36,7 +33,6 @@ class FormsManager {
       formMobile.onsubmit = function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Soumission du formulaire mobile bloquée");
         return false;
       };
     }
@@ -47,7 +43,6 @@ class FormsManager {
     const form = document.getElementById(formId);
     if (form) {
       form.onsubmit = null;
-      console.log(`Soumission activée pour le formulaire ${formId}`);
     }
   }
 
@@ -59,7 +54,6 @@ class FormsManager {
         e.stopPropagation();
         return false;
       };
-      console.log(`Soumission désactivée pour le formulaire ${formId}`);
     }
   }
 
