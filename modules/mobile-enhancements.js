@@ -1,4 +1,4 @@
-// Améliorations spécifiques mobile
+// Améliorations spécifiques mobile - LOG production
 class MobileEnhancementsManager {
   constructor() {
     this.init();
