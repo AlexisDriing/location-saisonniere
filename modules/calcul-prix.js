@@ -1,7 +1,6 @@
-// Calculateur de prix principal V8 securite
+// Calculateur de prix principal LOG production
 class PriceCalculator {
   constructor() {
-    console.log('🔧 PriceCalculator constructor appelé');
     this.elements = {
       calcNuit: Utils.getAllElementsById("calcul-nuit"),
       prixNuit: Utils.getAllElementsById("prix-nuit"),
@@ -44,7 +43,6 @@ class PriceCalculator {
     
     // Export global pour autres modules
     window.priceCalculator = this;
-    console.log('✅ PriceCalculator initialisé et assigné à window.priceCalculator');
   }
 
   loadPricingData() {
@@ -59,9 +57,7 @@ class PriceCalculator {
     if (element) {
       try {
         const jsonData = element.getAttribute(attribute);
-        console.log('📊 JSON tarifs trouvé:', jsonData);
         this.pricingData = JSON.parse(jsonData);
-        console.log('✅ Données tarifaires chargées:', this.pricingData);
       } catch (error) {
         console.error("❌ Erreur lors du chargement des données tarifaires:", error);
       }
@@ -77,7 +73,6 @@ class PriceCalculator {
     } else {
       this.logementType = "standard";
     }
-    console.log('🏠 Type de logement:', this.logementType);
   }
 
   listenForDateChanges() {
@@ -86,7 +81,6 @@ class PriceCalculator {
         if (picker.startDate && picker.endDate) {
           this.startDate = picker.startDate;
           this.endDate = picker.endDate;
-          console.log('📅 Dates sélectionnées:', this.startDate.format('YYYY-MM-DD'), 'à', this.endDate.format('YYYY-MM-DD'));
           this.calculateAndDisplayPrices();
         } else {
           this.resetPrices();
@@ -94,7 +88,6 @@ class PriceCalculator {
       });
       
       jQuery("#input-calendar, #input-calendar-mobile").on("cancel.daterangepicker", () => {
-        console.log('❌ Dates annulées');
         this.resetPrices();
       });
     } else {
@@ -138,9 +131,7 @@ class PriceCalculator {
         element.style.display = "none";
       }
     });
-    
-    console.log(`✅ Réductions réinitialisées sur ${this.elements.prixReduction.length} éléments`);
-    
+        
     // Réinitialiser les autres éléments
     if (this.elements.calcNuit.length) {
       this.elements.calcNuit.forEach(element => {
@@ -228,7 +219,6 @@ class PriceCalculator {
   }
 
   calculateAndDisplayPrices() {
-    console.log('💰 Calcul des prix démarré');
     if (!this.pricingData || !this.startDate || !this.endDate) {
       console.warn('⚠️ Données manquantes pour le calcul:', {
         pricingData: !!this.pricingData,
@@ -240,7 +230,6 @@ class PriceCalculator {
     
     const stayDetails = this.calculateStayDetails();
     if (stayDetails) {
-      console.log('✅ Détails du séjour calculés:', stayDetails);
       this.updateUI(stayDetails);
       this.hideMinNightsError();
     } else {
@@ -472,7 +461,6 @@ class PriceCalculator {
         }
       });
       
-      console.log(`✅ Réduction affichée: -${formatPrice(details.discountAmount)}€ sur ${this.elements.prixReduction.length} éléments`);
     } else {
       // MASQUER la réduction
       this.elements.prixReduction.forEach(element => {
@@ -488,7 +476,6 @@ class PriceCalculator {
         }
       });
       
-      console.log('✅ Réduction masquée sur tous les éléments');
     }
     
     // Frais de ménage
