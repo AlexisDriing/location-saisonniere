@@ -1,4 +1,4 @@
-// Page accueil - Point d'entrée principal VF 5
+// Page accueil - Point d'entrée principal - LOG production
 class AccueilPage {
   constructor() {
     this.managers = {};
@@ -6,7 +6,6 @@ class AccueilPage {
   }
 
   async init() {
-    console.log('🏠 Initialisation de la page accueil...');
     
     // Charger les dépendances externes
     await this.loadExternalDependencies();
@@ -14,7 +13,6 @@ class AccueilPage {
     // Initialiser les gestionnaires
     this.initializeManagers();
     
-    console.log('✅ Page accueil initialisée');
   }
 
   async loadExternalDependencies() {
@@ -60,7 +58,6 @@ class AccueilPage {
       this.managers.calendarList = new CalendarListManager();
       this.managers.homeSearch = new HomeSearch();
       
-      console.log('✅ Modules initialisés:', Object.keys(this.managers));
       
     } catch (error) {
       console.error('❌ Erreur initialisation:', error);
