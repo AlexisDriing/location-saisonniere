@@ -1,4 +1,4 @@
-// Gestion des prix pour les cartes de logements sur la page liste V4 Sécurité
+// Gestion des prix pour les cartes de logements sur la page liste - LOG production
 function setPriceListDisplay(element, price, oldPrice = null) {
   element.textContent = '';
   element.appendChild(document.createTextNode('Dès '));
@@ -145,9 +145,7 @@ class PriceListManager {
   }
 
   init() {
-    console.log('💰 Initialisation PriceListManager...');
     this.initializeAllCalculators();
-    console.log('✅ PriceListManager initialisé');
     
     // Export global
     window.priceListManager = this;
@@ -160,7 +158,6 @@ class PriceListManager {
       this.calculators.push(calculator);
     });
     
-    console.log(`📊 ${this.calculators.length} calculateurs de prix initialisés`);
   }
 
   // Méthode pour réinitialiser tous les prix
