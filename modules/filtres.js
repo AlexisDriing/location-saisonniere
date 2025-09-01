@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - LOG production
+// Gestionnaire complet des filtres - LOG production V2
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -376,11 +376,6 @@ class FiltersManager {
     
     this.tempState.optionsAccueil = Array.from(optionsSet);
     this.tempState.modesLocation = Array.from(modesSet);
-    
-      options: this.tempState.optionsAccueil,
-      modes: this.tempState.modesLocation
-    });
-  }
 
   // ================================
   // CONFIRMATION DES CHANGEMENTS
