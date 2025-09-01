@@ -1,4 +1,4 @@
-// Page liste - Point d'entrée principal qui orchestre tous les modules - VERSION CORRIGÉE
+// Page liste - Point d'entrée principal qui orchestre tous les modules - LOG production
 class ListeLogementsPage {
   constructor() {
     this.managers = {};
@@ -13,7 +13,6 @@ class ListeLogementsPage {
   }
 
   async init() {
-    console.log('🏘️ Initialisation de la page liste des logements...');
     
     // Charger les dépendances externes si nécessaires
     await this.loadExternalDependencies();
@@ -22,7 +21,6 @@ class ListeLogementsPage {
     this.initializeManagers();
     
     const totalTime = Math.round(performance.now() - this.initStartTime);
-    console.log(`✅ Page liste initialisée avec succès en ${totalTime}ms`);
   }
 
   async loadExternalDependencies() {
@@ -86,7 +84,6 @@ class ListeLogementsPage {
         this.loadPropertyManagerAutomatically();
       }, delay + 200); // 300ms après le début
       
-      console.log('✅ Gestionnaires initialisés en mode optimisé');
       
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation des gestionnaires:', error);
@@ -95,7 +92,6 @@ class ListeLogementsPage {
 
   // 🚀 PHASE 1 : Modules indispensables pour l'affichage de base
   loadEssentialModules() {
-    console.log('🚀 Phase 1: Chargement modules essentiels...');
     const startTime = performance.now();
     
     // Ces modules sont nécessaires pour que la page s'affiche correctement
@@ -111,7 +107,6 @@ class ListeLogementsPage {
 
   // 🚀 PHASE 2 : Modules pour les fonctionnalités avancées
   loadSecondaryModules() {
-    console.log('🚀 Phase 2: Chargement modules secondaires...');
     const startTime = performance.now();
     
     // Ces modules améliorent l'expérience mais ne sont pas critiques
@@ -127,7 +122,6 @@ class ListeLogementsPage {
   // 🚀 FIX : PropertyManager se charge automatiquement (pas à la demande)
   async loadPropertyManagerAutomatically() {
     if (!this.lazyModules.propertyManager) {
-      console.log('🏠 Chargement automatique de PropertyManager...');
       const startTime = performance.now();
       
       // S'assurer que les dépendances optionnelles sont chargées
@@ -147,7 +141,6 @@ class ListeLogementsPage {
 
   // 🚀 PHASE 3 : Configuration du chargement à la demande (sans PropertyManager)
   setupLazyLoading() {
-    console.log('🚀 Phase 3: Configuration chargement à la demande...');
     
     // Écouter les interactions utilisateur pour charger les modules au bon moment
     this.setupUserInteractionListeners();
@@ -183,7 +176,6 @@ class ListeLogementsPage {
 
   // 🚀 NOUVEAU : Pré-chargement si l'utilisateur reste sur la page
   preloadIfUserStaysOnPage() {
-    console.log('⏰ Utilisateur présent depuis 3s, pré-chargement des modules...');
     
     // Si l'utilisateur est toujours là après 3 secondes, on peut pré-charger
     this.loadFiltersIfNeeded();
@@ -193,7 +185,6 @@ class ListeLogementsPage {
   // 🚀 CHARGEMENT À LA DEMANDE : Filtres
   async loadFiltersIfNeeded() {
     if (!this.lazyModules.filters) {
-      console.log('🔄 Chargement FiltersManager à la demande...');
       const startTime = performance.now();
       
       this.managers.filters = new FiltersManager();
@@ -210,7 +201,6 @@ class ListeLogementsPage {
   // 🚀 CHARGEMENT À LA DEMANDE : Recherche et Calendrier
   async loadSearchAndCalendarIfNeeded() {
     if (!this.lazyModules.searchMap) {
-      console.log('🔄 Chargement SearchMap et Calendar à la demande...');
       const startTime = performance.now();
       
       this.managers.searchMap = new SearchMapManager();
@@ -246,11 +236,9 @@ class ListeLogementsPage {
 
   // 🚀 MÉTHODE PUBLIQUE : Forcer le chargement de tous les modules
   async loadAllModules() {
-    console.log('🚀 Chargement forcé de tous les modules...');
     await this.loadFiltersIfNeeded();
     await this.loadSearchAndCalendarIfNeeded();
     await this.loadPropertyManagerAutomatically();
-    console.log('✅ Tous les modules chargés');
   }
 
   // Méthodes utilitaires pour débuggage (inchangées)
@@ -264,7 +252,6 @@ class ListeLogementsPage {
 
   // 🚀 AMÉLIORÉ : Redémarrage avec nettoyage
   restart() {
-    console.log('🔄 Redémarrage de la page...');
     
     // Nettoyer les anciens managers
     Object.values(this.managers).forEach(manager => {
@@ -302,7 +289,6 @@ class ListeLogementsPage {
 
   // Méthode pour rafraîchir les données (inchangée)
   refresh() {
-    console.log('🔄 Rafraîchissement des données...');
     
     if (this.managers.propertyManager) {
       this.managers.propertyManager.applyFilters();
@@ -334,7 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
         getManager: (name) => window.listeLogementsPage.getManager(name),
         getPropertyManager: () => window.listeLogementsPage.getPropertyManager()
       };
-      console.log('🐛 Mode debug activé. Utilisez window.debugListePage pour débugger');
     }
   }, 100);
 });
