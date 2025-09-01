@@ -1,4 +1,4 @@
-// Configuration globale avec optimisations
+// Configuration globale avec optimisations - LOG production
 const CONFIG = {
   API_URL: window.location.hostname.includes('webflow.io') 
     ? 'https://ical-develop.onrender.com'      // Serveur staging pour webflow.io
@@ -23,7 +23,4 @@ const CONFIG = {
 // Export pour utilisation dans d'autres modules
 window.CONFIG = CONFIG;
 
-// 🆕 AJOUT : Log pour savoir quel serveur est utilisé
-console.log('✅ Config chargée:', CONFIG);
 console.log(`🌍 Environnement: ${window.location.hostname.includes('webflow.io') ? 'STAGING' : 'PRODUCTION'}`);
-console.log(`🔗 API URL: ${CONFIG.API_URL}`);
