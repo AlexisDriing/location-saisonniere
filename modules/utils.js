@@ -1,4 +1,4 @@
-// Fonctions utilitaires partagées
+// Fonctions utilitaires partagées - LOG production
 class Utils {
   static getElementByIdWithFallback(baseId) {
     const dualIds = [
@@ -52,4 +52,3 @@ class Utils {
 
 // Export global
 window.Utils = Utils;
-console.log('✅ Utils chargé:', Utils);
