@@ -63,15 +63,11 @@ class ReservationDataManager {
     // Adresse
     const adresseElement = document.getElementById("adresse-logement");
     if (adresseElement) {
+      // Récupérer directement l'adresse déjà réorganisée par interface.js
       const adresseComplete = adresseElement.textContent.trim();
       if (adresseComplete) {
-        const adresseParts = adresseComplete.split(',');
-        if (adresseParts.length > 1) {
-          const endIndex = adresseParts.length >= 3 ? 2 : 1;
-          info.adresse = adresseParts.slice(-endIndex).join(',').trim();
-        } else {
-          info.adresse = adresseComplete;
-        }
+        // On prend l'adresse complète telle qu'elle est affichée
+        info.adresse = adresseComplete;
       }
     }
     
