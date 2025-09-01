@@ -1,4 +1,4 @@
-// Gestion du calendrier pour la page liste des logements V3 accueil
+// Gestion du calendrier pour la page liste des logements LOG production
 class CalendarListManager {
   constructor() {
     this.dateButton = null;
@@ -6,18 +6,14 @@ class CalendarListManager {
     this.init();
   }
 
-  init() {
-    console.log('📅 Initialisation CalendarListManager...');
-    
+  init() {    
     // Attendre que DateRangePicker soit chargé
     if (typeof jQuery === 'undefined' || typeof jQuery.fn.daterangepicker === 'undefined') {
       setTimeout(() => this.init(), 100);
       return;
     }
     
-    this.setupDateRangePicker();
-    console.log('✅ CalendarListManager initialisé');
-    
+    this.setupDateRangePicker();    
     // Export global
     window.calendarListManager = this;
   }
@@ -135,7 +131,6 @@ class CalendarListManager {
       picker.setStartDate(moment());
       picker.setEndDate(moment());
       
-      console.log('Dates effacées. Réinitialisation complète du filtre et du sélecteur.');
     });
   }
 
