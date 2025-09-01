@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil V8
+// Gestionnaire de recherche pour la page d'accueil - LOG production
 class HomeSearch {
   constructor() {
     // Protection contre double initialisation
@@ -23,7 +23,6 @@ class HomeSearch {
   }
 
   init() {
-    console.log('🏠 Initialisation HomeSearch...');
     
     // Vérifier qu'on est sur la page d'accueil
     const searchButton = document.getElementById('button-search-home');
@@ -37,7 +36,6 @@ class HomeSearch {
     this.setupDateListener();
     this.setupSearchButton();
     
-    console.log('✅ HomeSearch initialisé');
   }
 
   setupVoyageurs() {
@@ -201,13 +199,11 @@ class HomeSearch {
       $('.dates-button-home:not(.mobile)').on('apply.daterangepicker', (e, picker) => {
         this.startDate = picker.startDate.format('YYYY-MM-DD');
         this.endDate = picker.endDate.format('YYYY-MM-DD');
-        console.log('📅 Dates desktop sélectionnées:', this.startDate, 'à', this.endDate);
       });
       
       $('.dates-button-home:not(.mobile)').on('cancel.daterangepicker', () => {
         this.startDate = null;
         this.endDate = null;
-        console.log('📅 Dates desktop effacées');
       });
       
 
@@ -277,13 +273,11 @@ class HomeSearch {
       $('.dates-button-home.mobile').on('apply.daterangepicker', (e, picker) => {
         this.startDateMobile = picker.startDate.format('YYYY-MM-DD');
         this.endDateMobile = picker.endDate.format('YYYY-MM-DD');
-        console.log('📅 Dates mobile sélectionnées:', this.startDateMobile, 'à', this.endDateMobile);
       });
       
       $('.dates-button-home.mobile').on('cancel.daterangepicker', () => {
         this.startDateMobile = null;
         this.endDateMobile = null;
-        console.log('📅 Dates mobile effacées');
       });
     }
   }
@@ -308,9 +302,7 @@ class HomeSearch {
     }
   }
 
-  handleSearch(isMobile = false) {
-    console.log(`🔍 Recherche lancée depuis la page d'accueil (${isMobile ? 'mobile' : 'desktop'})`);
-    
+  handleSearch(isMobile = false) {    
     // Récupérer le lieu selon la version
     let location = null;
     const searchInput = document.getElementById(isMobile ? 'search-input-home-mobile' : 'search-input-home');
@@ -333,9 +325,7 @@ class HomeSearch {
       enfants: isMobile ? this.enfantsMobile : this.enfants,
       timestamp: Date.now()
     };
-    
-    console.log('📦 Données à transférer:', searchData);
-    
+        
     // Sauvegarder dans localStorage
     localStorage.setItem('home_search_data', JSON.stringify(searchData));
     
