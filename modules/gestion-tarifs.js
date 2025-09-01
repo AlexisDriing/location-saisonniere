@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison v5 17%
+// Gestion de l'affichage des tarifs par saison - LOG production
 class TariffsDisplayManager {
   constructor() {
     this.init();
