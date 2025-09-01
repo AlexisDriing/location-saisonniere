@@ -1,13 +1,11 @@
-// Gestionnaire de formatage des adresses V2 adresse
+// Gestionnaire de formatage des adresses LOG production
 class AddressFormatterManager {
   constructor() {
     this.init();
   }
 
   init() {
-    console.log('📍 Initialisation AddressFormatterManager...');
     this.formatAllAddresses();
-    console.log('✅ AddressFormatterManager initialisé');
     
     // Export global
     window.addressFormatterManager = this;
@@ -20,8 +18,6 @@ class AddressFormatterManager {
     addressElements.forEach(element => {
       this.formatAddress(element);
     });
-    
-    console.log(`📍 ${addressElements.length} adresses formatées`);
   }
 
   formatAddress(element) {
