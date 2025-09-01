@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - VERSION CORRIGÉE Vbiz
+// Gestionnaire complet des filtres - VERSION Production
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -56,13 +56,11 @@ class FiltersManager {
   }
 
   init() {
-    console.log('🔧 Initialisation FiltersManager...');
     this.loadCapacityFromData();
     this.setupEventListeners();
     this.setupDropdownListeners();
     this.updateAllUI();
     this.updateMobileFilterIndicator();
-    console.log('✅ FiltersManager initialisé');
     
     // Export global
     window.filtersManager = this;
@@ -340,7 +338,6 @@ class FiltersManager {
     });
     
     this.tempState.equipements = Array.from(equipementsSet);
-    console.log('État temporaire équipements:', this.tempState.equipements);
   }
 
   updateTempPreferences() {
@@ -379,11 +376,6 @@ class FiltersManager {
     
     this.tempState.optionsAccueil = Array.from(optionsSet);
     this.tempState.modesLocation = Array.from(modesSet);
-    
-    console.log('État temporaire préférences:', {
-      options: this.tempState.optionsAccueil,
-      modes: this.tempState.modesLocation
-    });
   }
 
   // ================================
@@ -397,8 +389,6 @@ class FiltersManager {
     // Mettre à jour le bouton
     this.updateEquipementsButton(this.state.equipements.length);
     this.updateMobileFilterIndicator();
-    
-    console.log('✅ Équipements confirmés:', this.state.equipements);
   }
 
   confirmPreferencesChanges() {
@@ -410,11 +400,6 @@ class FiltersManager {
     const totalPreferences = this.state.optionsAccueil.length + this.state.modesLocation.length;
     this.updatePreferencesButton(totalPreferences);
     this.updateMobileFilterIndicator();
-    
-    console.log('✅ Préférences confirmées:', {
-      options: this.state.optionsAccueil,
-      modes: this.state.modesLocation
-    });
   }
 
   // ================================
