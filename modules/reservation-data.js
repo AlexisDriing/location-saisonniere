@@ -1,4 +1,4 @@
-// Gestion des données de réservation et récupération des informations - V3 taxes
+// Gestion des données de réservation et récupération des informations - LOG production
 class ReservationDataManager {
   constructor() {
     this.init();
@@ -10,7 +10,6 @@ class ReservationDataManager {
   }
 
   setupReservationButtons() {
-    console.log("🔍 Recherche des informations du logement...");
     
     // Récupérer les informations du logement
     const logementInfo = this.extractLogementInfo();
@@ -43,7 +42,6 @@ class ReservationDataManager {
       });
     });
     
-    console.log("✅ Boutons de réservation configurés avec succès (trouvés: " + bookButtons.length + ")");
   }
 
   extractLogementInfo() {
@@ -138,7 +136,6 @@ class ReservationDataManager {
       const pricingData = window.priceCalculator.pricingData;
       caution = pricingData.caution;
       acompte = pricingData.acompte;
-      console.log("💰 Caution:", caution, "Acompte:", acompte);
     }
     
     if (window.priceCalculator && window.priceCalculator.startDate) {
@@ -159,7 +156,6 @@ class ReservationDataManager {
     let siteInternet = "";
     if (siteInternetElement) {
       siteInternet = siteInternetElement.getAttribute("data-site-internet") || "";
-      console.log("🌐 Site internet trouvé:", siteInternet);
     }
     
     // Créer l'objet de données de réservation
@@ -187,7 +183,6 @@ class ReservationDataManager {
     
     // Sauvegarder dans localStorage
     localStorage.setItem("reservation_data", JSON.stringify(reservationData));
-    console.log("✅ Données de réservation sauvegardées:", reservationData);
   }
 
   loadSearchDataFromStorage() {
@@ -200,7 +195,6 @@ class ReservationDataManager {
     storedData = localStorage.getItem("selected_search_data");
   } else {
     isUsingModifiedDates = true;
-    console.log("📅 Utilisation des dates modifiées (retour navigation)");
   }
   
   if (!storedData) return;
@@ -215,9 +209,7 @@ class ReservationDataManager {
       }
       
       if (!searchData.startDate || !searchData.endDate) return;
-      
-      console.log("Données de recherche trouvées:", searchData);
-      
+            
       // Mettre à jour les voyageurs si disponible
       if (window.travelersManager) {
         if (typeof searchData.adultes === "number") {
@@ -276,14 +268,12 @@ class ReservationDataManager {
           
           // Appliquer au picker desktop s'il existe
           if (desktopPicker) {
-            console.log("Application des dates au calendrier desktop");
             desktopPicker.setStartDate(startDate);
             desktopPicker.setEndDate(endDate);
           }
           
           // 🔧 FIX: Appliquer AUSSI au picker mobile s'il existe
           if (mobilePicker) {
-            console.log("Application des dates au calendrier mobile");
             mobilePicker.setStartDate(startDate);
             mobilePicker.setEndDate(endDate);
           }
@@ -312,7 +302,6 @@ class ReservationDataManager {
                 el.style.color = "#272A2B";
               }
             });
-            console.log("Texte des dates mis à jour manuellement:", combinedText);
           }
           
           return true;
@@ -339,7 +328,6 @@ class ReservationDataManager {
     if (isUsingModifiedDates) {
         setTimeout(() => {
           localStorage.removeItem("current_detail_dates");
-          console.log("🧹 Dates modifiées nettoyées après utilisation");
         }, 1000); // Délai pour s'assurer que tout est bien chargé
       }
   }
