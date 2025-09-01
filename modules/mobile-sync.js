@@ -1,14 +1,12 @@
-// Gestion de la synchronisation entre les versions mobile et desktop
+// Gestion de la synchronisation entre les versions mobile et desktop - LOG production
 class MobileSyncManager {
   constructor() {
     this.init();
   }
 
   init() {
-    console.log('📱 Initialisation MobileSyncManager...');
     this.setupCalendarSync();
     this.setupPopupSync();
-    console.log('✅ MobileSyncManager initialisé');
     
     // Export global
     window.mobileSyncManager = this;
@@ -25,7 +23,6 @@ class MobileSyncManager {
     const mobileButton = $('.dates-button-search.calendar-mobile');
     
     if (desktopButton.length === 0 || mobileButton.length === 0) {
-      console.log('Boutons desktop/mobile non trouvés pour la synchronisation');
       return;
     }
     
