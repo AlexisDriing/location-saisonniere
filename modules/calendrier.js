@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - V2 max
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -130,7 +130,6 @@ class CalendarManager {
     Object.assign(currentData, newData);
     
     localStorage.setItem('current_detail_dates', JSON.stringify(currentData));
-    console.log('📅 Dates modifiées sauvegardées pour retour navigation');
     
   } else {
     $(e.target).val('');
@@ -140,7 +139,6 @@ class CalendarManager {
 
     // 🔧 VERSION AMÉLIORÉE du cancel
     $('#input-calendar, #input-calendar-mobile').on('cancel.daterangepicker', (e, picker) => {
-      console.log('🔧 cancel.daterangepicker déclenché');
       
       // Reset complet des variables
       this.nextUnavailableDate = null;
@@ -207,7 +205,6 @@ class CalendarManager {
     // 🔧 VERSION AMÉLIORÉE de setStartDate override
     const originalSetStartDate = this.picker.setStartDate;
     this.picker.setStartDate = (date) => {
-      console.log('🔧 setStartDate appelé avec:', date ? date.format('YYYY-MM-DD') : 'null');
       
       // 🔧 RESET systématique des variables
       this.nextUnavailableDate = null;
@@ -222,7 +219,6 @@ class CalendarManager {
           if (this.picker.startDate && 
               this.picker.startDate.isSame(date, 'day') && 
               !this.picker.endDate) {
-            console.log('🔧 Recalcul nextUnavailableDate pour:', date.format('YYYY-MM-DD'));
             this.updateCalendarUI();
           }
         }, 50); // 50ms pour laisser le picker se mettre à jour
@@ -381,12 +377,10 @@ enhancePickerPositioning() {
       datesTextElements.forEach(element => {
         element.textContent = combinedText;
       });
-      console.log('Texte de dates mis à jour:', combinedText);
     } else {
       datesTextElements.forEach(element => {
         element.textContent = "Sélectionner une date";
       });
-      console.log('Texte de dates réinitialisé à la valeur par défaut');
     }
   }
 
@@ -405,7 +399,6 @@ enhancePickerPositioning() {
     jQuery('#input-calendar, #input-calendar-mobile').val('');
     this.updateDatesText(null, null);
     
-    console.log('🔧 resetDatePicker : state complètement nettoyé');
   }
 
   // 🔧 BONUS : Méthode de debug pour vérifier l'état
@@ -596,7 +589,6 @@ class ICalManager {
       
       this.unavailableDates = new Set(unavailableDates);
       this.initialDataLoaded = true;
-      console.log(`[Client] Chargement terminé: ${this.unavailableDates.size} dates indisponibles`);
       return this.unavailableDates;
     } catch (error) {
       console.error('Erreur lors du chargement des événements iCal:', error);
