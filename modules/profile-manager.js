@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement V15
+// Gestionnaire de profil - gestion de boutons intégré et création de logement V16 stripe
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -399,7 +399,7 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   }
   
   // Configuration simple : juste ajouter le lien Stripe avec l'ID du logement
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_7sY5kCcx16EN8RO1PodEs00';
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/8x228q9kP0gp2tqbpYdEs0M';
   const propertyId = property.webflow_item_id;
   const userEmail = this.currentUser?.email || '';
   
