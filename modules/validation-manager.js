@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - LOG production V2
+// Gestionnaire de validation pour la page modification de logement - LOG production V3
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -68,10 +68,7 @@ class ValidationManager {
             messages: { empty: "Le mode de location est obligatoire" }
           },
           'code-enregistrement-input': {
-            required: true,
-            messages: {
-              empty: "Le code d'enregistrement est obligatoire"
-            }
+            required: false
           }
         },
         tabIndicatorId: 'error-indicator-tab1'
