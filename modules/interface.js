@@ -1,4 +1,4 @@
-// LOG production
+// LOG production V2
 class InterfaceManager {
   constructor() {
     this.init();
@@ -30,6 +30,7 @@ class InterfaceManager {
     this.updateBlocentierAvantages(hasReductions, hasCadeaux);
     this.setupInclus();
     this.setupAnnonces();
+    this.setupImmatriculation();
     this.setupTelephone();
     this.setupPlatformLinks();
     this.setupPopins();
@@ -671,6 +672,37 @@ setupAnnonces() {
     blocAnnonces.style.display = 'block'; // ou 'block' selon votre design
   }
 }
+
+// À ajouter après setupAnnonces() par exemple (vers ligne 650)
+setupImmatriculation() {
+  // Chercher l'élément qui contient le code d'enregistrement
+  const codeElement = document.querySelector('[data-code-enregistrement]');
+  
+  if (!codeElement) {
+    console.warn('⚠️ Élément data-code-enregistrement non trouvé');
+    return;
+  }
+  
+  // Récupérer la valeur
+  const codeValue = codeElement.getAttribute('data-code-enregistrement');
+  
+  // Chercher le bloc immatriculation
+  const blocImmatriculation = document.getElementById('immatriculation');
+  
+  if (!blocImmatriculation) {
+    console.warn('⚠️ Bloc #immatriculation non trouvé');
+    return;
+  }
+  
+  // Si le code est vide ou absent, cacher le bloc
+  if (!codeValue || codeValue.trim() === '') {
+    blocImmatriculation.style.display = 'none';
+  } else {
+    // Si un code existe, s'assurer que le bloc est visible
+    blocImmatriculation.style.display = 'flex'; // ou 'block' selon votre design
+  }
+}
+  
   // Gestion du téléphone cliquable
   setupTelephone() {
     
