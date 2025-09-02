@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - LOG production
+// Gestionnaire de la page de modification de logement - LOG production V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2866,10 +2866,10 @@ validateURL(input) {
   }
 }
 
-// Validation du code d'enregistrement (13 chiffres)
+// Validation du code d'enregistrement (alphanumérique, sans limite de longueur)
 validateCodeEnregistrement(input) {
   const value = input.value.trim();
-  if (value === '') return true; // Champ vide OK
+  if (value === '') return true; // Champ vide OK (sera géré par required)
   
   // Garder seulement les caractères alphanumériques (lettres et chiffres)
   const alphanumOnly = value.replace(/[^a-zA-Z0-9]/g, '');
@@ -2881,19 +2881,10 @@ validateCodeEnregistrement(input) {
   // Convertir en majuscules pour uniformité
   input.value = input.value.toUpperCase();
   
-  if (input.value.length > 13) {
-    input.value = input.value.substring(0, 13);
-  }
-  
-  if (input.value.length === 13) {
-    input.style.borderColor = '';
-    input.setCustomValidity('');
-    return true;
-  } else if (input.value.length > 0) {
-    input.style.borderColor = '#ff8c00';
-    input.setCustomValidity(`${13 - input.value.length} caractères manquants`);
-    return false;
-  }
+  // Pas de limitation de longueur, juste reset les styles
+  input.style.borderColor = '';
+  input.setCustomValidity('');
+  return true;
 }
 
   // Validation de l'email
