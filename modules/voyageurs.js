@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) - LOG production
+// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -111,6 +111,11 @@ class TravelersManager {
   }
 
   updateUI() {
+    if (this.adults + this.children > this.maxCapacity) {
+      this.adults = 1;
+      this.children = 0;
+      this.babies = 0;
+    }
     // Mettre à jour les chiffres
     this.updateElement("chiffres-adultes", this.adults);
     this.updateElement("chiffres-adultes-mobile", this.adults);
