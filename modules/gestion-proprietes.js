@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - V17 securisé
+// Gestionnaire principal des propriétés pour la page liste - Develop V2
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1183,6 +1183,11 @@ if (hostImageElement) {
     
     try {
     const data = JSON.parse(homeSearchData);
+
+      if (Date.now() - data.timestamp > 30*60*1000) {
+        localStorage.removeItem('home_search_data');
+        return;
+      }
     console.log('🏠 Données reçues de la page d\'accueil:', data);
     
     // 🆕 NOUVEAU : Mettre le texte du lieu dans l'input et lancer la recherche
