@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) Develop V5
+// Gestion des voyageurs (adultes, enfants, bébés) Develop V6
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -12,9 +12,7 @@ class TravelersManager {
   init() {
     this.loadCapacityFromData();
 
-    if (!this.maxCapacity) {
-      this.maxCapacity = 8;
-    }
+    const self = this;
     
     let cache = null;
     let mostRecentTime = 0;
@@ -35,22 +33,20 @@ class TravelersManager {
         const data = JSON.parse(cache);
         const totalDemande = (data.adultes || 0) + (data.enfants || 0);
         
-        // DEBUG : Voir ce qui se passe
-        console.log(`[DEBUG] Capacité: ${this.maxCapacity}, Demande: ${totalDemande}`);
-        
         // Si trop vieux OU trop de voyageurs
-        if ((Date.now() - data.timestamp > 30*60*1000) || (totalDemande > this.maxCapacity)) {
-          console.log(`[DEBUG] Limitation appliquée!`);
-          this.adults = 1;
-          this.children = 0;
-          this.babies = 0;
+        if ((Date.now() - data.timestamp > 30*60*1000) || (totalDemande > self.maxCapacity)) {
+          // 🆕 UTILISER self AU LIEU DE this
+          self.adults = 1;
+          self.children = 0;
+          self.babies = 0;
         } else {
-          this.adults = data.adultes || 1;
-          this.children = data.enfants || 0;
-          this.babies = data.bebes || 0;
+          // 🆕 UTILISER self AU LIEU DE this
+          self.adults = data.adultes || 1;
+          self.children = data.enfants || 0;
+          self.babies = data.bebes || 0;
         }
       } catch(e) {
-        console.error('[DEBUG] Erreur:', e);
+        // En cas d'erreur, valeurs par défaut
       }
     }
     
