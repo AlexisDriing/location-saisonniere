@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) Develop V6
+// Gestion des voyageurs (adultes, enfants, bébés) Develop V7
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -11,45 +11,6 @@ class TravelersManager {
 
   init() {
     this.loadCapacityFromData();
-
-    const self = this;
-    
-    let cache = null;
-    let mostRecentTime = 0;
-    
-    ['current_detail_dates', 'selected_search_data'].forEach(key => {
-      const data = localStorage.getItem(key);
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (parsed.timestamp > mostRecentTime) {
-          mostRecentTime = parsed.timestamp;
-          cache = data;
-        }
-      }
-    });
-    
-    if (cache) {
-      try {
-        const data = JSON.parse(cache);
-        const totalDemande = (data.adultes || 0) + (data.enfants || 0);
-        
-        // Si trop vieux OU trop de voyageurs
-        if ((Date.now() - data.timestamp > 30*60*1000) || (totalDemande > self.maxCapacity)) {
-          // 🆕 UTILISER self AU LIEU DE this
-          self.adults = 1;
-          self.children = 0;
-          self.babies = 0;
-        } else {
-          // 🆕 UTILISER self AU LIEU DE this
-          self.adults = data.adultes || 1;
-          self.children = data.enfants || 0;
-          self.babies = data.bebes || 0;
-        }
-      } catch(e) {
-        // En cas d'erreur, valeurs par défaut
-      }
-    }
-    
     this.setupEventListeners();
     this.updateUI();
   }
@@ -150,6 +111,11 @@ class TravelersManager {
   }
 
   updateUI() {
+    if (this.adults + this.children > this.maxCapacity) {
+      this.adults = 1;
+      this.children = 0;
+      this.babies = 0;
+    }
     // Mettre à jour les chiffres
     this.updateElement("chiffres-adultes", this.adults);
     this.updateElement("chiffres-adultes-mobile", this.adults);
