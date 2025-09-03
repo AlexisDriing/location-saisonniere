@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - Production
+// Gestionnaire principal des propriétés pour la page liste - Productions
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1152,7 +1152,12 @@ if (hostImageElement) {
     
     try {
     const data = JSON.parse(homeSearchData);
-    
+
+    if (data.timestamp && (Date.now() - data.timestamp > 30*60*1000)) {
+        localStorage.removeItem('home_search_data');
+        return;
+    }
+      
     // 🆕 NOUVEAU : Mettre le texte du lieu dans l'input et lancer la recherche
     if (data.locationText) {
       const searchInput = document.getElementById('search-input');
