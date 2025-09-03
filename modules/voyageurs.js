@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) Develop V4
+// Gestion des voyageurs (adultes, enfants, bébés) Develop V5
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -12,6 +12,10 @@ class TravelersManager {
   init() {
     this.loadCapacityFromData();
 
+    if (!this.maxCapacity) {
+      this.maxCapacity = 8;
+    }
+    
     let cache = null;
     let mostRecentTime = 0;
     
@@ -29,21 +33,24 @@ class TravelersManager {
     if (cache) {
       try {
         const data = JSON.parse(cache);
+        const totalDemande = (data.adultes || 0) + (data.enfants || 0);
+        
+        // DEBUG : Voir ce qui se passe
+        console.log(`[DEBUG] Capacité: ${this.maxCapacity}, Demande: ${totalDemande}`);
+        
         // Si trop vieux OU trop de voyageurs
-        if ((Date.now() - data.timestamp > 30*60*1000) || 
-            ((data.adultes + data.enfants) > this.maxCapacity)) {
-          // Réinitialiser à 1 adulte
+        if ((Date.now() - data.timestamp > 30*60*1000) || (totalDemande > this.maxCapacity)) {
+          console.log(`[DEBUG] Limitation appliquée!`);
           this.adults = 1;
           this.children = 0;
           this.babies = 0;
         } else {
-          // Utiliser les valeurs du cache
           this.adults = data.adultes || 1;
           this.children = data.enfants || 0;
           this.babies = data.bebes || 0;
         }
       } catch(e) {
-        // En cas d'erreur, valeurs par défaut
+        console.error('[DEBUG] Erreur:', e);
       }
     }
     
