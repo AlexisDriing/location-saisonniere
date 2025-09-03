@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) Develop V3
+// Gestion des voyageurs (adultes, enfants, bébés) Develop V4
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -12,14 +12,25 @@ class TravelersManager {
   init() {
     this.loadCapacityFromData();
 
-    const cache = localStorage.getItem('current_detail_dates') || 
-                  localStorage.getItem('selected_search_data');
+    let cache = null;
+    let mostRecentTime = 0;
+    
+    ['current_detail_dates', 'selected_search_data'].forEach(key => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (parsed.timestamp > mostRecentTime) {
+          mostRecentTime = parsed.timestamp;
+          cache = data;
+        }
+      }
+    });
     
     if (cache) {
       try {
         const data = JSON.parse(cache);
         // Si trop vieux OU trop de voyageurs
-        if ((Date.now() - data.timestamp > 5*60*1000) || 
+        if ((Date.now() - data.timestamp > 30*60*1000) || 
             ((data.adultes + data.enfants) > this.maxCapacity)) {
           // Réinitialiser à 1 adulte
           this.adults = 1;
