@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V6
+// Gestionnaire de validation pour la page modification de logement V7
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -1017,11 +1017,14 @@ class ValidationManager {
     
     if (!field) return;
     
-    // Trouver l'onglet du champ (utiliser l'ID du pane)
-    const tabPane = field.closest('[id^="w-tabs-"][id$="-pane-"]');
+    // Trouver l'onglet du champ (utiliser la classe w-tab-pane)
+    const tabPane = field.closest('.w-tab-pane');
     if (tabPane) {
-      // Trouver le bouton correspondant via le href
-      const tabLink = document.querySelector(`[href="#${tabPane.id}"]`);
+      // Récupérer le data-w-tab (ex: "Tab 3")
+      const tabName = tabPane.getAttribute('data-w-tab');
+      
+      // Trouver le bouton avec ce data-w-tab
+      const tabLink = document.querySelector(`.tab-button[data-w-tab="${tabName}"]`);
       
       // Changer d'onglet si nécessaire
       if (tabLink && !tabLink.classList.contains('w--current')) {
@@ -1030,7 +1033,7 @@ class ValidationManager {
         // Attendre puis scroller
         setTimeout(() => {
           this.scrollToField(field);
-        }, 150);
+        }, 200); // Un peu plus de délai pour l'animation Webflow
       } else {
         this.scrollToField(field);
       }
