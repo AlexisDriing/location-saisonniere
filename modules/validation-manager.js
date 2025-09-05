@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement V5
+// Gestionnaire de validation pour la page modification de logement V6
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -972,7 +972,7 @@ class ValidationManager {
     }
   }
 
-  // Nettoyer toutes les erreurs
+ // Nettoyer toutes les erreurs
   clearAllErrors() {
     // Masquer tous les messages d'erreur
     document.querySelectorAll('.error.show').forEach(error => {
@@ -992,6 +992,63 @@ class ValidationManager {
     
     this.errors.clear();
     this.tabErrors.clear();
+  }
+
+  // Naviguer vers la première erreur
+  navigateToFirstError() {
+    // Trouver la première erreur visible
+    const firstError = document.querySelector('.error.show');
+    if (!firstError) return;
+    
+    // Trouver le champ associé
+    let field = firstError.previousElementSibling;
+    
+    // Gérer les cas spéciaux
+    if (field?.classList.contains('character-counter')) {
+      field = field.previousElementSibling;
+    }
+    
+    if (!field || field.classList.contains('error')) {
+      const flexParent = firstError.closest('.flex-error');
+      if (flexParent) {
+        field = flexParent.querySelector('input, textarea, select');
+      }
+    }
+    
+    if (!field) return;
+    
+    // Trouver l'onglet du champ (utiliser l'ID du pane)
+    const tabPane = field.closest('[id^="w-tabs-"][id$="-pane-"]');
+    if (tabPane) {
+      // Trouver le bouton correspondant via le href
+      const tabLink = document.querySelector(`[href="#${tabPane.id}"]`);
+      
+      // Changer d'onglet si nécessaire
+      if (tabLink && !tabLink.classList.contains('w--current')) {
+        tabLink.click();
+        
+        // Attendre puis scroller
+        setTimeout(() => {
+          this.scrollToField(field);
+        }, 150);
+      } else {
+        this.scrollToField(field);
+      }
+    } else {
+      this.scrollToField(field);
+    }
+  }
+  
+  // Scroll simple vers le champ
+  scrollToField(field) {
+    const rect = field.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const targetPosition = rect.top + scrollTop - 150;
+    
+    window.scrollTo({
+      top: targetPosition,
+      behavior: 'smooth'
+    });
   }
 }
 
