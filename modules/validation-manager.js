@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - LOG production V4
+// Gestionnaire de validation pour la page modification de logement - LOG production V5
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -984,6 +984,66 @@ class ValidationManager {
     
     this.errors.clear();
     this.tabErrors.clear();
+  }
+
+  // Naviguer vers la première erreur
+  navigateToFirstError() {
+    // Trouver la première erreur visible
+    const firstError = document.querySelector('.error.show');
+    if (!firstError) return;
+    
+    // Trouver le champ associé
+    let field = firstError.previousElementSibling;
+    
+    // Gérer les cas spéciaux
+    if (field?.classList.contains('character-counter')) {
+      field = field.previousElementSibling;
+    }
+    
+    if (!field || field.classList.contains('error')) {
+      const flexParent = firstError.closest('.flex-error');
+      if (flexParent) {
+        field = flexParent.querySelector('input, textarea, select');
+      }
+    }
+    
+    if (!field) return;
+    
+    // Trouver l'onglet du champ (utiliser la classe w-tab-pane)
+    const tabPane = field.closest('.w-tab-pane');
+    if (tabPane) {
+      // Récupérer le data-w-tab (ex: "Tab 3")
+      const tabName = tabPane.getAttribute('data-w-tab');
+      
+      // Trouver le bouton avec ce data-w-tab
+      const tabLink = document.querySelector(`.tab-button[data-w-tab="${tabName}"]`);
+      
+      // Changer d'onglet si nécessaire
+      if (tabLink && !tabLink.classList.contains('w--current')) {
+        tabLink.click();
+        
+        // Attendre puis scroller
+        setTimeout(() => {
+          this.scrollToField(field);
+        }, 200); // Un peu plus de délai pour l'animation Webflow
+      } else {
+        this.scrollToField(field);
+      }
+    } else {
+      this.scrollToField(field);
+    }
+  }
+  
+  // Scroll simple vers le champ
+  scrollToField(field) {
+    const rect = field.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const targetPosition = rect.top + scrollTop - 150;
+    
+    window.scrollTo({
+      top: targetPosition,
+      behavior: 'smooth'
+    });
   }
 }
 
