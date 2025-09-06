@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - LOG production V2
+// Gestionnaire de la page de modification de logement - LOG production V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3363,6 +3363,12 @@ setBlockState(element, isActive) {
   if (this.validationManager && !this.validationManager.validateAllFields()) {
     console.log('❌ Validation échouée - Sauvegarde annulée');
     this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+    
+    // Naviguer vers la première erreur
+    setTimeout(() => {
+      this.validationManager.navigateToFirstError();
+    }, 100);
+    
     return;
   }
     
