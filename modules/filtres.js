@@ -1,4 +1,4 @@
-// Gestionnaire complet des filtres - capacité20
+// Gestionnaire complet des filtres - capacité50
 class FiltersManager {
   constructor() {
     this.equipementCheckboxes = document.querySelectorAll('#filtre-equipements .w-checkbox');
@@ -42,7 +42,7 @@ class FiltersManager {
       prixMax: null,
       adultes: 1,
       enfants: 0,
-      capaciteMax: 20
+      capaciteMax: 50
     };
     
     // État temporaire (pendant la sélection)
@@ -137,7 +137,7 @@ class FiltersManager {
   // ================================
 
   loadCapacityFromData() {
-    this.state.capaciteMax = 20;
+    this.state.capaciteMax = 50;
   }
 
   // ================================
