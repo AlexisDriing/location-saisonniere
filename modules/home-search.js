@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil V8
+// Gestionnaire de recherche pour la page d'accueil - Capacité20
 class HomeSearch {
   constructor() {
     // Protection contre double initialisation
@@ -43,7 +43,7 @@ class HomeSearch {
   setupVoyageurs() {
     // Adultes
     document.getElementById('adultes-plus-home')?.addEventListener('click', () => {
-      if (this.adultes + this.enfants < 10) {
+      if (this.adultes + this.enfants < 20) {
         this.adultes++;
         this.updateVoyageursDisplay();
       }
@@ -58,7 +58,7 @@ class HomeSearch {
     
     // Enfants
     document.getElementById('enfants-plus-home')?.addEventListener('click', () => {
-      if (this.adultes + this.enfants < 10) {
+      if (this.adultes + this.enfants < 20) {
         this.enfants++;
         this.updateVoyageursDisplay();
       }
