@@ -1,4 +1,4 @@
-// Google page
+// Google page V2
 class InterfaceManager {
   constructor() {
     this.init();
@@ -180,6 +180,7 @@ class InterfaceManager {
       const airbnbField = container.getAttribute("data-airbnb");
       const bookingField = container.getAttribute("data-booking");
       const gitesField = container.getAttribute("data-gites");
+      const googleField = container.getAttribute("data-google");
       
       container.innerHTML = "";
       
