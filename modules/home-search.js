@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil - LOG production
+// Gestionnaire de recherche pour la page d'accueil - LOG production 26/09
 class HomeSearch {
   constructor() {
     // Protection contre double initialisation
@@ -41,7 +41,7 @@ class HomeSearch {
   setupVoyageurs() {
     // Adultes
     document.getElementById('adultes-plus-home')?.addEventListener('click', () => {
-      if (this.adultes + this.enfants < 10) {
+      if (this.adultes + this.enfants < 50) {
         this.adultes++;
         this.updateVoyageursDisplay();
       }
@@ -56,7 +56,7 @@ class HomeSearch {
     
     // Enfants
     document.getElementById('enfants-plus-home')?.addEventListener('click', () => {
-      if (this.adultes + this.enfants < 10) {
+      if (this.adultes + this.enfants < 50) {
         this.enfants++;
         this.updateVoyageursDisplay();
       }
@@ -109,7 +109,7 @@ class HomeSearch {
     if (adulteMoins) adulteMoins.style.opacity = this.adultes <= 1 ? '0.3' : '1';
     if (enfantMoins) enfantMoins.style.opacity = this.enfants <= 0 ? '0.3' : '1';
     
-    const isMax = this.adultes + this.enfants >= 10;
+    const isMax = this.adultes + this.enfants >= 50;
     if (adultePlus) adultePlus.style.opacity = isMax ? '0.3' : '1';
     if (enfantPlus) enfantPlus.style.opacity = isMax ? '0.3' : '1';
   }
@@ -117,7 +117,7 @@ class HomeSearch {
   setupVoyageursMobile() {
     // Adultes mobile
     document.getElementById('adultes-plus-home-mobile')?.addEventListener('click', () => {
-      if (this.adultesMobile + this.enfantsMobile < 10) {
+      if (this.adultesMobile + this.enfantsMobile < 50) {
         this.adultesMobile++;
         this.updateVoyageursDisplayMobile();
       }
@@ -132,7 +132,7 @@ class HomeSearch {
     
     // Enfants mobile
     document.getElementById('enfants-plus-home-mobile')?.addEventListener('click', () => {
-      if (this.adultesMobile + this.enfantsMobile < 10) {
+      if (this.adultesMobile + this.enfantsMobile < 50) {
         this.enfantsMobile++;
         this.updateVoyageursDisplayMobile();
       }
@@ -185,7 +185,7 @@ class HomeSearch {
     if (adulteMoins) adulteMoins.style.opacity = this.adultesMobile <= 1 ? '0.3' : '1';
     if (enfantMoins) enfantMoins.style.opacity = this.enfantsMobile <= 0 ? '0.3' : '1';
     
-    const isMax = this.adultesMobile + this.enfantsMobile >= 10;
+    const isMax = this.adultesMobile + this.enfantsMobile >= 50;
     if (adultePlus) adultePlus.style.opacity = isMax ? '0.3' : '1';
     if (enfantPlus) enfantPlus.style.opacity = isMax ? '0.3' : '1';
   }
