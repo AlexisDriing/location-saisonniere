@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Google page
+// Gestionnaire de la page de modification de logement - Google page V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -386,7 +386,7 @@ setupTimeFormatters() {
       { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb' },
       { id: 'annonce-booking-input', dataKey: 'annonce_booking' },
       { id: 'annonce-gites-input', dataKey: 'annonce_gites' },
-      { id: 'page-google-input', dataKey: 'page_google' }
+      { id: 'page-google', dataKey: 'page_google' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -2714,7 +2714,7 @@ setupFieldListeners() {
     { id: 'annonce-airbnb-input' },
     { id: 'annonce-booking-input' },
     { id: 'annonce-gites-input' },
-    { id: 'page-google-input' }
+    { id: 'page-google' }
   ];
   
   fields.forEach(field => {
@@ -3341,7 +3341,7 @@ setBlockState(element, isActive) {
       { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb' },
       { id: 'annonce-booking-input', dataKey: 'annonce_booking' },
       { id: 'annonce-gites-input', dataKey: 'annonce_gites' },
-      { id: 'page-google-input', dataKey: 'page_google' }
+      { id: 'page-google', dataKey: 'page_google' }
     ];
     
     // Remettre les valeurs initiales
@@ -3486,7 +3486,7 @@ setBlockState(element, isActive) {
     { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb', dbKey: 'annonce_airbnb' },
     { id: 'annonce-booking-input', dataKey: 'annonce_booking', dbKey: 'annonce_booking' },
     { id: 'annonce-gites-input', dataKey: 'annonce_gites', dbKey: 'annonce_gites' },
-    { id: 'page-google-input', dataKey: 'page_google', dbKey: 'page_google' }
+    { id: 'page-google', dataKey: 'page_google', dbKey: 'page_google' }
   ];
     
   // Collecter les valeurs actuelles
