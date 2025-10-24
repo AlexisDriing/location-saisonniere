@@ -1,4 +1,4 @@
-// LOG production V2
+// Google page V2
 class InterfaceManager {
   constructor() {
     this.init();
@@ -30,7 +30,6 @@ class InterfaceManager {
     this.updateBlocentierAvantages(hasReductions, hasCadeaux);
     this.setupInclus();
     this.setupAnnonces();
-    this.setupImmatriculation();
     this.setupTelephone();
     this.setupPlatformLinks();
     this.setupPopins();
@@ -130,10 +129,12 @@ class InterfaceManager {
     }
   }
   setupMainImages() {
+  console.log('📸 Configuration des images principales...');
   
   // Utiliser les classes que vous avez données
   const allImages = document.querySelectorAll('.collection-item-2 .image-list-logement');
   
+  console.log(`📸 ${allImages.length} images trouvées dans la collection`);
   
   if (allImages.length < 3) {
     console.warn(`⚠️ Seulement ${allImages.length} images trouvées (minimum 3 requis)`);
@@ -146,25 +147,30 @@ class InterfaceManager {
     allImages[1]?.src || allImages[1]?.getAttribute('src'),
     allImages[2]?.src || allImages[2]?.getAttribute('src')
   ];
-    
+  
+  console.log('📸 URLs récupérées:', imageUrls);
+  
   // 1️⃣ Première image → background-image de .main-image
   const mainImage = document.querySelector('.main-image');
   if (mainImage && imageUrls[0]) {
     mainImage.style.backgroundImage = `url('${imageUrls[0]}')`;
     mainImage.style.backgroundSize = 'cover';
     mainImage.style.backgroundPosition = 'center';
+    console.log('✅ Image principale mise à jour');
   }
   
   // 2️⃣ Deuxième image → src de .secondary-image
   const secondaryImage = document.querySelector('.secondary-image');
   if (secondaryImage && imageUrls[1]) {
     secondaryImage.src = imageUrls[1];
+    console.log('✅ Image secondaire mise à jour');
   }
   
   // 3️⃣ Troisième image → src de .third-image  
   const thirdImage = document.querySelector('.third-image');
   if (thirdImage && imageUrls[2]) {
     thirdImage.src = imageUrls[2];
+    console.log('✅ Troisième image mise à jour');
   }
 }
 
@@ -174,6 +180,7 @@ class InterfaceManager {
       const airbnbField = container.getAttribute("data-airbnb");
       const bookingField = container.getAttribute("data-booking");
       const gitesField = container.getAttribute("data-gites");
+      const googleField = container.getAttribute("data-google");
       
       container.innerHTML = "";
       
@@ -195,6 +202,13 @@ class InterfaceManager {
         const img = document.createElement("img");
         img.src = "https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/688b2ed71694b8ab6ae9f4a9_other-icon.jpg";
         img.alt = "Logo Gîtes de France";
+        container.appendChild(img);
+      }
+
+      if (googleField && googleField.trim() !== "") {
+        const img = document.createElement("img");
+        img.src = "https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/68d6899911953c716d7ad252_icon-google.jpg";
+        img.alt = "Logo Google";
         container.appendChild(img);
       }
       
@@ -221,6 +235,7 @@ class InterfaceManager {
     const extrasData = extrasGrid.getAttribute("data-extras");
     if (!extrasData || extrasData.trim() === "") {
       // 🆕 AJOUTER : Laisser le bloc parent caché
+      console.log('📋 Aucun extra défini');
       return;
     }
     
@@ -228,6 +243,7 @@ class InterfaceManager {
     const blocExtras = document.querySelector('.blocentier-extras');
     if (blocExtras) {
       blocExtras.style.display = 'block'; // ou 'block' selon votre design
+      console.log('✅ Bloc extras affiché');
     }
     
     extrasGrid.innerHTML = "";
@@ -265,6 +281,7 @@ class InterfaceManager {
 
   // Gestion des équipements
   setupEquipements() {
+    console.log('🏊 Configuration des équipements...');
     
     // Mapping entre les noms d'équipements et leurs IDs
     const equipementMapping = {
@@ -296,6 +313,7 @@ class InterfaceManager {
     const equipementsString = equipementsElement.getAttribute('data-equipements-principaux');
     
     if (!equipementsString || equipementsString.trim() === '') {
+      console.log('📋 Aucun équipement défini pour ce logement');
       return;
     }
 
@@ -306,6 +324,7 @@ class InterfaceManager {
     
     // Parser les équipements (séparés par des virgules)
     const equipements = equipementsString.split(',').map(eq => eq.trim());
+    console.log('📋 Équipements trouvés:', equipements);
     
     // Afficher chaque équipement trouvé
     let equipementsAffiches = 0;
@@ -317,6 +336,7 @@ class InterfaceManager {
         if (element) {
           element.style.display = ''; // Utiliser le display par défaut
           equipementsAffiches++;
+          console.log(`✅ Affichage de l'équipement: ${equipement} (ID: ${elementId})`);
         } else {
           console.warn(`⚠️ Élément non trouvé pour l'ID: ${elementId}`);
         }
@@ -325,10 +345,12 @@ class InterfaceManager {
       }
     });
     
+    console.log(`✅ ${equipementsAffiches} équipements affichés`);
   }
 
   // Gestion des options d'accueil
   setupOptionsAccueil() {
+    console.log('🏠 Configuration des options d\'accueil...');
     
     // Mapping entre les noms d'options et leurs IDs
     const optionsMapping = {
@@ -357,11 +379,13 @@ class InterfaceManager {
     const optionsString = optionsElement.getAttribute('data-option-accueil');
     
     if (!optionsString || optionsString.trim() === '') {
+      console.log('📋 Aucune option d\'accueil définie pour ce logement');
       return;
     }
     
     // Parser les options (séparées par des virgules)
     const options = optionsString.split(',').map(opt => opt.trim());
+    console.log('📋 Options d\'accueil trouvées:', options);
     
     // Afficher chaque option trouvée
     let optionsAffichees = 0;
@@ -373,6 +397,7 @@ class InterfaceManager {
         if (element) {
           element.style.display = ''; // Utiliser le display par défaut
           optionsAffichees++;
+          console.log(`✅ Affichage de l'option: ${option} (ID: ${elementId})`);
         } else {
           console.warn(`⚠️ Élément non trouvé pour l'ID: ${elementId}`);
         }
@@ -381,6 +406,7 @@ class InterfaceManager {
       }
     });
     
+    console.log(`✅ ${optionsAffichees} options d'accueil affichées`);
   }
 
   // Gestion de l'affichage conditionnel pour Chambre d'hôtes
@@ -451,6 +477,7 @@ class InterfaceManager {
     const heureArrivee = formatHeure(horaires[0]);
     const heureDepart = formatHeure(horaires[1]);
     
+    console.log(`📋 Horaires formatés: Arrivée ${heureArrivee}, Départ ${heureDepart}`);
     
     const textHorairesElement = document.querySelector('.text-horaires');
     
@@ -471,10 +498,12 @@ class InterfaceManager {
     }
     
     textHorairesElement.textContent = texteActuel;
+    console.log(`✅ Horaires mis à jour: ${texteActuel}`);
   }
 
   // Gestion des réductions
   setupReductions() {
+  console.log('💰 Configuration des réductions...');
   
   // Chercher l'élément qui contient le JSON
   const jsonElement = document.querySelector('[data-json-tarifs-line]');
@@ -490,6 +519,7 @@ class InterfaceManager {
   try {
     const jsonString = jsonElement.getAttribute('data-json-tarifs-line');
     if (!jsonString || jsonString.trim() === '') {
+      console.log('📋 Aucune donnée tarifaire');
       // Le bloc reste caché (état par défaut Webflow)
       return false; // 🆕 MODIFIÉ : return false au lieu de return
     }
@@ -503,6 +533,7 @@ class InterfaceManager {
   
   // Vérifier s'il y a des réductions
   if (!pricingData.discounts || !Array.isArray(pricingData.discounts) || pricingData.discounts.length === 0) {
+    console.log('📋 Aucune réduction définie');
     // Le bloc reste caché (état par défaut Webflow)
     return false; // 🆕 MODIFIÉ : return false au lieu de return
   }
@@ -512,6 +543,7 @@ class InterfaceManager {
     .sort((a, b) => a.nights - b.nights)
     .slice(0, 5); // Limiter à 5 maximum
   
+  console.log(`📋 ${sortedDiscounts.length} réduction(s) trouvée(s):`, sortedDiscounts);
   
   // Construire la phrase dynamique
   let phraseReduction = '';
@@ -579,6 +611,7 @@ class InterfaceManager {
 }
 
 setupCadeaux() {
+console.log('🎁 Configuration des cadeaux...');
 
 // Chercher l'élément qui contient les cadeaux
 const cadeauxElement = document.querySelector('[data-cadeaux]');
@@ -592,6 +625,7 @@ if (!cadeauxElement) {
 const cadeauxValue = cadeauxElement.getAttribute('data-cadeaux');
 
 if (!cadeauxValue || cadeauxValue.trim() === '') {
+  console.log('📋 Aucun cadeau défini');
   return false; // Retourne false = pas visible
 }
 
@@ -599,12 +633,14 @@ if (!cadeauxValue || cadeauxValue.trim() === '') {
 const blocCadeaux = document.querySelector('.cadeaux');
 if (blocCadeaux) {
   blocCadeaux.style.display = 'flex'; // ou 'block' selon votre design
+  console.log('✅ Bloc cadeaux affiché');
 }
 
 return true; // Retourne true = visible
 }
 
 updateBlocentierAvantages(hasReductions, hasCadeaux) {
+  console.log('📦 Mise à jour bloc avantages...');
   
   const blocAvantages = document.querySelector('.blocentier-avantages');
   if (!blocAvantages) {
@@ -615,6 +651,7 @@ updateBlocentierAvantages(hasReductions, hasCadeaux) {
   // Si au moins un des deux est visible
   if (hasReductions || hasCadeaux) {
     blocAvantages.style.display = 'block'; // ou 'block' selon votre design
+    console.log('✅ Bloc avantages affiché (réductions:', hasReductions, ', cadeaux:', hasCadeaux, ')');
   } else {
     // Les deux sont vides, laisser caché (déjà caché par défaut dans Webflow)
     console.log('❌ Bloc avantages reste caché (aucun contenu)');
@@ -622,6 +659,7 @@ updateBlocentierAvantages(hasReductions, hasCadeaux) {
 }
 
 setupInclus() {
+  console.log('✅ Configuration du bloc inclus...');
   
   // Chercher l'élément qui contient les inclus
   const inclusElement = document.querySelector('[data-inclus-reservation]');
@@ -635,6 +673,7 @@ setupInclus() {
   const inclusValue = inclusElement.getAttribute('data-inclus-reservation');
   
   if (!inclusValue || inclusValue.trim() === '') {
+    console.log('📋 Aucun inclus défini - bloc reste caché');
     return;
   }
   
@@ -642,27 +681,33 @@ setupInclus() {
   const blocInclus = document.querySelector('.inclus');
   if (blocInclus) {
     blocInclus.style.display = 'flex'; // ou 'block' selon votre design
+    console.log('✅ Bloc inclus affiché');
   }
 }
 
 setupAnnonces() {
+  console.log('📢 Configuration du bloc annonces...');
   
   // Vérifier les 3 champs d'annonces
   const airbnbElement = document.querySelector('[data-airbnb-link]');
   const bookingElement = document.querySelector('[data-booking-link]');
   const gitesElement = document.querySelector('[data-gites-link]');
+  const googleElement = document.querySelector('[data-google-link]');
   
   // Récupérer les valeurs
   const airbnbValue = airbnbElement ? airbnbElement.getAttribute('data-airbnb-link') : '';
   const bookingValue = bookingElement ? bookingElement.getAttribute('data-booking-link') : '';
   const gitesValue = gitesElement ? gitesElement.getAttribute('data-gites-link') : '';
+  const googleValue = googleElement ? googleElement.getAttribute('data-google-link') : '';
   
   // Vérifier si au moins une annonce existe
   const hasAnnonces = (airbnbValue && airbnbValue.trim() !== '') ||
                       (bookingValue && bookingValue.trim() !== '') ||
-                      (gitesValue && gitesValue.trim() !== '');
+                      (gitesValue && gitesValue.trim() !== '') ||
+                      (googleValue && googleValue.trim() !== '');
   
   if (!hasAnnonces) {
+    console.log('📋 Aucune annonce définie - bloc reste caché');
     return;
   }
   
@@ -670,41 +715,12 @@ setupAnnonces() {
   const blocAnnonces = document.querySelector('.annonces');
   if (blocAnnonces) {
     blocAnnonces.style.display = 'block'; // ou 'block' selon votre design
+    console.log('✅ Bloc annonces affiché');
   }
 }
-
-// À ajouter après setupAnnonces() par exemple (vers ligne 650)
-setupImmatriculation() {
-  // Chercher l'élément qui contient le code d'enregistrement
-  const codeElement = document.querySelector('[data-code-enregistrement]');
-  
-  if (!codeElement) {
-    console.warn('⚠️ Élément data-code-enregistrement non trouvé');
-    return;
-  }
-  
-  // Récupérer la valeur
-  const codeValue = codeElement.getAttribute('data-code-enregistrement');
-  
-  // Chercher le bloc immatriculation
-  const blocImmatriculation = document.getElementById('immatriculation');
-  
-  if (!blocImmatriculation) {
-    console.warn('⚠️ Bloc #immatriculation non trouvé');
-    return;
-  }
-  
-  // Si le code est vide ou absent, cacher le bloc
-  if (!codeValue || codeValue.trim() === '') {
-    blocImmatriculation.style.display = 'none';
-  } else {
-    // Si un code existe, s'assurer que le bloc est visible
-    blocImmatriculation.style.display = 'flex'; // ou 'block' selon votre design
-  }
-}
-  
   // Gestion du téléphone cliquable
   setupTelephone() {
+    console.log('📞 Configuration du téléphone...');
     
     // Chercher l'élément qui contient le numéro de téléphone
     const telephoneElement = document.querySelector('[data-telephone]');
@@ -718,6 +734,7 @@ setupImmatriculation() {
     const numeroTelephone = telephoneElement.getAttribute('data-telephone');
     
     if (!numeroTelephone || numeroTelephone.trim() === '') {
+      console.log('📋 Aucun numéro de téléphone défini');
       return;
     }
     
@@ -739,8 +756,10 @@ setupImmatriculation() {
       
       // Révéler le numéro de téléphone
       numeroHoteElement.textContent = numeroTelephone;
+      console.log('📞 Numéro révélé:', numeroTelephone);
     });
     
+    console.log('✅ Bouton téléphone configuré');
   }
 
   // Gestion des liens vers plateformes
@@ -748,7 +767,8 @@ setupImmatriculation() {
     const plateformes = [
       { id: "airbnb", cmsField: "data-airbnb-link" },
       { id: "booking", cmsField: "data-booking-link" },
-      { id: "gites", cmsField: "data-gites-link" }
+      { id: "gites", cmsField: "data-gites-link" },
+      { id: "google", cmsField: "data-google-link" }
     ];
     
     plateformes.forEach(({ id, cmsField }) => {
@@ -780,12 +800,14 @@ setupImmatriculation() {
     }
     
     openBtn.addEventListener("click", function() {
+      console.log("Popin ouverte :", popinSelector);
       document.body.classList.add("no-scroll");
       popin.style.display = "block";
     });
     
     closeBtns.forEach(btn => {
       btn.addEventListener("click", function() {
+        console.log("Popin fermée :", popinSelector);
         document.body.classList.remove("no-scroll");
         popin.style.display = "none";
       });

@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - LOG production V3
+// Gestionnaire de la page de modification de logement - Google page
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -52,6 +52,7 @@ class PropertyEditor {
   }
   
   async init() {
+    console.log('✏️ Initialisation PropertyEditor...');
     
     // 1. Récupérer l'ID depuis l'URL
   this.propertyId = this.getPropertyIdFromUrl();
@@ -61,6 +62,7 @@ class PropertyEditor {
     return;
   }
   
+  console.log('🏠 ID du logement à modifier:', this.propertyId);
   
   // 2. Charger les données du logement
   await this.loadPropertyData();
@@ -85,6 +87,7 @@ class PropertyEditor {
   }
   this.validationManager = new ValidationManager(this);
     
+  console.log('✅ PropertyEditor initialisé');
   window.propertyEditor = this;
 }
 
@@ -95,6 +98,7 @@ class PropertyEditor {
 
   async loadPropertyData() {
     try {
+      console.log('📡 Chargement des données du logement...');
       
       const response = await fetch(`${window.CONFIG.API_URL}/property-details-by-id/${this.propertyId}`);
       
@@ -103,6 +107,7 @@ class PropertyEditor {
       }
       
       this.propertyData = await response.json();
+      console.log('✅ Données reçues:', this.propertyData);
       
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
@@ -110,6 +115,7 @@ class PropertyEditor {
   }
 
   initFormFormatters() {
+    console.log('📝 Initialisation des formatters...');
     
     // Attendre que Cleave soit chargé
     if (typeof Cleave === 'undefined') {
@@ -346,6 +352,7 @@ setupTimeFormatters() {
   
   
   prefillForm() {
+    console.log('📝 Pré-remplissage des champs...');
     
     // 1. Afficher le nom du logement
     const titleElement = document.getElementById('logement-name-edit');
@@ -378,7 +385,8 @@ setupTimeFormatters() {
       { id: 'telephone-input', dataKey: 'telephone' },
       { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb' },
       { id: 'annonce-booking-input', dataKey: 'annonce_booking' },
-      { id: 'annonce-gites-input', dataKey: 'annonce_gites' }
+      { id: 'annonce-gites-input', dataKey: 'annonce_gites' },
+      { id: 'page-google-input', dataKey: 'page_google' }
     ];
     
     // 3. Pré-remplir et sauvegarder les valeurs initiales
@@ -388,6 +396,7 @@ setupTimeFormatters() {
         const value = this.propertyData[field.dataKey] || '';
         input.value = value;
         this.initialValues[field.dataKey] = value;
+        console.log(`✅ Champ ${field.id} pré-rempli:`, value || '(vide)');
       }
     });
 
@@ -415,6 +424,7 @@ setupTimeFormatters() {
 
   // 🆕 NOUVELLE MÉTHODE : Configurer TOUS les boutons Tally avec les paramètres
 setupTallyButton() {
+  console.log('📝 Configuration des boutons Tally...');
   
   // Chercher TOUS les boutons avec l'attribut data-tally-url
   const tallyButtons = document.querySelectorAll('[data-tally-url]');
@@ -453,6 +463,7 @@ setupTallyButton() {
 }
   
   prefillAddress() {
+    console.log('📍 Pré-remplissage de l\'adresse...');
     
     const address = this.propertyData.address || '';
     
@@ -491,13 +502,16 @@ setupTallyButton() {
     if (status === 'published') {
       tagPublished.style.display = 'block'; // ou 'flex' selon votre CSS
       tagPending.style.display = 'none';
+      console.log('✅ Affichage du tag published');
     } else {
       tagPublished.style.display = 'none';
       tagPending.style.display = 'block'; // ou 'flex' selon votre CSS
+      console.log('✅ Affichage du tag pending');
     }
   }
     
   initSeasonManagement() {
+    console.log('🌞 Initialisation gestion des saisons...');
     
     // Initialiser les formatters
     this.initFormFormatters();
@@ -509,6 +523,7 @@ setupTallyButton() {
     this.hideAllSeasonBlocks();
     
     // Afficher les saisons existantes
+    console.log('📊 Affichage des saisons existantes:', this.pricingData.seasons);
     this.displayExistingSeasons();
   }
   
@@ -542,6 +557,7 @@ setupTallyButton() {
     };
   }
   
+  console.log('📊 Données tarifaires chargées:', this.pricingData);
 }
   
   hideAllSeasonBlocks() {
@@ -554,12 +570,14 @@ setupTallyButton() {
   }
   
   displayExistingSeasons() {
+    console.log('🔍 displayExistingSeasons appelée');
+    console.log('📊 pricingData:', this.pricingData);
     
     if (this.pricingData && this.pricingData.seasons && this.pricingData.seasons.length > 0) {
-
+      console.log(`✅ ${this.pricingData.seasons.length} saison(s) trouvée(s)`);
       
       this.pricingData.seasons.forEach((season, index) => {
-
+        console.log(`📅 Affichage saison ${index + 1}:`, season);
         this.displaySeasonBlock(season, index);
       });
     } else {
@@ -569,7 +587,7 @@ setupTallyButton() {
   
   displaySeasonBlock(season, index) {
     const seasonNum = index + 1;
-
+    console.log(`🎯 Tentative d'affichage du bloc season-${seasonNum}`);
     
     const seasonBlock = document.getElementById(`season-${seasonNum}`);
     
@@ -578,14 +596,14 @@ setupTallyButton() {
       return;
     }
     
-
+    console.log(`✅ Bloc season-${seasonNum} trouvé, affichage en cours...`);
     seasonBlock.style.display = 'flex'; // ou 'block' selon votre CSS
     
     // Utiliser des IDs uniques avec le numéro
     const nameElement = document.getElementById(`name-season-${seasonNum}`);
     if (nameElement) {
       nameElement.textContent = season.name;
-
+      console.log(`✅ Nom affiché: ${season.name}`);
     } else {
       console.log(`❌ Élément name-season-${seasonNum} non trouvé`);
     }
@@ -711,6 +729,7 @@ setupTallyButton() {
       // Pas d'image hôte : afficher empty, masquer bloc hôte
       if (blocEmptyHote) blocEmptyHote.style.display = 'flex';
       if (blocHote) blocHote.style.display = 'none';
+      console.log('👤 Aucune image hôte - Affichage du bloc empty');
     } else {
       // Il y a une image : masquer empty, afficher bloc hôte
       if (blocEmptyHote) blocEmptyHote.style.display = 'none';
@@ -765,9 +784,11 @@ setupTallyButton() {
   }
   
   if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
+    console.log('📷 Aucune image dans la galerie');
     return;
   }
   
+  console.log(`📷 ${imagesGallery.length} images trouvées dans la galerie`);
   
   // Afficher chaque image (max 20)
   const maxImages = Math.min(imagesGallery.length, 20);
@@ -835,6 +856,7 @@ setupTallyButton() {
 
   // 🆕 Ouvrir la modal de modification
 openEditSeasonModal(seasonIndex) {
+  console.log('✏️ Ouverture modal modification saison', seasonIndex + 1);
 
   this.resetEditSeasonModal();
   
@@ -968,6 +990,7 @@ resetSeasonModal() {
 }
 
 validateAndAddSeason() {
+  console.log('✅ Validation de la nouvelle saison');
   
   // Validation complète avec ValidationManager
   if (this.validationManager && !this.validationManager.validateSeason(false)) {
@@ -1018,6 +1041,7 @@ validateAndAddSeason() {
 
 // 🆕 Valider et sauvegarder les modifications de la saison
 validateAndEditSeason() {
+  console.log('✅ Validation des modifications de la saison', this.editingSeasonIndex + 1);
   
   // Vérifier qu'on a bien un index
   if (this.editingSeasonIndex === undefined || this.editingSeasonIndex === null) {
@@ -1182,6 +1206,7 @@ resetEditSeasonModal() {
 
 // 🆕 NOUVELLE MÉTHODE : Supprimer une saison
 removeSeason(index) {
+  console.log(`🗑️ Suppression de la saison ${index + 1}`);
   
   // Supprimer du tableau
   this.pricingData.seasons.splice(index, 1);
@@ -1238,6 +1263,7 @@ removeSeason(index) {
 
   
   prefillDefaultPricing() {
+  console.log('💰 Pré-remplissage defaultPricing...');
   
   // Prix par défaut
   const defaultPriceInput = document.getElementById('default-price-input');
@@ -1413,6 +1439,7 @@ prefillComplexFields() {
   this.initialValues.caution = caution;
   this.initialValues.acompte = acompte;
   
+  console.log('✅ Caution et acompte configurés:', { caution, acompte });
 }
   
 prefillTailleMaison() {  
@@ -1439,6 +1466,7 @@ prefillTailleMaison() {
   // NOUVEAU : Si pas de match mais qu'on a une capacity dans pricingData
   if (!match && this.pricingData && this.pricingData.capacity) {
     values.voyageurs = this.pricingData.capacity;
+    console.log('🔄 Utilisation de capacity depuis pricingData:', values.voyageurs);
   }
   
   // Remplir les inputs...
@@ -1461,6 +1489,7 @@ prefillTailleMaison() {
     // Prioriser la valeur parsée de taille_maison
     if (values.voyageurs > 0) {
       this.pricingData.capacity = values.voyageurs;
+      console.log('✅ Capacity synchronisée depuis taille_maison:', values.voyageurs);
     } else if (!this.pricingData.capacity) {
       // Si pas de voyageurs dans la chaîne ET pas de capacity, mettre 1 par défaut
       this.pricingData.capacity = 1;
@@ -1507,6 +1536,7 @@ prefillHoraires() {
   
 // 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
 prefillCleaningOptions() {
+  console.log('🧹 Pré-remplissage options de ménage...');
   
   // Récupérer les éléments du DOM
   const includedRadio = document.getElementById('inclus');
@@ -1560,10 +1590,15 @@ if (this.pricingData.cleaning && this.pricingData.cleaning.included) {
   this.initialValues.cleaningIncluded = this.pricingData.cleaning?.included ?? true;
   this.initialValues.cleaningPrice = this.pricingData.cleaning?.price || 0;
   
+  console.log('✅ Options de ménage configurées:', {
+    included: this.pricingData.cleaning?.included ?? true,
+    price: this.pricingData.cleaning?.price || 0
+  });
 }
 
 // 🆕 NOUVELLE MÉTHODE : Formater tous les champs avec suffixes au chargement
 formatAllSuffixFields() {
+  console.log('💰 Formatage initial des champs avec suffixes...');
   
   // Formater directement sans déclencher d'événements
   document.querySelectorAll('[data-suffix="euro"], [data-suffix="euro-nuit"]').forEach(input => {
@@ -1589,6 +1624,7 @@ formatAllSuffixFields() {
 // ================================
 
 initDiscountManagement() {
+  console.log('💰 Initialisation gestion des réductions...');
   
   // Masquer tous les blocs de réduction au départ
   document.querySelectorAll('.bloc-reduction').forEach(bloc => {
@@ -1609,6 +1645,7 @@ initDiscountManagement() {
 }
   
 displayDiscounts() {
+  console.log('📊 Affichage des réductions existantes...');
   
   // Masquer tous les blocs d'abord
   document.querySelectorAll('.bloc-reduction').forEach(bloc => {
@@ -1622,6 +1659,7 @@ displayDiscounts() {
   
   // Afficher chaque réduction
   this.pricingData.discounts.forEach((discount, index) => {
+    console.log(`💰 Affichage réduction ${index + 1}:`, discount);
     
     let blocElement;
     
@@ -1671,6 +1709,7 @@ displayDiscounts() {
 }
 
 addDiscount() {
+  console.log('➕ Ajout d\'une nouvelle réduction');
   
   // Vérifier la limite
   if (this.pricingData.discounts.length >= 5) {
@@ -1733,6 +1772,7 @@ addDiscount() {
 }
 
 removeDiscount(index) {
+  console.log(`🗑️ Suppression de la réduction ${index + 1}`);
   
   // Supprimer du tableau
   this.pricingData.discounts.splice(index, 1);
@@ -1821,6 +1861,7 @@ updateAddButtonState() {
 // ================================
 
 initIcalManagement() {
+  console.log('📅 Initialisation gestion des liens iCal...');
   
   // Masquer tous les blocs sauf le premier
   document.querySelectorAll('.bloc-ical.next').forEach(bloc => {
@@ -1841,6 +1882,7 @@ initIcalManagement() {
 }
 
 displayIcals() {
+  console.log('📊 Affichage des iCals existants...');
   
   // Le premier bloc est TOUJOURS visible
   const firstBloc = document.getElementById('ical-1');
@@ -1889,6 +1931,7 @@ displayIcals() {
 }
 
 addIcal() {
+  console.log('➕ Ajout d\'un nouveau calendrier');
   
   // Trouver le premier bloc caché
   for (let i = 2; i <= 4; i++) {
@@ -1915,6 +1958,7 @@ addIcal() {
 }
 
 removeIcal(index) {
+  console.log(`🗑️ Suppression du calendrier ${index}`);
   
   // On ne peut pas supprimer le premier
   if (index === 1) return;
@@ -2019,6 +2063,7 @@ updateAddIcalButton() {
 // ================================
 
 initExtrasManagement() {
+  console.log('🎁 Initialisation gestion des extras...');
   
   // Masquer tous les blocs extras au départ
   document.querySelectorAll('.bloc-extra').forEach(bloc => {
@@ -2039,6 +2084,7 @@ initExtrasManagement() {
 }
 
 parseAndDisplayExtras() {
+  console.log('📊 Parsing des extras existants...');
   
   // Récupérer la valeur du champ extras
   const extrasValue = this.propertyData.extras || '';
@@ -2051,7 +2097,9 @@ parseAndDisplayExtras() {
   
   // Parser le format "🚴Location de vélos10€/jour, ⏰Départ tardif5€"
   this.extras = this.parseExtrasString(extrasValue);
-    
+  
+  console.log('✅ Extras parsés:', this.extras);
+  
   // Afficher chaque extra
   this.displayExtras();
 }
@@ -2082,6 +2130,7 @@ parseExtrasString(extrasString) {
 }
 
 displayExtras() {
+  console.log('🎨 Affichage des extras...');
   
   // Masquer tous les blocs d'abord
   document.querySelectorAll('.bloc-extra').forEach(bloc => {
@@ -2094,6 +2143,7 @@ displayExtras() {
   
   // Afficher chaque extra
   this.extras.forEach((extra, index) => {
+    console.log(`🎁 Affichage extra ${index + 1}:`, extra);
     
     let blocElement;
     
@@ -2157,6 +2207,7 @@ displayExtras() {
 }
 
 addExtra() {
+  console.log('➕ Ajout d\'un nouvel extra');
   
   // Vérifier la limite
   if (this.extras.length >= 10) {
@@ -2218,6 +2269,7 @@ addExtra() {
 }
 
 removeExtra(index) {
+  console.log(`🗑️ Suppression de l'extra ${index + 1}`);
   
   // Supprimer du tableau
   this.extras.splice(index, 1);
@@ -2398,6 +2450,7 @@ generateExtrasString() {
 // ================================
 
 initImageManagement() {
+  console.log('📷 Initialisation gestion des images...');
   
   // Copier l'état initial
   this.originalImagesGallery = JSON.parse(JSON.stringify(this.propertyData.images_gallery || []));
@@ -2437,6 +2490,7 @@ initSortable() {
       const movedItem = this.currentImagesGallery.splice(evt.oldIndex, 1)[0];
       this.currentImagesGallery.splice(evt.newIndex, 0, movedItem);
       
+      console.log('🔄 Nouvel ordre sauvé');
       
       // Juste activer le bouton save
       this.enableButtons();
@@ -2539,6 +2593,7 @@ addDeleteButtonFromTemplate(imageBlock, index) {
       // Ajouter le bouton cloné au bloc image
       imageBlock.appendChild(deleteBtn);
       
+      console.log(`✅ Bouton delete ajouté à image-block-${index + 1}`);
     } else {
       console.error('❌ ERREUR : Template de bouton delete non trouvé');
       return;
@@ -2658,7 +2713,8 @@ setupFieldListeners() {
     { id: 'telephone-input' },
     { id: 'annonce-airbnb-input' },
     { id: 'annonce-booking-input' },
-    { id: 'annonce-gites-input' }
+    { id: 'annonce-gites-input' },
+    { id: 'page-google-input' }
   ];
   
   fields.forEach(field => {
@@ -2825,6 +2881,7 @@ cautionAcompteIds.forEach(id => {
           const newCapacity = parseInt(e.target.value) || 0;
           if (this.pricingData) {
             this.pricingData.capacity = newCapacity;
+            console.log('🔄 Capacity mise à jour:', newCapacity);
           }
         }
         
@@ -2866,10 +2923,10 @@ validateURL(input) {
   }
 }
 
-// Validation du code d'enregistrement (alphanumérique, sans limite de longueur)
+// Validation du code d'enregistrement (13 chiffres)
 validateCodeEnregistrement(input) {
   const value = input.value.trim();
-  if (value === '') return true; // Champ vide OK (sera géré par required)
+  if (value === '') return true; // Champ vide OK
   
   // Garder seulement les caractères alphanumériques (lettres et chiffres)
   const alphanumOnly = value.replace(/[^a-zA-Z0-9]/g, '');
@@ -2881,10 +2938,19 @@ validateCodeEnregistrement(input) {
   // Convertir en majuscules pour uniformité
   input.value = input.value.toUpperCase();
   
-  // Pas de limitation de longueur, juste reset les styles
-  input.style.borderColor = '';
-  input.setCustomValidity('');
-  return true;
+  if (input.value.length > 13) {
+    input.value = input.value.substring(0, 13);
+  }
+  
+  if (input.value.length === 13) {
+    input.style.borderColor = '';
+    input.setCustomValidity('');
+    return true;
+  } else if (input.value.length > 0) {
+    input.style.borderColor = '#ff8c00';
+    input.setCustomValidity(`${13 - input.value.length} caractères manquants`);
+    return false;
+  }
 }
 
   // Validation de l'email
@@ -2980,6 +3046,7 @@ setupDefaultPricingListeners() {
 
 // 🆕 NOUVELLE MÉTHODE : Configurer les listeners pour le ménage
 setupCleaningListeners() {
+  console.log('🧹 Configuration listeners ménage...');
   
   const includedRadio = document.getElementById('inclus');
   const notIncludedRadio = document.getElementById('non-inclus');
@@ -2992,6 +3059,7 @@ setupCleaningListeners() {
   // Listener pour "Inclus"
   includedRadio.addEventListener('change', () => {
     if (includedRadio.checked) {
+      console.log('✅ Ménage inclus sélectionné');
       priceInput.style.display = 'none';
       priceInput.value = '';
       priceInput.removeAttribute('data-raw-value');
@@ -3010,6 +3078,7 @@ setupCleaningListeners() {
   // Listener pour "Non inclus"
   notIncludedRadio.addEventListener('change', () => {
     if (notIncludedRadio.checked) {
+      console.log('💰 Ménage non inclus sélectionné');
       priceInput.style.display = 'block';
       
       // Focus sur le champ prix
@@ -3034,6 +3103,7 @@ setupCleaningListeners() {
       }
       this.pricingData.cleaning.price = value;
       
+      console.log('💰 Prix ménage mis à jour:', value);
       this.enableButtons();
     });
     
@@ -3159,6 +3229,7 @@ setBlockState(element, isActive) {
   }
 
   updateDefaultPricing() {
+  console.log('💰 Mise à jour defaultPricing...');
   
   // S'assurer que la structure existe
   if (!this.pricingData.defaultPricing) {
@@ -3204,6 +3275,7 @@ setBlockState(element, isActive) {
         }
         this.pricingData.defaultPricing.platformPrices[platform] = numericValue;
         hasPlatformPrices = true;
+        console.log(`✅ Prix ${platform} mis à jour: ${numericValue}€`);
       } else if (this.pricingData.defaultPricing.platformPrices && this.pricingData.defaultPricing.platformPrices[platform]) {
         // 🆕 Si la valeur est 0 ou vide, supprimer la plateforme
         delete this.pricingData.defaultPricing.platformPrices[platform];
@@ -3216,9 +3288,11 @@ setBlockState(element, isActive) {
     delete this.pricingData.defaultPricing.platformPrices;
   }
   
+  console.log('✅ defaultPricing mis à jour:', this.pricingData.defaultPricing);
 }
   
   setupSaveButton() {
+    console.log('💾 Configuration des boutons...');
     
     const saveButton = document.getElementById('button-save-modifications');
     const cancelButton = document.getElementById('annulation');
@@ -3242,9 +3316,11 @@ setBlockState(element, isActive) {
       });
     }
     
+    console.log('✅ Boutons configurés');
   }
 
   cancelModifications() {
+    console.log('❌ Annulation des modifications');
 
     if (this.validationManager) {
       this.validationManager.clearAllErrors();
@@ -3264,7 +3340,8 @@ setBlockState(element, isActive) {
       { id: 'telephone-input', dataKey: 'telephone' },
       { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb' },
       { id: 'annonce-booking-input', dataKey: 'annonce_booking' },
-      { id: 'annonce-gites-input', dataKey: 'annonce_gites' }
+      { id: 'annonce-gites-input', dataKey: 'annonce_gites' },
+      { id: 'page-google-input', dataKey: 'page_google' }
     ];
     
     // Remettre les valeurs initiales
@@ -3359,6 +3436,7 @@ setBlockState(element, isActive) {
   }
 
   async saveModifications() {
+  console.log('💾 Sauvegarde des modifications...');
 
   if (this.validationManager && !this.validationManager.validateAllFields()) {
     console.log('❌ Validation échouée - Sauvegarde annulée');
@@ -3407,7 +3485,8 @@ setBlockState(element, isActive) {
     { id: 'telephone-input', dataKey: 'telephone', dbKey: 'telephone' },
     { id: 'annonce-airbnb-input', dataKey: 'annonce_airbnb', dbKey: 'annonce_airbnb' },
     { id: 'annonce-booking-input', dataKey: 'annonce_booking', dbKey: 'annonce_booking' },
-    { id: 'annonce-gites-input', dataKey: 'annonce_gites', dbKey: 'annonce_gites' }
+    { id: 'annonce-gites-input', dataKey: 'annonce_gites', dbKey: 'annonce_gites' },
+    { id: 'page-google-input', dataKey: 'page_google', dbKey: 'page_google' }
   ];
     
   // Collecter les valeurs actuelles
@@ -3500,6 +3579,7 @@ setBlockState(element, isActive) {
   // 🆕 NOUVEAU : Synchroniser capacity MAINTENANT avant toute comparaison
   const nouveauNombreVoyageurs = parseInt(voyageurs) || 0;
   if (this.pricingData && nouveauNombreVoyageurs !== this.pricingData.capacity) {
+    console.log('🔄 Mise à jour capacity avant save:', this.pricingData.capacity, '→', nouveauNombreVoyageurs);
     this.pricingData.capacity = nouveauNombreVoyageurs;
   }
 
@@ -3559,11 +3639,15 @@ setBlockState(element, isActive) {
   }
   
   currentValues.conditions_reservation = conditionsTexte;
+
+  console.log('Initial values:', this.initialValues);
+  console.log('Current values:', currentValues);
     
   const updates = {};
   // Comparer avec les valeurs initiales
   Object.keys(currentValues).forEach(key => {
     if (key === 'equipements_principaux' || key === 'options_accueil' || key === 'mode_paiement') {
+      console.log('DEBUG - Clé problématique:', key, '- Valeur:', this.initialValues[key], '- Type:', typeof this.initialValues[key]);
       const currentStr = currentValues[key].join(', ');
       const initialStr = (this.initialValues[key] || []).join(', ');
       if (currentStr !== initialStr) {
@@ -3578,6 +3662,7 @@ setBlockState(element, isActive) {
   if (currentStatus === 'pending-none') {
     // C'est le premier enregistrement avec validation réussie
     updates['verification_status'] = 'pending-verif';
+    console.log('🔄 Changement de statut: pending-none → pending-verif');
   }
     
   // NOUVEAU : Comparaison manuelle pour taille_maison
@@ -3631,6 +3716,7 @@ setBlockState(element, isActive) {
   
   if (originalPricingJson !== currentPricingJson) {
     updates.pricing_data = this.pricingData;
+    console.log('📊 Données tarifaires ajoutées aux updates');
   } else {
     console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
   }
@@ -3651,6 +3737,7 @@ setBlockState(element, isActive) {
     }
     
     updates['photos-du-logement'] = this.currentImagesGallery;
+    console.log('📷 Images modifiées ajoutées aux updates');
   }
     
     // Si aucune modification
@@ -3659,6 +3746,7 @@ setBlockState(element, isActive) {
       return;
     }
     
+    console.log(`📤 Envoi de ${Object.keys(updates).length} champ(s) modifié(s):`, updates);
     
     // Désactiver le bouton pendant la sauvegarde
     const saveButton = document.getElementById('button-save-modifications');
@@ -3679,6 +3767,7 @@ setBlockState(element, isActive) {
       const result = await response.json();
       
       if (response.ok && result.success) {
+      console.log('✅ Sauvegarde réussie');
       
       // Mettre à jour les valeurs initiales avec les nouvelles valeurs
       Object.keys(updates).forEach(key => {

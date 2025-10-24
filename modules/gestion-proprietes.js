@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - Productions
+// Gestionnaire principal des propriétés pour la page liste - Develop V2
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -75,6 +75,7 @@ class PropertyManager {
   }
 
   async init() {
+    console.log('🏠 Initialisation PropertyManager...');
     const startTime = performance.now();
     
     // Récupérer le template et le container
@@ -87,7 +88,9 @@ class PropertyManager {
       this.templateClone = this.templateElement.cloneNode(true);
       
       // 🆕 NOUVEAU : Nettoyer le template pour éviter la contamination
-      this.cleanTemplate(this.templateClone);      
+      this.cleanTemplate(this.templateClone);
+      console.log('🧹 Template nettoyé pour éviter la contamination des images');
+      
       this.templateElement.style.display = 'none';
     }
     
@@ -97,6 +100,7 @@ class PropertyManager {
 
     
     const initTime = Math.round(performance.now() - startTime);
+    console.log(`✅ PropertyManager initialisé en ${initTime}ms`);
     
     // Charger la première page de propriétés
     setTimeout(() => {
@@ -117,10 +121,12 @@ class PropertyManager {
       preloader.className = 'grid-preloader';
       preloader.innerHTML = '<div class="spinner"></div>';
       wrapper.appendChild(preloader);
+      console.log('✅ Preloader créé dans la grille');
     }
   }
   
   cleanTemplate(template) {
+    console.log('🧹 Nettoyage du template en cours...');
     
     // Nettoyer TOUTES les images de TOUTES les façons possibles
     const allImages = template.querySelectorAll('img');
@@ -179,6 +185,7 @@ class PropertyManager {
       });
     });
     
+    console.log('✅ Template nettoyé avec succès');
 }
 
   
@@ -201,6 +208,7 @@ class PropertyManager {
 
   async updatePricesForDates(startDate, endDate) {
     try {
+      console.log('💰 Mise à jour des prix pour:', startDate, 'à', endDate);
       
       // Récupérer les propriétés visibles
       const visiblePropertyIds = [];
@@ -222,6 +230,7 @@ class PropertyManager {
       const cachedPrices = this.getFromCache(cacheKey);
       
       if (cachedPrices) {
+        console.log('🚀 Utilisation du cache pour les prix');
         this.updatePriceDisplays(cachedPrices.prices, cachedPrices.nights);
         return;
       }
@@ -243,6 +252,8 @@ class PropertyManager {
       
       // Mettre en cache
       this.setInCache(cacheKey, { prices: data.prices, nights: data.nights });
+      
+      console.log('💰 Prix calculés:', data);
       this.updatePriceDisplays(data.prices, data.nights);
       
     } catch (error) {
@@ -315,6 +326,7 @@ class PropertyManager {
   }
 
   resetPriceDisplay() {
+    console.log('🔄 Réinitialisation des prix...');
     
     // Masquer tous les totaux
     document.querySelectorAll('.text-total').forEach(element => {
@@ -385,6 +397,7 @@ class PropertyManager {
   }
 
   cleanupCache() {
+    console.log('🧹 Nettoyage du cache...');
     const now = Date.now();
     const expiredKeys = [];
     let oldestTimestamp = now;
@@ -422,6 +435,7 @@ class PropertyManager {
     }
     
     this.lastCacheCleanup = now;
+    console.log(`🧹 ${expiredKeys.length} entrées expirées supprimées, taille cache: ${this.requestCache.size}`);
   }
 
   // ================================
@@ -455,6 +469,9 @@ class PropertyManager {
     const requestStartTime = performance.now();
     
     try {
+      if (window.CONFIG?.PERFORMANCE?.logTimings) {
+        console.log(`🌐 Exécution requête (${this.activeRequests}/${window.CONFIG?.PERFORMANCE?.maxConcurrentRequests || 5})`);
+      }
       
       const response = await fetch(url);
       
@@ -521,6 +538,7 @@ class PropertyManager {
     this.filterTimeout = setTimeout(async () => {
     
     this.isFiltering = true;
+    console.log('🔍 Application des filtres...');
     const filterStartTime = performance.now();
     
     if (resetPage) {
@@ -536,6 +554,7 @@ class PropertyManager {
       const cachedData = this.getFromCache(cacheKey);
       
       if (cachedData) {
+        console.log('🚀 Utilisation du cache pour les filtres');
         this.displayFilteredProperties(cachedData.properties);
         this.totalResults = cachedData.total || 0;
         this.totalPages = cachedData.total_pages || 1;
@@ -548,6 +567,7 @@ class PropertyManager {
         }
         
         const cacheTime = Math.round(performance.now() - filterStartTime);
+        console.log(`✅ Filtres appliqués depuis le cache en ${cacheTime}ms`);
         return;
       }
       
@@ -583,14 +603,21 @@ class PropertyManager {
       }
       
       url += `page=${this.currentPage}&limit=${this.pageSize}`;
-
+      
+      if (window.CONFIG?.PERFORMANCE?.logTimings) {
+        console.log('🌐 URL requête:', url);
+      }
+      
       // Afficher indicateur de chargement
       this.showLoading(true);
       
       // Utiliser la queue de requêtes
       const response = await this.queueRequest(url);
       const data = await response.json();
-    
+      
+      if (window.CONFIG?.PERFORMANCE?.logTimings) {
+        console.log('📊 Réponse serveur:', data);
+      }
       
       // Mettre en cache la réponse
       this.setInCache(cacheKey, data);
@@ -614,6 +641,7 @@ class PropertyManager {
       }
       
       const totalTime = Math.round(performance.now() - filterStartTime);
+      console.log(`✅ Filtres appliqués en ${totalTime}ms`);
       
     } catch (error) {
       console.error('❌ Erreur filtrage:', error);
@@ -650,6 +678,7 @@ class PropertyManager {
       }
     });
     
+    console.log(`✅ ${properties.length} propriétés affichées`);
   }
 
   createPropertyCard(propData) {
@@ -829,6 +858,7 @@ if (imageElement) {
   if (firstImageUrl && firstImageUrl.startsWith('http')) {
     imageElement.src = firstImageUrl;
     imageElement.style.backgroundImage = `url(${firstImageUrl})`;
+    console.log('✅ Première image affichée depuis images_gallery');
   }
 }
 
@@ -1139,6 +1169,7 @@ if (hostImageElement) {
         self.resetFilters();
         self.resetPriceDisplay();
         
+        console.log('🗑️ Dates effacées, filtres réinitialisés');
       });
     } else {
       console.warn('⚠️ DateRangePicker non trouvé, les filtres de dates ne fonctionneront pas');
@@ -1153,11 +1184,12 @@ if (hostImageElement) {
     try {
     const data = JSON.parse(homeSearchData);
 
-    if (data.timestamp && (Date.now() - data.timestamp > 30*60*1000)) {
+      if (Date.now() - data.timestamp > 30*60*1000) {
         localStorage.removeItem('home_search_data');
         return;
-    }
-      
+      }
+    console.log('🏠 Données reçues de la page d\'accueil:', data);
+    
     // 🆕 NOUVEAU : Mettre le texte du lieu dans l'input et lancer la recherche
     if (data.locationText) {
       const searchInput = document.getElementById('search-input');
@@ -1185,6 +1217,7 @@ if (hostImageElement) {
     
     // 2. Appliquer les dates (INCHANGÉ)
     if (data.startDate && data.endDate && window.calendarListManager) {
+      console.log('📅 Application des dates:', data.startDate, 'à', data.endDate);
       
       // Mettre à jour les variables
       this.startDate = data.startDate;
@@ -1198,6 +1231,7 @@ if (hostImageElement) {
       
       // 3. Appliquer le nombre de voyageurs
       if ((data.adultes || data.enfants) && window.filtersManager) {
+        console.log('👥 Application des voyageurs:', data.adultes, 'adultes,', data.enfants, 'enfants');
         
         // Mettre à jour FiltersManager
         window.filtersManager.state.adultes = data.adultes || 1;
@@ -1253,6 +1287,7 @@ if (hostImageElement) {
 
   setSearchLocation(location) {
     this.searchLocation = location;
+    console.log('📍 Localisation de recherche définie:', location);
   }
 
   // ================================
@@ -1277,6 +1312,7 @@ if (hostImageElement) {
     this.showNoResults(false);
     this.showError(false);
     
+    console.log('🔄 Filtres réinitialisés');
   }
 
   // ================================
@@ -1294,11 +1330,13 @@ if (hostImageElement) {
       // Afficher
       preloader.classList.add('active');
       preloader.classList.remove('hiding');
+      console.log('🔄 Preloader affiché');
     } else {
       // Masquer avec animation
       preloader.classList.add('hiding');
       setTimeout(() => {
         preloader.classList.remove('active', 'hiding');
+        console.log('✅ Preloader masqué');
       }, 300);
     }
   }
@@ -1336,6 +1374,7 @@ if (hostImageElement) {
   clearCache() {
     this.requestCache.clear();
     this.performanceMetrics.cacheHits = 0;
+    console.log('🧹 Cache entièrement vidé');
   }
 
   // ================================
@@ -1369,7 +1408,9 @@ document.addEventListener('click', function(e) {
     
     const page = link.getAttribute('data-page');
     if (!page) return;
-        
+    
+    console.log('🖱️ Clic pagination:', page);
+    
     if (page === 'prev' && window.propertyManager.currentPage > 1) {
       window.propertyManager.changePage(window.propertyManager.currentPage - 1);
     } else if (page === 'next' && window.propertyManager.currentPage < window.propertyManager.totalPages) {
@@ -1407,6 +1448,7 @@ document.addEventListener('click', function(e) {
           storedData.timestamp = Date.now();
           
           localStorage.setItem('selected_search_data', JSON.stringify(storedData));
+          console.log('👥 Données voyageurs mises à jour:', storedData);
         } catch (error) {
           console.error('❌ Erreur mise à jour voyageurs:', error);
         }
