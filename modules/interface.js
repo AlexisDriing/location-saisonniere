@@ -1,4 +1,4 @@
-// LOG production V2
+// Page google
 class InterfaceManager {
   constructor() {
     this.init();
@@ -174,6 +174,7 @@ class InterfaceManager {
       const airbnbField = container.getAttribute("data-airbnb");
       const bookingField = container.getAttribute("data-booking");
       const gitesField = container.getAttribute("data-gites");
+      const googleField = container.getAttribute("data-google");
       
       container.innerHTML = "";
       
@@ -195,6 +196,13 @@ class InterfaceManager {
         const img = document.createElement("img");
         img.src = "https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/688b2ed71694b8ab6ae9f4a9_other-icon.jpg";
         img.alt = "Logo Gîtes de France";
+        container.appendChild(img);
+      }
+
+       if (googleField && googleField.trim() !== "") {
+        const img = document.createElement("img");
+        img.src = "https://cdn.prod.website-files.com/631204438bf0c14f7ab24dd6/68d6899911953c716d7ad252_icon-google.jpg";
+        img.alt = "Logo Google";
         container.appendChild(img);
       }
       
@@ -651,16 +659,19 @@ setupAnnonces() {
   const airbnbElement = document.querySelector('[data-airbnb-link]');
   const bookingElement = document.querySelector('[data-booking-link]');
   const gitesElement = document.querySelector('[data-gites-link]');
+  const googleElement = document.querySelector('[data-google-link]');
   
   // Récupérer les valeurs
   const airbnbValue = airbnbElement ? airbnbElement.getAttribute('data-airbnb-link') : '';
   const bookingValue = bookingElement ? bookingElement.getAttribute('data-booking-link') : '';
   const gitesValue = gitesElement ? gitesElement.getAttribute('data-gites-link') : '';
+  const googleValue = googleElement ? googleElement.getAttribute('data-google-link') : '';
   
   // Vérifier si au moins une annonce existe
   const hasAnnonces = (airbnbValue && airbnbValue.trim() !== '') ||
                       (bookingValue && bookingValue.trim() !== '') ||
-                      (gitesValue && gitesValue.trim() !== '');
+                      (gitesValue && gitesValue.trim() !== '') ||
+                      (googleValue && googleValue.trim() !== '');
   
   if (!hasAnnonces) {
     return;
@@ -748,7 +759,8 @@ setupImmatriculation() {
     const plateformes = [
       { id: "airbnb", cmsField: "data-airbnb-link" },
       { id: "booking", cmsField: "data-booking-link" },
-      { id: "gites", cmsField: "data-gites-link" }
+      { id: "gites", cmsField: "data-gites-link" },
+      { id: "google", cmsField: "data-google-link" }
     ];
     
     plateformes.forEach(({ id, cmsField }) => {
