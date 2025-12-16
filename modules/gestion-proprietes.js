@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - Develop V3
+// Gestionnaire principal des propriétés pour la page liste - Develop V4
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1082,7 +1082,8 @@ if (hostImageElement) {
   }
 
   addPageNumbers(paginationList) {
-    const maxVisiblePages = 5;
+    const isMobile = window.innerWidth < 768;
+    const maxVisiblePages = isMobile ? 4 : 5;
     let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
     
