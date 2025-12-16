@@ -1015,12 +1015,23 @@ if (hostImageElement) {
     const paginationList = document.createElement('ul');
     paginationList.className = 'pagination-list';
     
-    const prevButton = this.createPaginationButton('Précédent', 'prev', this.currentPage <= 1);
+    // Détecter si on est sur mobile
+    const isMobile = window.innerWidth < 768;
+    
+    // SVG pour les flèches (style minimaliste)
+    const arrowLeft = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+    const arrowRight = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
+    
+    // Bouton "Précédent" - flèche sur mobile, texte sur desktop
+    const prevText = isMobile ? arrowLeft : 'Précédent';
+    const prevButton = this.createPaginationButton(prevText, 'prev', this.currentPage <= 1);
     paginationList.appendChild(prevButton);
     
     this.addPageNumbers(paginationList);
     
-    const nextButton = this.createPaginationButton('Suivant', 'next', this.currentPage >= this.totalPages);
+    // Bouton "Suivant" - flèche sur mobile, texte sur desktop
+    const nextText = isMobile ? arrowRight : 'Suivant';
+    const nextButton = this.createPaginationButton(nextText, 'next', this.currentPage >= this.totalPages);
     paginationList.appendChild(nextButton);
     
     const resultsText = document.createElement('div');
@@ -1033,15 +1044,16 @@ if (hostImageElement) {
     paginationContainer.appendChild(paginationList);
   }
 
-  createPaginationButton(text, page, disabled) {
+  createPaginationButton(content, page, disabled) {
     const button = document.createElement('li');
     button.className = `pagination-item pagination-${page} ${disabled ? 'disabled' : ''}`;
-    button.innerHTML = `<a href="#" class="pagination-link" data-page="${page}">${text}</a>`;
+    button.innerHTML = `<a href="#" class="pagination-link" data-page="${page}">${content}</a>`;
     return button;
   }
 
   addPageNumbers(paginationList) {
-    const maxVisiblePages = 5;
+    const isMobile = window.innerWidth < 768;
+    const maxVisiblePages = isMobile ? 4 : 5;
     let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
     
