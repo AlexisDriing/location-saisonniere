@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - LOG production V5
+// Gestionnaire de validation pour la page modification de logement - LOG production V6
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -180,10 +180,9 @@ class ValidationManager {
             }
           },
           'caution-input': {
-            required: true,
+            required: false,
             min: 0,
             messages: {
-              empty: "Le montant de la caution est obligatoire",
               min: "La caution ne peut pas être négative"
             }
           },
