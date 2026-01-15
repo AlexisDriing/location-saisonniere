@@ -1,4 +1,4 @@
-// Gestionnaire des formulaires - Dev - Safari correction
+// Gestionnaire des formulaires - Dev - Safari correction 2
 class FormsManager {
   constructor() {
     this.init();
@@ -39,6 +39,12 @@ class FormsManager {
     if (searchInputMobile) {
       searchInputMobile.addEventListener('keydown', this.blockEnterKey, true);
     }
+  }
+  
+  // Page accueil - Mobile (FIX SAFARI)
+  const searchInputHomeMobile = document.getElementById('search-input-home-mobile');
+  if (searchInputHomeMobile) {
+    searchInputHomeMobile.addEventListener('keydown', this.blockEnterKey, true);
   }
 }
 
