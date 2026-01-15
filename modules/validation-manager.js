@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - LOG production V6
+// Gestionnaire de validation pour la page modification de logement - LOG production V7
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -617,6 +617,13 @@ class ValidationManager {
       
       const nights = parseInt(nightsInput.value) || 0;
       const percentage = parseInt(this.editor.getRawValue(percentageInput)) || 0;
+
+      if (nights === 0 && percentage === 0) {
+        this.showDiscountError(nightsInput, "Le nombre de nuits doit être supérieur à 0");
+        this.showDiscountError(percentageInput, "La réduction doit être supérieure à 0");
+        hasError = true;
+        return; // Passer à la réduction suivante
+      }
       
       // Vérifier si les deux champs sont remplis ou vides
       if ((nights > 0 && percentage === 0) || (nights === 0 && percentage > 0)) {
