@@ -1,4 +1,4 @@
-// Gestionnaire des formulaires - LOG production
+// Gestionnaire des formulaires - LOG production V2
 class FormsManager {
   constructor() {
     this.init();
@@ -15,26 +15,45 @@ class FormsManager {
     const form = document.getElementById('form-desktop');
     const searchInput = document.getElementById('search-input');
     
-    if (form && searchInput) {
-      form.onsubmit = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      };
+    if (form) {
+      // Méthode 1: addEventListener avec capture (plus fiable que onsubmit)
+      form.addEventListener('submit', this.blockSubmit, true);
+      
+      // Méthode 2: Bloquer la touche Entrée sur l'input (FIX SAFARI)
+      if (searchInput) {
+        searchInput.addEventListener('keydown', this.blockEnterKey, true);
+      }
     } else {
-      console.warn("Formulaire desktop ou champ de recherche introuvable.");
+      console.warn("Formulaire desktop introuvable.");
     }
     
-    // Faire de même pour le formulaire mobile si présent
+    // Faire de même pour le formulaire mobile
     const formMobile = document.getElementById('form-mobile');
     const searchInputMobile = document.getElementById('search-input-mobile');
     
-    if (formMobile && searchInputMobile) {
-      formMobile.onsubmit = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      };
+    if (formMobile) {
+      form.addEventListener('submit', this.blockSubmit, true);
+      
+      if (searchInputMobile) {
+        searchInputMobile.addEventListener('keydown', this.blockEnterKey, true);
+      }
+    }
+  }
+  
+  // NOUVELLE MÉTHODE À AJOUTER
+  blockSubmit(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    return false;
+  }
+  
+  // NOUVELLE MÉTHODE À AJOUTER (FIX SAFARI)
+  blockEnterKey(e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
     }
   }
 
