@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production
+// Gestionnaire de recherche géographique avec Mapbox - LOG production V2
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -101,6 +101,23 @@ class SearchMapManager {
         e.stopPropagation();
         // Pas de handleSearch ici, c'est HomeSearch qui gère
       });
+    }
+    
+    // Prévenir la soumission - Page accueil MOBILE (FIX SAFARI)
+    const searchFormHomeMobile = searchInputHomeMobile ? searchInputHomeMobile.closest('form') : null;
+    if (searchFormHomeMobile) {
+      searchFormHomeMobile.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      
+      // Bloquer aussi la touche Entrée (FIX SAFARI)
+      searchInputHomeMobile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
     }
     
     if (searchFormMobile) {
