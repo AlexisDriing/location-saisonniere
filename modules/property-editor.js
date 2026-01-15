@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - page google
+// Gestionnaire de la page de modification de logement - extras
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2386,7 +2386,7 @@ updateAddExtraButtonState() {
 // Méthode pour générer la chaîne extras au format attendu
 generateExtrasString() {
   return this.extras
-    .filter(extra => extra.name && extra.price) // Ignorer les extras incomplets
+    .filter(extra => extra.name && extra.price && extra.emoji) // Ignorer les extras incomplets
     .map(extra => {
       return `${extra.emoji}${extra.name}${extra.price}€`;
     })
