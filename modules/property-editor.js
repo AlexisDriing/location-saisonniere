@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - extras
+// Gestionnaire de la page de modification de logement - PROD
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1627,12 +1627,9 @@ displayDiscounts() {
     let blocElement;
     
     if (index === 0) {
-      // Première réduction : bloc avec labels
-      blocElement = document.querySelector('.bloc-reduction:not(.next)');
-    } else {
-      // Réductions suivantes : blocs sans labels
-      const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
-      if (nextBlocs[index - 1]) {
+        blocElement = document.querySelector('.bloc-reduction:not(.next):not(.ical)');
+      } else {
+        const nextBlocs = document.querySelectorAll('.bloc-reduction.next:not(.ical)');
         blocElement = nextBlocs[index - 1];
       }
     }
@@ -1691,9 +1688,9 @@ addDiscount() {
   // SIMPLE : Afficher juste le nouveau bloc au lieu de tout réafficher
   let blocElement;
   if (newIndex === 0) {
-    blocElement = document.querySelector('.bloc-reduction:not(.next)');
+    blocElement = document.querySelector('.bloc-reduction:not(.next):not(.ical)');
   } else {
-    const nextBlocs = document.querySelectorAll('.bloc-reduction.next');
+    const nextBlocs = document.querySelectorAll('.bloc-reduction.next:not(.ical)');
     blocElement = nextBlocs[newIndex - 1];
   }
   
