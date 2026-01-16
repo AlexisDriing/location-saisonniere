@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - PROD V2
+// Gestionnaire de la page de modification de logement - PROD V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1611,8 +1611,8 @@ initDiscountManagement() {
   
 displayDiscounts() {
   
-  // Masquer tous les blocs d'abord
-  document.querySelectorAll('.bloc-reduction').forEach(bloc => {
+  // Masquer tous les blocs d'abord (sauf les iCals)
+  document.querySelectorAll('.bloc-reduction:not(.ical)').forEach(bloc => {
     bloc.style.display = 'none';
   });
   
