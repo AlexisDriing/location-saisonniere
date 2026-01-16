@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - PROD
+// Gestionnaire de la page de modification de logement - PROD V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1632,7 +1632,7 @@ displayDiscounts() {
         const nextBlocs = document.querySelectorAll('.bloc-reduction.next:not(.ical)');
         blocElement = nextBlocs[index - 1];
       }
-    }
+    
     
     if (blocElement) {
       // Afficher le bloc
