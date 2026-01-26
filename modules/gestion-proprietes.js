@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - Productions
+// Gestionnaire principal des propriétés pour la page liste - Production
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1222,10 +1222,14 @@ if (hostImageElement) {
       // Nettoyer après utilisation
       localStorage.removeItem('home_search_data');
       
-      // Lancer la recherche après un court délai pour laisser tout s'initialiser
-      setTimeout(() => {
-        this.applyFilters();
-      }, 1000);
+      // Appeler applyFilters() SEULEMENT s'il n'y a pas de recherche par lieu
+      // Car si locationText existe, c'est handleSearch() qui appellera applyFilters()
+      // après avoir récupéré les coordonnées (évite la race condition du bug 0km)
+      if (!data.locationText) {
+        setTimeout(() => {
+          this.applyFilters();
+        }, 1000);
+      }
       
     } catch (error) {
       console.error('❌ Erreur traitement données page accueil:', error);
