@@ -3628,7 +3628,7 @@ setBlockState(element, isActive) {
   let conditionsTexte = '';
   
   if (parseInt(cautionValue) > 0) {
-    conditionsTexte = `Caution : Une caution de ${cautionValue}€ vous sera demandée au moment de la réservation`;
+    conditionsTexte = `Caution : Une caution de ${cautionValue}€ est requise. Les modalités de remise (à l’arrivée, empreinte bancaire, etc.) seront précisées par l’hôte.`;
   }
   
   if (parseInt(acompteValue) > 0) {
