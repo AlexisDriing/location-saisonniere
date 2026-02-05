@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - LOG production V7
+// Gestionnaire de validation pour la page modification de logement - menage en option
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -510,7 +510,8 @@ class ValidationManager {
         if (fieldId === 'cleaning-option') {
           const inclus = document.getElementById('inclus');
           const nonInclus = document.getElementById('non-inclus');
-          return (inclus?.checked || nonInclus?.checked) ? 'selected' : '';
+          const option = document.getElementById('option');
+          return (inclus?.checked || nonInclus?.checked || option?.checked) ? 'selected' : '';
         }
         return '';
         
