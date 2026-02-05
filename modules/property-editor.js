@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - menage option V2
+// Gestionnaire de la page de modification de logement - nouveaux équipements
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1302,7 +1302,12 @@ prefillComplexFields() {
     'Barbecue': 'checkbox-barbecue',
     'Climatisation': 'checkbox-climatisation',
     'Équipement bébé': 'checkbox-equipement-bebe',
-    'Parking gratuit': 'checkbox-parking'
+    'Parking gratuit': 'checkbox-parking',
+    'Wifi': 'checkbox-wifi',
+    'Four': 'checkbox-four',
+    'Lave-vaisselle': 'checkbox-lave-vaisselle',
+    'Sèche-linge': 'checkbox-seche-linge',
+    'Machine à laver': 'checkbox-machine-a-laver'
   };
   
   // Cocher les bonnes cases
@@ -2732,7 +2737,9 @@ setupFieldListeners() {
   
   // NOUVEAU : Listeners pour les checkboxes équipements
   const equipementIds = ['checkbox-piscine', 'checkbox-jacuzzi', 'checkbox-barbecue', 
-                        'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking'];
+                      'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking',
+                      'checkbox-wifi', 'checkbox-four', 'checkbox-lave-vaisselle',
+                      'checkbox-seche-linge', 'checkbox-machine-a-laver'];
   equipementIds.forEach(id => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
@@ -3468,7 +3475,12 @@ setBlockState(element, isActive) {
     'checkbox-barbecue': 'Barbecue',
     'checkbox-climatisation': 'Climatisation',
     'checkbox-equipement-bebe': 'Équipement bébé',
-    'checkbox-parking': 'Parking gratuit'
+    'checkbox-parking': 'Parking gratuit',
+    'checkbox-wifi': 'Wifi',
+    'checkbox-four': 'Four',
+    'checkbox-lave-vaisselle': 'Lave-vaisselle',
+    'checkbox-seche-linge': 'Sèche-linge',
+    'checkbox-machine-a-laver': 'Machine à laver'
   };
   
   const selectedEquipements = [];
