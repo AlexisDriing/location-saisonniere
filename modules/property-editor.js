@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - menage option
+// Gestionnaire de la page de modification de logement - menage option V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -3061,7 +3061,7 @@ setupCleaningListeners() {
     
   // Listener pour le prix du ménage
   priceInput.addEventListener('input', () => {
-    const value = parseInt(this.getRawValue(priceInput)) || 0;
+    const value = parseInt(priceInput.value.replace(/[^\d]/g, '')) || 0;
     
     if (!this.pricingData.cleaning) {
       this.pricingData.cleaning = {};
