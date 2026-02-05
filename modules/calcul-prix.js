@@ -1,4 +1,4 @@
-// Calculateur de prix principal LOG production
+// Calculateur de prix principal - menage en option
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -316,12 +316,17 @@ class PriceCalculator {
       // Frais de ménage
       if (this.pricingData.cleaning && !this.pricingData.cleaning.included) {
         details.cleaningFee = this.pricingData.cleaning.price || 0;
+        details.cleaningOptional = this.pricingData.cleaning.optional || false;
       }
       
-      // Prix total
-      details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee;
+      // Prix total - Le ménage "en option" n'est PAS ajouté au total
+      if (details.cleaningOptional) {
+        details.totalPrice = details.originalNightsPrice - details.discountAmount;
+      } else {
+        details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee;
+      }
       
-      if (details.cleaningFee > 0) {
+      if (details.cleaningFee > 0 && !details.cleaningOptional) {
         details.platformPrice += details.cleaningFee;
       }
       
@@ -482,7 +487,11 @@ class PriceCalculator {
     if (this.elements.prixMenage.length) {
       this.elements.prixMenage.forEach(element => {
         if (details.cleaningFee > 0) {
-          element.textContent = `${formatPrice(details.cleaningFee)}€`;
+          if (details.cleaningOptional) {
+            element.innerHTML = `${formatPrice(details.cleaningFee)}€ <span style="color:#778183">(en option)</span>`;
+          } else {
+            element.textContent = `${formatPrice(details.cleaningFee)}€`;
+          }
         } else {
           element.textContent = "Inclus";
         }
