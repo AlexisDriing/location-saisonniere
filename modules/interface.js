@@ -1,3 +1,4 @@
+// Nouveaux équipements
 // Page google
 class InterfaceManager {
   constructor() {
@@ -281,7 +282,12 @@ class InterfaceManager {
       'Climatisation': 'climatisation',
       'Barbecue': 'barbecue',
       'Équipement bébé': 'baby',
-      'Parking gratuit': 'parking'
+      'Parking gratuit': 'parking',
+      'Wifi': 'wifi',
+      'Four': 'four',
+      'Lave-vaisselle': 'lave-vaisselle',
+      'Sèche-linge': 'seche-linge',
+      'Machine à laver': 'machine-a-laver'
     };
     
     // Masquer tous les équipements au départ
