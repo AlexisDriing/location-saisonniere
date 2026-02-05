@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - PROD V3
+// Gestionnaire de la page de modification de logement - nouveaux équipements
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1302,7 +1302,12 @@ prefillComplexFields() {
     'Barbecue': 'checkbox-barbecue',
     'Climatisation': 'checkbox-climatisation',
     'Équipement bébé': 'checkbox-equipement-bebe',
-    'Parking gratuit': 'checkbox-parking'
+    'Parking gratuit': 'checkbox-parking',
+    'Wifi': 'checkbox-wifi',
+    'Four': 'checkbox-four',
+    'Lave-vaisselle': 'checkbox-lave-vaisselle',
+    'Sèche-linge': 'checkbox-seche-linge',
+    'Machine à laver': 'checkbox-machine-a-laver'
   };
   
   // Cocher les bonnes cases
@@ -1512,55 +1517,68 @@ prefillCleaningOptions() {
   // Récupérer les éléments du DOM
   const includedRadio = document.getElementById('inclus');
   const notIncludedRadio = document.getElementById('non-inclus');
+  const optionalRadio = document.getElementById('option');
   const priceInput = document.getElementById('cleaning-price-input');
   
-  if (!includedRadio || !notIncludedRadio || !priceInput) {
+  if (!includedRadio || !notIncludedRadio || !optionalRadio || !priceInput) {
     console.warn('⚠️ Éléments de ménage non trouvés dans le DOM');
     return;
   }
   
+  // Récupérer les labels Webflow
+  const includedLabel = document.getElementById('menage-inclus');
+  const notIncludedLabel = document.getElementById('menage-non-inclus');
+  const optionalLabel = document.getElementById('menage-option');
+  
+  // Fonction helper pour reset tous les radios visuellement
+  const resetAllRadios = () => {
+    includedRadio.checked = false;
+    notIncludedRadio.checked = false;
+    optionalRadio.checked = false;
+    if (includedLabel) includedLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (notIncludedLabel) notIncludedLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (optionalLabel) optionalLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+  };
+  
   // Définir l'état initial basé sur les données
-if (this.pricingData.cleaning && this.pricingData.cleaning.included) {
-  // Cocher "Inclus"
-  includedRadio.checked = true;
-  notIncludedRadio.checked = false;
+  const cleaning = this.pricingData.cleaning;
   
-  // Mettre à jour le visuel Webflow pour "Inclus"
-  const includedLabel = document.getElementById('menage-inclus');
-  const notIncludedLabel = document.getElementById('menage-non-inclus');
-  if (includedLabel && notIncludedLabel) {
-    includedLabel.querySelector('.w-radio-input').classList.add('w--redirected-checked');
-    notIncludedLabel.querySelector('.w-radio-input').classList.remove('w--redirected-checked');
+  if (cleaning && cleaning.optional) {
+    // En option
+    resetAllRadios();
+    optionalRadio.checked = true;
+    if (optionalLabel) optionalLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (cleaning.price) {
+      priceInput.value = cleaning.price;
+      priceInput.setAttribute('data-raw-value', cleaning.price);
+    }
+  } else if (cleaning && cleaning.included) {
+    // Inclus
+    resetAllRadios();
+    includedRadio.checked = true;
+    if (includedLabel) includedLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+  } else {
+    // Non inclus (par défaut si included === false)
+    resetAllRadios();
+    notIncludedRadio.checked = true;
+    if (notIncludedLabel) notIncludedLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (cleaning && cleaning.price) {
+      priceInput.value = cleaning.price;
+      priceInput.setAttribute('data-raw-value', cleaning.price);
+    }
   }
-  
-  priceInput.style.display = 'none';
-  priceInput.value = '';
-} else {
-  // Cocher "Non inclus"
-  includedRadio.checked = false;
-  notIncludedRadio.checked = true;
-  
-  // Mettre à jour le visuel Webflow pour "Non inclus"
-  const includedLabel = document.getElementById('menage-inclus');
-  const notIncludedLabel = document.getElementById('menage-non-inclus');
-  if (includedLabel && notIncludedLabel) {
-    includedLabel.querySelector('.w-radio-input').classList.remove('w--redirected-checked');
-    notIncludedLabel.querySelector('.w-radio-input').classList.add('w--redirected-checked');
-  }
-  
-  priceInput.style.display = 'block';
-  
-  // Afficher le prix si disponible
-  if (this.pricingData.cleaning && this.pricingData.cleaning.price) {
-    priceInput.value = this.pricingData.cleaning.price;
-    priceInput.setAttribute('data-raw-value', this.pricingData.cleaning.price);
-  }
-}
   
   // Sauvegarder l'état initial
-  this.initialValues.cleaningIncluded = this.pricingData.cleaning?.included ?? true;
-  this.initialValues.cleaningPrice = this.pricingData.cleaning?.price || 0;
-  
+  this.initialValues.cleaningIncluded = cleaning?.included ?? true;
+  this.initialValues.cleaningOptional = cleaning?.optional ?? false;
+  this.initialValues.cleaningPrice = cleaning?.price || 0;
 }
 
 // 🆕 NOUVELLE MÉTHODE : Formater tous les champs avec suffixes au chargement
@@ -2719,7 +2737,9 @@ setupFieldListeners() {
   
   // NOUVEAU : Listeners pour les checkboxes équipements
   const equipementIds = ['checkbox-piscine', 'checkbox-jacuzzi', 'checkbox-barbecue', 
-                        'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking'];
+                      'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking',
+                      'checkbox-wifi', 'checkbox-four', 'checkbox-lave-vaisselle',
+                      'checkbox-seche-linge', 'checkbox-machine-a-laver'];
   equipementIds.forEach(id => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
@@ -2982,9 +3002,10 @@ setupCleaningListeners() {
   
   const includedRadio = document.getElementById('inclus');
   const notIncludedRadio = document.getElementById('non-inclus');
+  const optionalRadio = document.getElementById('option');
   const priceInput = document.getElementById('cleaning-price-input');
   
-  if (!includedRadio || !notIncludedRadio || !priceInput) {
+  if (!includedRadio || !notIncludedRadio || !optionalRadio || !priceInput) {
     return;
   }
   
@@ -3000,6 +3021,7 @@ setupCleaningListeners() {
         this.pricingData.cleaning = {};
       }
       this.pricingData.cleaning.included = true;
+      this.pricingData.cleaning.optional = false;
       this.pricingData.cleaning.price = 0;
       
       this.enableButtons();
@@ -3019,39 +3041,59 @@ setupCleaningListeners() {
         this.pricingData.cleaning = {};
       }
       this.pricingData.cleaning.included = false;
+      this.pricingData.cleaning.optional = false;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Listener pour "En option"
+  optionalRadio.addEventListener('change', () => {
+    if (optionalRadio.checked) {
+      priceInput.style.display = 'block';
+      
+      // Focus sur le champ prix
+      setTimeout(() => priceInput.focus(), 100);
+      
+      // Mettre à jour les données
+      if (!this.pricingData.cleaning) {
+        this.pricingData.cleaning = {};
+      }
+      this.pricingData.cleaning.included = false;
+      this.pricingData.cleaning.optional = true;
       
       this.enableButtons();
     }
   });
     
-    // Listener pour le prix du ménage
-    priceInput.addEventListener('input', () => {
-      const value = parseInt(this.getRawValue(priceInput)) || 0;
-      
-      if (!this.pricingData.cleaning) {
-        this.pricingData.cleaning = {};
-      }
-      this.pricingData.cleaning.price = value;
-      
-      this.enableButtons();
-    });
+  // Listener pour le prix du ménage
+  priceInput.addEventListener('input', () => {
+    const value = parseInt(priceInput.value.replace(/[^\d]/g, '')) || 0;
     
-    // Formatage du prix
-    priceInput.addEventListener('blur', function() {
-      const value = this.value.replace(/[^\d]/g, '');
-      if (value) {
-        this.setAttribute('data-raw-value', value);
-        this.value = value + '€';
-      }
-    });
+    if (!this.pricingData.cleaning) {
+      this.pricingData.cleaning = {};
+    }
+    this.pricingData.cleaning.price = value;
     
-    priceInput.addEventListener('focus', function() {
-      const rawValue = this.getAttribute('data-raw-value');
-      if (rawValue) {
-        this.value = rawValue;
-      }
-    });
-  }
+    this.enableButtons();
+  });
+  
+  // Formatage du prix
+  priceInput.addEventListener('blur', function() {
+    const value = this.value.replace(/[^\d]/g, '');
+    if (value) {
+      this.setAttribute('data-raw-value', value);
+      this.value = value + '€';
+    }
+  });
+  
+  priceInput.addEventListener('focus', function() {
+    const rawValue = this.getAttribute('data-raw-value');
+    if (rawValue) {
+      this.value = rawValue;
+    }
+  });
+}
 
   // Version corrigée avec cascade des états
   setupPriceOpacityHandlers() {    
@@ -3287,7 +3329,7 @@ setBlockState(element, isActive) {
       // Si pas de données d'origine, réinitialiser à vide
       this.pricingData = {
         seasons: [],
-        cleaning: { included: true },
+        cleaning: { included: true, optional: false },
         discounts: [],
         capacity: 4,
         caution: 0,
@@ -3433,7 +3475,12 @@ setBlockState(element, isActive) {
     'checkbox-barbecue': 'Barbecue',
     'checkbox-climatisation': 'Climatisation',
     'checkbox-equipement-bebe': 'Équipement bébé',
-    'checkbox-parking': 'Parking gratuit'
+    'checkbox-parking': 'Parking gratuit',
+    'checkbox-wifi': 'Wifi',
+    'checkbox-four': 'Four',
+    'checkbox-lave-vaisselle': 'Lave-vaisselle',
+    'checkbox-seche-linge': 'Sèche-linge',
+    'checkbox-machine-a-laver': 'Machine à laver'
   };
   
   const selectedEquipements = [];

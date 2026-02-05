@@ -1,4 +1,4 @@
-// Gestion des données de réservation et récupération des informations - LOG production
+// Gestion des données de réservation et récupération des informations - menage option
 class ReservationDataManager {
   constructor() {
     this.init();
@@ -143,7 +143,7 @@ class ReservationDataManager {
         calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
         prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
         prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
-        prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.textContent || "",
+        prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
         totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
         dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
         dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
