@@ -1,4 +1,4 @@
-// Nouveaux équipements
+// Nouveaux équipements - features condition annulation
 // Page google
 class InterfaceManager {
   constructor() {
@@ -21,6 +21,7 @@ class InterfaceManager {
     this.setupItineraireButton();
     this.setupSeasonButton();
     this.setupConditionsReservation();
+    this.setupConditionsAnnulation();
     this.setupExtras();
     this.setupEquipements();
     this.setupOptionsAccueil();
@@ -130,6 +131,41 @@ class InterfaceManager {
       conditionsElement.innerHTML = htmlContent;
     }
   }
+
+setupConditionsAnnulation() {
+    // Récupérer la valeur depuis le CMS
+    const conditionsElement = document.querySelector('[data-conditions-annulation]');
+    if (!conditionsElement) return;
+    
+    const value = conditionsElement.getAttribute('data-conditions-annulation') || 
+                  conditionsElement.textContent.trim();
+    
+    if (!value) return;
+    
+    const predefinedPolicies = ['flexible', 'moderate', 'limited', 'strict'];
+    
+    // Masquer tous les blocs par défaut
+    ['flexible', 'moderate', 'limited', 'strict', 'custom'].forEach(policy => {
+      const bloc = document.getElementById(`annulation-${policy}`);
+      if (bloc) bloc.style.display = 'none';
+    });
+    
+    if (predefinedPolicies.includes(value)) {
+      // Choix prédéfini : afficher le bloc correspondant
+      const bloc = document.getElementById(`annulation-${value}`);
+      if (bloc) bloc.style.display = 'block';
+    } else {
+      // Texte personnalisé : afficher le bloc custom avec le texte
+      const customBloc = document.getElementById('annulation-custom');
+      if (customBloc) {
+        customBloc.style.display = 'block';
+        // Mettre le texte dans le bloc
+        const textElement = customBloc.querySelector('[data-custom-annulation-text]') || customBloc;
+        textElement.textContent = value;
+      }
+    }
+  }
+  
   setupMainImages() {
   
   // Utiliser les classes que vous avez données
