@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - menage en option
+// Gestionnaire de validation pour la page modification de logement - feature condition annulation
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -186,11 +186,19 @@ class ValidationManager {
               min: "La caution ne peut pas être négative"
             }
           },
-          'conditions-annulation-input': {
+          'cancellation-policy': {
             required: true,
-            maxLength: 1000,
+            type: 'radio',
             messages: {
-              empty: "Les conditions d'annulation sont obligatoires",
+              empty: "Veuillez choisir une politique d'annulation"
+            }
+          },
+          'conditions-annulation-input': {
+            required: false,
+            maxLength: 1000,
+            conditionalRequired: true,
+            messages: {
+              empty: "Le texte personnalisé est obligatoire",
               maxLength: "Maximum 1000 caractères (actuellement: {count})"
             }
           },
@@ -459,6 +467,16 @@ class ValidationManager {
       // Pour les groupes checkbox
       if (fieldConfig.type === 'checkbox-group' && value.length === 0) {
         return fieldConfig.messages.empty;
+      }
+    }
+    
+    // Validation conditionnelle (textarea requis seulement si radio "custom" sélectionné)
+    if (fieldConfig.conditionalRequired) {
+      const customRadio = document.getElementById('radio-custom');
+      if (customRadio && customRadio.checked) {
+        if (value === '' || value === null || value === undefined) {
+          return fieldConfig.messages.empty;
+        }
       }
     }
     
