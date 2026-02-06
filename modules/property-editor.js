@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - nouveaux équipements
+// Gestionnaire de la page de modification de logement - Features condition annulation
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -372,7 +372,6 @@ setupTimeFormatters() {
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
       { id: 'site-internet-input', dataKey: 'site_internet' },
       { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
-      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
       { id: 'hote-input', dataKey: 'host_name' },
       { id: 'email-input', dataKey: 'email' },
       { id: 'telephone-input', dataKey: 'telephone' },
@@ -399,6 +398,7 @@ setupTimeFormatters() {
      // NOUVEAU : Pré-remplir les options de ménage
     this.prefillCleaningOptions();
     this.prefillHoraires();
+    this.prefillCancellationPolicy();
     this.prefillComplexFields();
 
     // Pré-remplir les autres champs simples
@@ -1510,6 +1510,42 @@ prefillHoraires() {
   
   this.initialValues.horaires_arrivee_depart = horairesStr;
 }
+
+
+prefillCancellationPolicy() {
+  const value = this.propertyData.conditions_annulation || '';
+  const predefinedPolicies = ['flexible', 'moderate', 'limited', 'strict'];
+  const customBloc = document.getElementById('bloc-custom-annulation');
+  const textarea = document.getElementById('conditions-annulation-input');
+  
+  // Déterminer si c'est un choix prédéfini ou du texte custom
+  let selectedPolicy;
+  
+  if (predefinedPolicies.includes(value)) {
+    selectedPolicy = value;
+    if (customBloc) customBloc.style.display = 'none';
+  } else {
+    // Texte libre (ancien format ou personnalisé)
+    selectedPolicy = 'custom';
+    if (customBloc) customBloc.style.display = 'block';
+    if (textarea) textarea.value = value;
+  }
+  
+  // Cocher le bon radio button
+  const radio = document.getElementById(`radio-${selectedPolicy}`);
+  if (radio) {
+    radio.checked = true;
+    // Mettre à jour le visuel Webflow
+    document.querySelectorAll('input[name="cancellation-policy"]').forEach(r => {
+      r.closest('.w-radio')?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    });
+    radio.closest('.w-radio')?.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+  }
+  
+  // Sauvegarder la valeur initiale
+  this.initialValues.conditions_annulation = value;
+}
+
   
 // 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
 prefillCleaningOptions() {
@@ -2668,7 +2704,6 @@ setupFieldListeners() {
     { id: 'code-enregistrement-input' },
     { id: 'site-internet-input' },
     { id: 'inclus-reservation-input' },
-    { id: 'conditions-annulation-input' },
     { id: 'hote-input' },
     { id: 'email-input' },
     { id: 'telephone-input' },
@@ -2829,6 +2864,36 @@ cautionAcompteIds.forEach(id => {
     });
     }
   });
+
+// Listeners pour la politique d'annulation (radio buttons)
+  document.querySelectorAll('input[name="cancellation-policy"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const customBloc = document.getElementById('bloc-custom-annulation');
+      if (customBloc) {
+        if (e.target.value === 'custom') {
+          customBloc.style.display = 'block';
+          const textarea = document.getElementById('conditions-annulation-input');
+          if (textarea) setTimeout(() => textarea.focus(), 100);
+        } else {
+          customBloc.style.display = 'none';
+        }
+      }
+      this.enableButtons();
+    });
+  });
+
+  // Listener sur le textarea pour le mode personnalisé
+  const conditionsTextarea = document.getElementById('conditions-annulation-input');
+  if (conditionsTextarea) {
+    conditionsTextarea.addEventListener('input', () => {
+      this.enableButtons();
+    });
+    conditionsTextarea.addEventListener('blur', () => {
+      if (this.validationManager) {
+        this.validationManager.validateFieldOnBlur('conditions-annulation-input');
+      }
+    });
+  }
   
   // NOUVEAU : Listeners pour taille maison avec synchronisation capacity
   const tailleMaisonIds = ['voyageurs-input', 'chambres-input', 'lits-input', 'salles-bain-input'];
@@ -3299,7 +3364,6 @@ setBlockState(element, isActive) {
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
       { id: 'site-internet-input', dataKey: 'site_internet' },
       { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
-      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
       { id: 'hote-input', dataKey: 'host_name' },
       { id: 'email-input', dataKey: 'email' },
       { id: 'telephone-input', dataKey: 'telephone' },
@@ -3320,6 +3384,7 @@ setBlockState(element, isActive) {
     this.prefillComplexFields();
     this.prefillTailleMaison();
     this.prefillHoraires();
+    this.prefillCancellationPolicy();
     this.prefillCautionAcompte();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
@@ -3443,7 +3508,6 @@ setBlockState(element, isActive) {
     { id: 'code-enregistrement-input', dataKey: 'code_enregistrement', dbKey: 'code_enregistrement' },
     { id: 'site-internet-input', dataKey: 'site_internet', dbKey: 'site_internet' },
     { id: 'inclus-reservation-input', dataKey: 'inclus_reservation', dbKey: 'inclus_reservation' },
-    { id: 'conditions-annulation-input', dataKey: 'conditions_annulation', dbKey: 'conditions_annulation' },
     { id: 'hote-input', dataKey: 'host_name', dbKey: 'host_name' },
     { id: 'email-input', dataKey: 'email', dbKey: 'email' },
     { id: 'telephone-input', dataKey: 'telephone', dbKey: 'telephone' },
@@ -3607,6 +3671,17 @@ setBlockState(element, isActive) {
   }
   
   currentValues.conditions_reservation = conditionsTexte;
+
+// Collecter la politique d'annulation
+  const selectedPolicy = document.querySelector('input[name="cancellation-policy"]:checked');
+  if (selectedPolicy) {
+    if (selectedPolicy.value === 'custom') {
+      const customText = document.getElementById('conditions-annulation-input')?.value.trim() || '';
+      currentValues.conditions_annulation = customText;
+    } else {
+      currentValues.conditions_annulation = selectedPolicy.value;
+    }
+  }
     
   const updates = {};
   // Comparer avec les valeurs initiales
