@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - feature condition annulation
+// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -738,51 +738,74 @@ class ValidationManager {
       this.hideFieldError(`season-name-input${suffix}`);
     }
     
-    // Validation des dates
-    const startDate = this.editor.getDateValue(startInput);
-    const endDate = this.editor.getDateValue(endInput);
+    // Validation de TOUTES les plages de dates
+  const allPeriods = [];
+  let hasAtLeastOnePeriod = false;
+
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (!block || block.style.display === 'none') continue;
+
+    const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+    const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
     
+    const startDate = startInput ? this.editor.getDateValue(startInput) : null;
+    const endDate = endInput ? this.editor.getDateValue(endInput) : null;
+
     if (!startDate) {
-      this.showFieldError(`season-date-start-input${suffix}`, "La date de début est obligatoire");
+      this.showFieldError(`season-date-start-input-${i}${suffix}`, "La date de début est obligatoire");
       hasError = true;
     } else {
-      this.hideFieldError(`season-date-start-input${suffix}`);
+      this.hideFieldError(`season-date-start-input-${i}${suffix}`);
     }
-    
+
     if (!endDate) {
-      this.showFieldError(`season-date-end-input${suffix}`, "La date de fin est obligatoire");
+      this.showFieldError(`season-date-end-input-${i}${suffix}`, "La date de fin est obligatoire");
       hasError = true;
     } else {
-      this.hideFieldError(`season-date-end-input${suffix}`);
+      this.hideFieldError(`season-date-end-input-${i}${suffix}`);
     }
-    
-    // Validation du prix
-    const price = parseInt(this.editor.getRawValue(priceInput)) || 0;
-    if (price < 10) {
-      this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
-      hasError = true;
-    } else {
-      this.hideFieldError(`season-price-input${suffix}`);
+
+    if (startDate && endDate) {
+      allPeriods.push({ start: startDate, end: endDate, index: i });
+      hasAtLeastOnePeriod = true;
     }
-    
-    // Validation des nuits minimum
-    const minNights = parseInt(this.editor.getRawValue(minNightsInput)) || 0;
-    if (minNights < 1) {
-      this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
-      hasError = true;
-    } else {
-      this.hideFieldError(`season-min-nights-input${suffix}`);
+  }
+
+  // Au moins une plage doit exister
+  if (!hasAtLeastOnePeriod) {
+    this.showFieldError(`season-date-start-input-1${suffix}`, "Au moins une plage de dates est obligatoire");
+    hasError = true;
+  }
+
+  // Vérifier les chevauchements INTRA-saison (entre plages de la même saison)
+  if (!hasError && allPeriods.length > 1) {
+    for (let a = 0; a < allPeriods.length; a++) {
+      for (let b = a + 1; b < allPeriods.length; b++) {
+        const [dayA1, monthA1] = allPeriods[a].start.split('-').map(Number);
+        const [dayA2, monthA2] = allPeriods[a].end.split('-').map(Number);
+        const [dayB1, monthB1] = allPeriods[b].start.split('-').map(Number);
+        const [dayB2, monthB2] = allPeriods[b].end.split('-').map(Number);
+
+        if (this.datesOverlap(dayA1, monthA1, dayA2, monthA2, dayB1, monthB1, dayB2, monthB2)) {
+          const msg = `Cette plage chevauche la plage n°${allPeriods[a].index}`;
+          this.showFieldError(`season-date-start-input-${allPeriods[b].index}${suffix}`, msg);
+          hasError = true;
+        }
+      }
     }
-    
-    // Si pas d'erreur de base, vérifier les chevauchements de dates
-    if (!hasError && startDate && endDate) {
-      const overlap = this.checkSeasonDateOverlap(startDate, endDate, isEdit);
+  }
+
+  // Vérifier les chevauchements INTER-saisons (avec les autres saisons)
+  if (!hasError) {
+    for (const period of allPeriods) {
+      const overlap = this.checkSeasonDateOverlap(period.start, period.end, isEdit);
       if (overlap) {
-        this.showFieldError(`season-date-start-input${suffix}`, overlap);
-        this.showFieldError(`season-date-end-input${suffix}`, overlap);
+        this.showFieldError(`season-date-start-input-${period.index}${suffix}`, overlap);
         hasError = true;
       }
     }
+  }
     
     // Validation des prix plateformes (si renseignés)
     if (!hasError && price > 0) {
