@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -505,6 +505,8 @@ setupTallyButton() {
     
     // Configuration des boutons
     this.setupSeasonButtons();
+
+    this.setupSeasonPeriodButtons();
     
     // Cacher tous les blocs saison par défaut
     this.hideAllSeasonBlocks();
@@ -603,13 +605,20 @@ setupTallyButton() {
       weekPriceElement.textContent = weekPrice;
     }
     
-    // Dates
+    // Dates — trier chronologiquement puis afficher avec séparateur " - "
     const datesElement = document.getElementById(`dates-season-${seasonNum}`);
     if (datesElement && season.periods && season.periods.length > 0) {
-      const dateRanges = season.periods.map(period => 
+      // Trier les périodes chronologiquement pour l'affichage
+      const sortedPeriods = [...season.periods].sort((a, b) => {
+        const [dayA, monthA] = a.start.split('-').map(Number);
+        const [dayB, monthB] = b.start.split('-').map(Number);
+        return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+      });
+      
+      const dateRanges = sortedPeriods.map(period => 
         this.formatDateRange(period.start, period.end)
       );
-      datesElement.textContent = dateRanges.join(" et ");
+      datesElement.textContent = dateRanges.join(" - ");
     }
     
     // Nuits minimum
@@ -698,6 +707,122 @@ setupTallyButton() {
       this.validateAndEditSeason();
     });
   }
+}
+
+  // === GESTION DES PLAGES DE DATES MULTIPLES ===
+
+setupSeasonPeriodButtons() {
+  // --- Modal AJOUT ---
+  const addPlageBtn = document.getElementById('btn-add-plage-dates');
+  if (addPlageBtn) {
+    addPlageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addPlageDates(false);
+    });
+  }
+  
+  // Boutons supprimer pour plages 2 à 5 (modal ajout)
+  for (let i = 2; i <= 5; i++) {
+    const deleteBtn = document.getElementById(`btn-delete-plage-${i}`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removePlageDates(i, false);
+      });
+    }
+  }
+
+  // --- Modal EDIT ---
+  const addPlageBtnEdit = document.getElementById('btn-add-plage-dates-edit');
+  if (addPlageBtnEdit) {
+    addPlageBtnEdit.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addPlageDates(true);
+    });
+  }
+  
+  // Boutons supprimer pour plages 2 à 5 (modal edit)
+  for (let i = 2; i <= 5; i++) {
+    const deleteBtn = document.getElementById(`btn-delete-plage-${i}-edit`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removePlageDates(i, true);
+      });
+    }
+  }
+}
+
+addPlageDates(isEdit = false) {
+  const suffix = isEdit ? '-edit' : '';
+  
+  // Trouver le prochain bloc masqué
+  for (let i = 2; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (block && block.style.display === 'none') {
+      block.style.display = 'flex'; // ou '' selon votre CSS
+      
+      // Initialiser les formatters Cleave sur les nouveaux inputs
+      const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+      const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
+      if (this.initFormFormatters) {
+        this.initFormFormatters();
+      }
+      
+      break;
+    }
+  }
+  
+  // Masquer le bouton "Ajouter" si on atteint 5 plages
+  const visibleCount = this.countVisiblePlages(isEdit);
+  if (visibleCount >= 5) {
+    const addBtn = document.getElementById(`btn-add-plage-dates${suffix}`);
+    if (addBtn) addBtn.style.display = 'none';
+  }
+}
+
+removePlageDates(index, isEdit = false) {
+  const suffix = isEdit ? '-edit' : '';
+  const block = document.getElementById(`bloc-plage-dates-${index}${suffix}`);
+  
+  if (block) {
+    // Vider les inputs
+    const startInput = document.getElementById(`season-date-start-input-${index}${suffix}`);
+    const endInput = document.getElementById(`season-date-end-input-${index}${suffix}`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+    
+    // Masquer le bloc
+    block.style.display = 'none';
+    
+    // Nettoyer les erreurs éventuelles
+    if (this.validationManager) {
+      this.validationManager.hideFieldError(`season-date-start-input-${index}${suffix}`);
+      this.validationManager.hideFieldError(`season-date-end-input-${index}${suffix}`);
+    }
+  }
+  
+  // Réafficher le bouton "Ajouter"
+  const addBtn = document.getElementById(`btn-add-plage-dates${suffix}`);
+  if (addBtn) addBtn.style.display = '';
+}
+
+countVisiblePlages(isEdit = false) {
+  const suffix = isEdit ? '-edit' : '';
+  let count = 0;
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (block && block.style.display !== 'none') {
+      count++;
+    }
+  }
+  return count;
 }
 
   displayHostImage() {    
@@ -873,22 +998,37 @@ openEditSeasonModal(seasonIndex) {
   const nameInput = document.getElementById('season-name-input-edit');
   if (nameInput) nameInput.value = season.name;
   
-  // Gérer les dates
-  if (season.periods && season.periods[0]) {
-    const startInput = document.getElementById('season-date-start-input-edit');
-    const endInput = document.getElementById('season-date-end-input-edit');
-    
-    if (startInput) {
-      // Convertir "28-07" en "28/07" pour l'input
-      const [day, month] = season.periods[0].start.split('-');
-      startInput.value = `${day}/${month}`;
-      startInput.setAttribute('data-date-value', `${day}/${month}`);
-    }
-    
-    if (endInput) {
-      const [day, month] = season.periods[0].end.split('-');
-      endInput.value = `${day}/${month}`;
-      endInput.setAttribute('data-date-value', `${day}/${month}`);
+  // Pré-remplir TOUTES les plages de dates
+  if (season.periods && season.periods.length > 0) {
+    season.periods.forEach((period, i) => {
+      const index = i + 1; // bloc-plage-dates-1, bloc-plage-dates-2, etc.
+      
+      // Afficher le bloc si i > 0 (le bloc 1 est toujours visible)
+      if (index > 1) {
+        const block = document.getElementById(`bloc-plage-dates-${index}-edit`);
+        if (block) block.style.display = 'flex'; // ou '' selon votre CSS
+      }
+      
+      const startInput = document.getElementById(`season-date-start-input-${index}-edit`);
+      const endInput = document.getElementById(`season-date-end-input-${index}-edit`);
+      
+      if (startInput) {
+        const [day, month] = period.start.split('-');
+        startInput.value = `${day}/${month}`;
+        startInput.setAttribute('data-date-value', `${day}/${month}`);
+      }
+      
+      if (endInput) {
+        const [day, month] = period.end.split('-');
+        endInput.value = `${day}/${month}`;
+        endInput.setAttribute('data-date-value', `${day}/${month}`);
+      }
+    });
+
+    // Masquer le bouton "Ajouter" si 5 plages
+    if (season.periods.length >= 5) {
+      const addBtn = document.getElementById('btn-add-plage-dates-edit');
+      if (addBtn) addBtn.style.display = 'none';
     }
   }
   
@@ -934,11 +1074,8 @@ openEditSeasonModal(seasonIndex) {
 }
   
 resetSeasonModal() {
-  // Réinitialiser tous les champs
   const fields = [
     'season-name-input',
-    'season-date-start-input',
-    'season-date-end-input',
     'season-price-input',
     'season-min-nights-input'
   ];
@@ -952,13 +1089,36 @@ resetSeasonModal() {
     }
   });
 
-  // NOUVEAU : Réinitialiser les prix plateformes
+  // Réinitialiser TOUTES les plages de dates (1 à 5)
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}`);
+    const endInput = document.getElementById(`season-date-end-input-${i}`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+
+    // Masquer les blocs 2 à 5, garder le bloc 1 visible
+    if (i > 1) {
+      const block = document.getElementById(`bloc-plage-dates-${i}`);
+      if (block) block.style.display = 'none';
+    }
+  }
+
+  // Réafficher le bouton "Ajouter une plage"
+  const addBtn = document.getElementById('btn-add-plage-dates');
+  if (addBtn) addBtn.style.display = '';
+
+  // Réinitialiser les prix plateformes
   const platformIds = [
     'season-airbnb-price-input',
     'season-booking-price-input',
     'season-other-price-input'
   ];
-  
   platformIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
@@ -980,14 +1140,18 @@ validateAndAddSeason() {
   const seasonData = this.getSeasonFormData();
   
   // Créer l'objet saison pour le JSON
+  // Trier les périodes chronologiquement (par mois de début)
+  const sortedPeriods = [...seasonData.periods].sort((a, b) => {
+    const [dayA, monthA] = a.start.split('-').map(Number);
+    const [dayB, monthB] = b.start.split('-').map(Number);
+    return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+  });
+
   const newSeason = {
     name: seasonData.name,
     price: parseInt(seasonData.price),
     minNights: parseInt(seasonData.minNights) || 1,
-    periods: [{
-      start: seasonData.dateStart,
-      end: seasonData.dateEnd
-    }]
+    periods: sortedPeriods
   };
   
   // NOUVEAU : Ajouter les prix plateformes s'ils existent
@@ -1035,15 +1199,19 @@ validateAndEditSeason() {
   // Récupérer les valeurs des champs
   const seasonData = this.getEditSeasonFormData();
   
-  /// Mettre à jour la saison existante
+  // Mettre à jour la saison existante
+  // Trier les périodes chronologiquement
+  const sortedPeriods = [...seasonData.periods].sort((a, b) => {
+    const [dayA, monthA] = a.start.split('-').map(Number);
+    const [dayB, monthB] = b.start.split('-').map(Number);
+    return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+  });
+
   const updatedSeason = {
     name: seasonData.name,
     price: parseInt(seasonData.price),
     minNights: parseInt(seasonData.minNights) || 1,
-    periods: [{
-      start: seasonData.dateStart,
-      end: seasonData.dateEnd
-    }]
+    periods: sortedPeriods
   };
   
   // NOUVEAU : Ajouter les prix plateformes s'ils existent
@@ -1073,13 +1241,29 @@ validateAndEditSeason() {
 }
   
 getSeasonFormData() {
+  // Récupérer toutes les plages de dates visibles
+  const periods = [];
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}`);
+    const endInput = document.getElementById(`season-date-end-input-${i}`);
+    
+    // Vérifier que le bloc est visible (pas display:none)
+    const block = document.getElementById(`bloc-plage-dates-${i}`);
+    if (!block || block.style.display === 'none') continue;
+    
+    const start = this.getDateValue(startInput);
+    const end = this.getDateValue(endInput);
+    
+    if (start && end) {
+      periods.push({ start, end });
+    }
+  }
+
   return {
     name: document.getElementById('season-name-input')?.value.trim(),
-    dateStart: this.getDateValue(document.getElementById('season-date-start-input')),
-    dateEnd: this.getDateValue(document.getElementById('season-date-end-input')),
+    periods: periods,
     price: this.getRawValue(document.getElementById('season-price-input')),
     minNights: this.getRawValue(document.getElementById('season-min-nights-input')) || '1',
-    // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input')) || '0',
     otherPrice: this.getRawValue(document.getElementById('season-other-price-input')) || '0'
@@ -1088,13 +1272,29 @@ getSeasonFormData() {
 
   // 🆕 Récupérer les données du formulaire de modification
 getEditSeasonFormData() {
+  // Récupérer toutes les plages de dates visibles
+  const periods = [];
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}-edit`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-edit`);
+    
+    // Vérifier que le bloc est visible
+    const block = document.getElementById(`bloc-plage-dates-${i}-edit`);
+    if (!block || block.style.display === 'none') continue;
+    
+    const start = this.getDateValue(startInput);
+    const end = this.getDateValue(endInput);
+    
+    if (start && end) {
+      periods.push({ start, end });
+    }
+  }
+
   return {
     name: document.getElementById('season-name-input-edit')?.value.trim(),
-    dateStart: this.getDateValue(document.getElementById('season-date-start-input-edit')),
-    dateEnd: this.getDateValue(document.getElementById('season-date-end-input-edit')),
+    periods: periods,
     price: this.getRawValue(document.getElementById('season-price-input-edit')),
     minNights: this.getRawValue(document.getElementById('season-min-nights-input-edit')) || '1',
-    // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-edit')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-edit')) || '0',
     otherPrice: this.getRawValue(document.getElementById('season-other-price-input-edit')) || '0'
@@ -1151,8 +1351,6 @@ closeSeasonModal() {
 resetEditSeasonModal() {
   const fields = [
     'season-name-input-edit',
-    'season-date-start-input-edit',
-    'season-date-end-input-edit',
     'season-price-input-edit',
     'season-min-nights-input-edit'
   ];
@@ -1165,13 +1363,36 @@ resetEditSeasonModal() {
       input.removeAttribute('data-date-value');
     }
   });
-  // NOUVEAU : Réinitialiser les prix plateformes
+
+  // Réinitialiser TOUTES les plages de dates (1 à 5)
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}-edit`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-edit`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+
+    // Masquer les blocs 2 à 5, garder le bloc 1 visible
+    if (i > 1) {
+      const block = document.getElementById(`bloc-plage-dates-${i}-edit`);
+      if (block) block.style.display = 'none';
+    }
+  }
+
+  // Réafficher le bouton "Ajouter une plage"
+  const addBtn = document.getElementById('btn-add-plage-dates-edit');
+  if (addBtn) addBtn.style.display = '';
+
   const platformIds = [
     'season-airbnb-price-input-edit',
     'season-booking-price-input-edit',
     'season-other-price-input-edit'
   ];
-  
   platformIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
