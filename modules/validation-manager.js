@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons
+// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons V2
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -738,8 +738,30 @@ class ValidationManager {
       this.hideFieldError(`season-name-input${suffix}`);
     }
     
+    // Validation du prix
+    const price = priceInput ? parseInt(this.editor.getRawValue(priceInput)) || 0 : 0;
+    if (price < 10) {
+      if (priceInput) {
+        this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
+      }
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-price-input${suffix}`);
+    }
+    
+    // Validation des nuits minimum
+    const minNights = minNightsInput ? parseInt(this.editor.getRawValue(minNightsInput)) || 0 : 0;
+    if (minNights < 1) {
+      if (minNightsInput) {
+        this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
+      }
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-min-nights-input${suffix}`);
+    }
+
     // Validation de TOUTES les plages de dates
-  const allPeriods = [];
+    const allPeriods = [];
   let hasAtLeastOnePeriod = false;
 
   for (let i = 1; i <= 5; i++) {
