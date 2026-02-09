@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons V2
+// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons V2 - week-ends
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -448,6 +448,22 @@ class ValidationManager {
     if (!this.validateDiscounts()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
+    }
+
+    // NOUVEAU : Validation du prix week-end
+    const weekendOui = document.getElementById('weekend-oui');
+    const weekendPriceInput = document.getElementById('weekend-price-input');
+    
+    if (weekendOui && weekendOui.checked) {
+      const weekendPrice = parseInt(this.editor.getRawValue(weekendPriceInput)) || 0;
+      if (weekendPrice < 10) {
+        this.showFieldError('weekend-price-input', "Le prix week-end doit être d'au moins 10€");
+        hasError = true;
+      } else {
+        this.hideFieldError('weekend-price-input');
+      }
+    } else {
+      this.hideFieldError('weekend-price-input');
     }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
