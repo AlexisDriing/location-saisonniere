@@ -1,4 +1,4 @@
-// Calculateur de prix principal - menage en option
+// Calculateur de prix principal - menage en option - week-end
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -280,16 +280,27 @@ class PriceCalculator {
           continue;
         }
         
+        // NOUVEAU : Déterminer le prix de la nuit (week-end ou normal)
+        let nightPrice = season.price;
+        const dayOfWeek = currentDate.day(); // 0=dimanche, 5=vendredi, 6=samedi
+        
+        if (season === this.pricingData.defaultPricing && 
+            this.pricingData.defaultPricing.weekend?.enabled &&
+            this.pricingData.defaultPricing.weekend?.price > 0 &&
+            (dayOfWeek === 5 || dayOfWeek === 6)) {
+          nightPrice = this.pricingData.defaultPricing.weekend.price;
+        }
+        
         const nightInfo = {
           date: currentDate.format("YYYY-MM-DD"),
           formattedDate: currentDate.format("DD/MM/YYYY"),
           season: season.name,
-          price: season.price,
-          platformPrice: this.getPlatformPrice(season)
+          price: nightPrice,
+          platformPrice: this.getPlatformPrice(season, nightPrice)
         };
         
         details.nightsBreakdown.push(nightInfo);
-        details.nightsPrice += season.price;
+        details.nightsPrice += nightPrice;
         details.platformPrice += nightInfo.platformPrice;
         currentDate.add(1, "day");
       }
@@ -382,38 +393,52 @@ class PriceCalculator {
     return this.pricingData.seasons[0];
   }
 
-  getPlatformPrice(season) {
+  getPlatformPrice(season, overridePrice = null) {
     if (!season) return 0;
     
     const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
+    
+    const basePrice = overridePrice || season.price;
   
-    // Si c'est defaultPricing ET qu'il a des prix plateformes
-    if (season === this.pricingData.defaultPricing && season.platformPrices) {
-      // 🔧 FIX : Filtrer les prix à 0
+    // Si PAS de override (appel normal) → utiliser les prix manuels si disponibles
+    if (!overridePrice && season === this.pricingData.defaultPricing && season.platformPrices) {
       const prices = Object.values(season.platformPrices).filter(price => price > 0);
       if (prices.length > 0) {
         return prices.reduce((a, b) => a + b, 0) / prices.length;
       }
     }
     
-    if (!usePercentage && season.platformPrices) {
-      // 🔧 FIX : Filtrer les prix à 0
+    if (!overridePrice && !usePercentage && season.platformPrices) {
       const prices = Object.values(season.platformPrices).filter(price => price > 0);
       if (prices.length > 0) {
         return prices.reduce((a, b) => a + b, 0) / prices.length;
+      }
+    }
+    
+    // Si override (week-end) → calculer le % depuis les prix manuels du defaultPricing
+    if (overridePrice && this.pricingData.defaultPricing?.platformPrices) {
+      const manualPrices = Object.values(this.pricingData.defaultPricing.platformPrices).filter(p => p > 0);
+      if (manualPrices.length > 0) {
+        const avgPlatformPrice = manualPrices.reduce((a, b) => a + b, 0) / manualPrices.length;
+        const directPrice = this.pricingData.defaultPricing.price;
+        if (directPrice > 0) {
+          // Calculer le pourcentage : 122/100 = 1.22
+          const ratio = avgPlatformPrice / directPrice;
+          // Appliquer ce même ratio au prix week-end : 130 * 1.22 = 158.60
+          return overridePrice * ratio;
+        }
       }
     }
     
     if (this.pricingData.platformMarkup && this.pricingData.platformMarkup.percentage) {
-      return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
+      return basePrice * (1 + this.pricingData.platformMarkup.percentage / 100);
     }
     
-    // Toujours appliquer la réduction par défaut (17% ou valeur configurée)
     const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
       ? this.pricingData.platformPricing.defaultDiscount 
       : 17;
     
-    return season.price * (100 / (100 - defaultDiscount));
+    return basePrice * (100 / (100 - defaultDiscount));
   }
 
   updateUI(details) {
