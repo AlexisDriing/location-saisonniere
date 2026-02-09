@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1924,7 +1924,7 @@ setupWeekendListeners() {
     yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
     noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
     
-    priceBlock.style.display = 'none';
+    priceInput.style.display = 'block';
     priceInput.value = '';
     priceInput.removeAttribute('data-raw-value');
     
