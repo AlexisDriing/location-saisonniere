@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -397,6 +397,9 @@ setupTimeFormatters() {
 
      // NOUVEAU : Pré-remplir les options de ménage
     this.prefillCleaningOptions();
+    this.prefillWeekendOptions();
+    // NOUVEAU : Pré-remplir l'option prix week-end
+    this.prefillWeekendOptions();
     this.prefillHoraires();
     this.prefillCancellationPolicy();
     this.prefillComplexFields();
@@ -1838,6 +1841,114 @@ prefillCleaningOptions() {
   this.initialValues.cleaningPrice = cleaning?.price || 0;
 }
 
+prefillWeekendOptions() {
+  const yesRadio = document.getElementById('weekend-oui');
+  const noRadio = document.getElementById('weekend-non');
+  const priceInput = document.getElementById('weekend-price-input');
+  
+  if (!yesRadio || !noRadio || !priceInput) {
+    console.warn('⚠️ Éléments week-end non trouvés dans le DOM');
+    return;
+  }
+  
+  // Récupérer les labels Webflow
+  const yesLabel = document.getElementById('label-weekend-oui');
+  const noLabel = document.getElementById('label-weekend-non');
+  
+  const weekend = this.pricingData.defaultPricing?.weekend;
+  
+  if (weekend && weekend.enabled) {
+    // Activer "Oui"
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (weekend.price) {
+      priceInput.value = weekend.price;
+      priceInput.setAttribute('data-raw-value', weekend.price);
+    }
+  } else {
+    // "Non" par défaut
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+  }
+  
+  // Sauvegarder l'état initial
+  this.initialValues.weekendEnabled = weekend?.enabled ?? false;
+  this.initialValues.weekendPrice = weekend?.price || 0;
+}
+
+setupWeekendListeners() {
+  const yesLabel = document.getElementById('label-weekend-oui');
+  const noLabel = document.getElementById('label-weekend-non');
+  const priceInput = document.getElementById('weekend-price-input');
+  
+  if (!yesLabel || !noLabel || !priceInput) return;
+  
+  // Clic sur "Oui"
+  yesLabel.addEventListener('click', () => {
+    const yesRadio = document.getElementById('weekend-oui');
+    const noRadio = document.getElementById('weekend-non');
+    
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    setTimeout(() => priceInput.focus(), 100);
+    
+    // Mettre à jour les données
+    if (!this.pricingData.defaultPricing.weekend) {
+      this.pricingData.defaultPricing.weekend = {};
+    }
+    this.pricingData.defaultPricing.weekend.enabled = true;
+    
+    this.enableButtons();
+  });
+  
+  // Clic sur "Non"
+  noLabel.addEventListener('click', () => {
+    const yesRadio = document.getElementById('weekend-oui');
+    const noRadio = document.getElementById('weekend-non');
+    
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceBlock.style.display = 'none';
+    priceInput.value = '';
+    priceInput.removeAttribute('data-raw-value');
+    
+    // Mettre à jour les données
+    if (!this.pricingData.defaultPricing.weekend) {
+      this.pricingData.defaultPricing.weekend = {};
+    }
+    this.pricingData.defaultPricing.weekend.enabled = false;
+    this.pricingData.defaultPricing.weekend.price = 0;
+    
+    this.enableButtons();
+  });
+  
+  // Changement du prix
+  priceInput.addEventListener('blur', () => {
+    const price = parseInt(this.getRawValue(priceInput)) || 0;
+    if (!this.pricingData.defaultPricing.weekend) {
+      this.pricingData.defaultPricing.weekend = {};
+    }
+    this.pricingData.defaultPricing.weekend.price = price;
+    this.enableButtons();
+  });
+}
+
 // 🆕 NOUVELLE MÉTHODE : Formater tous les champs avec suffixes au chargement
 formatAllSuffixFields() {
   
@@ -3142,7 +3253,7 @@ cautionAcompteIds.forEach(id => {
   this.setupDefaultPricingListeners();
 
   this.setupCleaningListeners();
-
+  this.setupWeekendListeners();
   // 🆕 AJOUTER les gestionnaires d'opacité
   this.setupPriceOpacityHandlers();
 }
