@@ -1,4 +1,4 @@
-// Calculateur de prix principal - menage en option - week-end
+// Calculateur de prix principal - menage en option - week-end - personnes supplémentaires
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -117,6 +117,12 @@ class PriceCalculator {
       button.style.pointerEvents = "none";
       button.style.cursor = "not-allowed";
     });
+
+    // 🆕 Masquer la ligne supplément voyageurs
+      const ligneSupplementEl = document.getElementById('ligne-supplement-voyageurs');
+      if (ligneSupplementEl) {
+        ligneSupplementEl.style.display = 'none';
+      }
     
     // ===== RÉINITIALISER LES RÉDUCTIONS (SIMPLIFIÉ) =====
     this.elements.prixReduction.forEach(element => {
@@ -306,6 +312,28 @@ class PriceCalculator {
       }
       
       details.originalNightsPrice = details.nightsPrice;
+
+      // 🆕 NOUVEAU : Supplément voyageurs
+      details.extraGuestsFee = 0;
+      details.extraGuestsCount = 0;
+      const extraGuests = this.pricingData.extraGuests;
+      if (extraGuests && extraGuests.enabled && extraGuests.threshold > 0 && extraGuests.pricePerPerson > 0) {
+        const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
+        const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+        const totalGuests = adultsCount + childrenCount;
+        
+        const extraCount = Math.max(0, totalGuests - extraGuests.threshold);
+        if (extraCount > 0) {
+          details.extraGuestsCount = extraCount;
+          details.extraGuestsFee = extraCount * extraGuests.pricePerPerson * details.nights;
+          
+          // Ajouter au prix des nuits (AVANT réduction)
+          details.nightsPrice += details.extraGuestsFee;
+          
+          // Ajouter aussi au prix plateforme
+          details.platformPrice += details.extraGuestsFee;
+        }
+      }
       
       // Appliquer les réductions de séjour
       if (this.pricingData.discounts && this.pricingData.discounts.length > 0) {
@@ -314,6 +342,8 @@ class PriceCalculator {
         for (const discount of sortedDiscounts) {
           if (details.nights >= discount.nights) {
             const discountPercentage = discount.percentage;
+            // 🆕 La réduction s'applique sur originalNightsPrice + supplément voyageurs
+            const baseForDiscount = details.originalNightsPrice + details.extraGuestsFee;
             const nightsDiscount = details.originalNightsPrice * discountPercentage / 100;
             const platformDiscount = details.platformPrice * discountPercentage / 100;
             
@@ -332,9 +362,9 @@ class PriceCalculator {
       
       // Prix total - Le ménage "en option" n'est PAS ajouté au total
       if (details.cleaningOptional) {
-        details.totalPrice = details.originalNightsPrice - details.discountAmount;
+        details.totalPrice = details.originalNightsPrice + details.extraGuestsFee - details.discountAmount;
       } else {
-        details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee;
+        details.totalPrice = details.originalNightsPrice + details.extraGuestsFee - details.discountAmount + details.cleaningFee;
       }
       
       if (details.cleaningFee > 0 && !details.cleaningOptional) {
@@ -473,6 +503,25 @@ class PriceCalculator {
         element.textContent = `${formatPrice(details.originalNightsPrice)}€`;
       });
     }
+
+     // 🆕 NOUVEAU : Supplément voyageurs
+      const ligneSupplementEl = document.getElementById('ligne-supplement-voyageurs');
+      const calculSupplementEl = document.getElementById('calcul-supplement');
+      const prixSupplementEl = document.getElementById('prix-supplement');
+      
+      if (ligneSupplementEl) {
+        if (details.extraGuestsFee > 0) {
+          ligneSupplementEl.style.display = 'flex';
+          if (calculSupplementEl) {
+            calculSupplementEl.textContent = `Supplément voyageurs (${details.extraGuestsCount} pers.)`;
+          }
+          if (prixSupplementEl) {
+            prixSupplementEl.textContent = `${formatPrice(details.extraGuestsFee)}€`;
+          }
+        } else {
+          ligneSupplementEl.style.display = 'none';
+        }
+      }   
     
     // ===== GESTION DES RÉDUCTIONS (SIMPLIFIÉ) =====
     if (details.discountAmount > 0) {
