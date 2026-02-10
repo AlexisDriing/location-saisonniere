@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -397,9 +397,9 @@ setupTimeFormatters() {
 
      // NOUVEAU : Pré-remplir les options de ménage
     this.prefillCleaningOptions();
-    this.prefillWeekendOptions();
     // NOUVEAU : Pré-remplir l'option prix week-end
     this.prefillWeekendOptions();
+    this.prefillExtraGuestsOptions();
     this.prefillHoraires();
     this.prefillCancellationPolicy();
     this.prefillComplexFields();
@@ -1885,6 +1885,139 @@ prefillWeekendOptions() {
   this.initialValues.weekendPrice = weekend?.price || 0;
 }
 
+  // 🆕 Pré-remplir les options de supplément voyageurs
+prefillExtraGuestsOptions() {
+  const yesRadio = document.getElementById('extra-guests-oui');
+  const noRadio = document.getElementById('extra-guests-non');
+  const yesLabel = document.getElementById('label-extra-guests-oui');
+  const noLabel = document.getElementById('label-extra-guests-non');
+  const thresholdInput = document.getElementById('extra-guests-threshold-input');
+  const priceInput = document.getElementById('extra-guests-price-input');
+
+  if (!yesRadio || !noRadio || !thresholdInput || !priceInput) return;
+
+  // Initialiser si absent
+  if (!this.pricingData.extraGuests) {
+    this.pricingData.extraGuests = { enabled: false, threshold: 2, pricePerPerson: 0 };
+  }
+
+  const extraGuests = this.pricingData.extraGuests;
+
+  if (extraGuests.enabled) {
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    thresholdInput.style.display = 'block';
+    priceInput.style.display = 'block';
+    if (extraGuests.threshold) {
+      thresholdInput.value = extraGuests.threshold;
+      thresholdInput.setAttribute('data-raw-value', extraGuests.threshold);
+    }
+    if (extraGuests.pricePerPerson) {
+      priceInput.value = this.formatPrice(extraGuests.pricePerPerson);
+      priceInput.setAttribute('data-raw-value', extraGuests.pricePerPerson);
+    }
+  } else {
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    thresholdInput.style.display = 'none';
+    priceInput.style.display = 'none';
+  }
+
+  // Sauvegarder les valeurs initiales pour le cancel
+  this.initialValues.extraGuestsEnabled = extraGuests.enabled;
+  this.initialValues.extraGuestsThreshold = extraGuests.threshold || 2;
+  this.initialValues.extraGuestsPrice = extraGuests.pricePerPerson || 0;
+}
+
+// 🆕 Configurer les listeners pour le supplément voyageurs
+setupExtraGuestsListeners() {
+  const yesRadio = document.getElementById('extra-guests-oui');
+  const noRadio = document.getElementById('extra-guests-non');
+  const yesLabel = document.getElementById('label-extra-guests-oui');
+  const noLabel = document.getElementById('label-extra-guests-non');
+  const thresholdInput = document.getElementById('extra-guests-threshold-input');
+  const priceInput = document.getElementById('extra-guests-price-input');
+
+  if (!yesRadio || !noRadio || !thresholdInput || !priceInput) return;
+
+  // Listener sur le radio "Oui"
+  yesRadio.addEventListener('change', () => {
+    if (yesRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+
+      thresholdInput.style.display = 'block';
+      priceInput.style.display = 'block';
+      setTimeout(() => thresholdInput.focus(), 100);
+
+      if (!this.pricingData.extraGuests) {
+        this.pricingData.extraGuests = {};
+      }
+      this.pricingData.extraGuests.enabled = true;
+
+      this.enableButtons();
+    }
+  });
+
+  // Listener sur le radio "Non"
+  noRadio.addEventListener('change', () => {
+    if (noRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+
+      thresholdInput.style.display = 'none';
+      priceInput.style.display = 'none';
+      thresholdInput.value = '';
+      thresholdInput.removeAttribute('data-raw-value');
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+
+      if (!this.pricingData.extraGuests) {
+        this.pricingData.extraGuests = {};
+      }
+      this.pricingData.extraGuests.enabled = false;
+      this.pricingData.extraGuests.threshold = 0;
+      this.pricingData.extraGuests.pricePerPerson = 0;
+
+      this.enableButtons();
+    }
+  });
+
+  // Changement du seuil
+  thresholdInput.addEventListener('blur', () => {
+    let threshold = parseInt(thresholdInput.value) || 0;
+    
+    // Valider : min 1, max capacity - 1
+    const maxThreshold = (this.pricingData.capacity || 8) - 1;
+    if (threshold < 1) threshold = 1;
+    if (threshold > maxThreshold) threshold = maxThreshold;
+    
+    thresholdInput.value = threshold;
+    thresholdInput.setAttribute('data-raw-value', threshold);
+
+    if (!this.pricingData.extraGuests) {
+      this.pricingData.extraGuests = {};
+    }
+    this.pricingData.extraGuests.threshold = threshold;
+
+    this.enableButtons();
+  });
+
+  // Changement du prix
+  priceInput.addEventListener('blur', () => {
+    const price = parseInt(this.getRawValue(priceInput)) || 0;
+    if (!this.pricingData.extraGuests) {
+      this.pricingData.extraGuests = {};
+    }
+    this.pricingData.extraGuests.pricePerPerson = price;
+    this.enableButtons();
+  });
+}
+  
 setupWeekendListeners() {
   const yesRadio = document.getElementById('weekend-oui');
   const noRadio = document.getElementById('weekend-non');
@@ -3248,6 +3381,7 @@ cautionAcompteIds.forEach(id => {
 
   this.setupCleaningListeners();
   this.setupWeekendListeners();
+  this.setupExtraGuestsListeners();
   // 🆕 AJOUTER les gestionnaires d'opacité
   this.setupPriceOpacityHandlers();
 }
@@ -3676,6 +3810,7 @@ setBlockState(element, isActive) {
     
   }
 
+  
   cancelModifications() {
 
     if (this.validationManager) {
@@ -3737,7 +3872,8 @@ setBlockState(element, isActive) {
     this.prefillDefaultPricing();    
     // 🆕 AJOUTER : Restaurer les options de ménage
     this.prefillCleaningOptions();
-
+    this.prefillWeekendOptions();
+    this.prefillExtraGuestsOptions();
     // Réinitialiser les iCals depuis les valeurs initiales
     for (let i = 1; i <= 4; i++) {
       const input = document.getElementById(`ical-url-${i}`);
