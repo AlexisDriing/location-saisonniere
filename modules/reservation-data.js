@@ -1,4 +1,4 @@
-// Gestion des données de réservation et récupération des informations - menage option
+// Gestion des données de réservation et récupération des informations - menage option - Personnes supplémentaires
 class ReservationDataManager {
   constructor() {
     this.init();
@@ -144,6 +144,8 @@ class ReservationDataManager {
         prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
         prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
         prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
+        prixSupplement: document.getElementById("prix-supplement")?.textContent || "",
+        calculSupplement: document.getElementById("calcul-supplement")?.textContent || "",
         totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
         dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
         dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
