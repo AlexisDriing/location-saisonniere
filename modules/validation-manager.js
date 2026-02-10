@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons V2 - week-ends
+// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons V2 - week-ends - personnes supplémentaires
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -464,6 +464,36 @@ class ValidationManager {
       }
     } else {
       this.hideFieldError('weekend-price-input');
+    }
+
+    // 🆕 NOUVEAU : Validation du supplément voyageurs
+    const extraGuestsOui = document.getElementById('extra-guests-oui');
+    const extraGuestsThresholdInput = document.getElementById('extra-guests-threshold-input');
+    const extraGuestsPriceInput = document.getElementById('extra-guests-price-input');
+
+    if (extraGuestsOui && extraGuestsOui.checked) {
+      const threshold = parseInt(extraGuestsThresholdInput?.value) || 0;
+      const price = parseInt(this.editor.getRawValue(extraGuestsPriceInput)) || 0;
+      const maxCapacity = (this.editor.pricingData?.capacity || 8) - 1;
+
+      if (threshold < 1 || threshold > maxCapacity) {
+        this.showFieldError('extra-guests-threshold-input', `Le seuil doit être entre 1 et ${maxCapacity}`);
+        isValid = false;
+        this.showTabError('error-indicator-tab3');
+      } else {
+        this.hideFieldError('extra-guests-threshold-input');
+      }
+
+      if (price < 1) {
+        this.showFieldError('extra-guests-price-input', "Le prix par personne doit être d'au moins 1€");
+        isValid = false;
+        this.showTabError('error-indicator-tab3');
+      } else {
+        this.hideFieldError('extra-guests-price-input');
+      }
+    } else {
+      this.hideFieldError('extra-guests-threshold-input');
+      this.hideFieldError('extra-guests-price-input');
     }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
