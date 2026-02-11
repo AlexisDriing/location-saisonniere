@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1531,7 +1531,8 @@ prefillComplexFields() {
     'Four': 'checkbox-four',
     'Lave-vaisselle': 'checkbox-lave-vaisselle',
     'Sèche-linge': 'checkbox-seche-linge',
-    'Machine à laver': 'checkbox-machine-a-laver'
+    'Machine à laver': 'checkbox-machine-a-laver',
+    'Borne électrique': 'checkbox-borne-electrique'
   };
   
   // Cocher les bonnes cases
@@ -3172,7 +3173,7 @@ setupFieldListeners() {
     { id: 'annonce-airbnb-input' },
     { id: 'annonce-booking-input' },
     { id: 'annonce-gites-input' },
-    { id: 'page-google' }
+    { id: 'page-google' },
   ];
   
   fields.forEach(field => {
@@ -3236,7 +3237,7 @@ setupFieldListeners() {
   const equipementIds = ['checkbox-piscine', 'checkbox-jacuzzi', 'checkbox-barbecue', 
                       'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking',
                       'checkbox-wifi', 'checkbox-four', 'checkbox-lave-vaisselle',
-                      'checkbox-seche-linge', 'checkbox-machine-a-laver'];
+                      'checkbox-seche-linge', 'checkbox-machine-a-laver', 'checkbox-borne-electrique'];
   equipementIds.forEach(id => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
@@ -4009,7 +4010,8 @@ setBlockState(element, isActive) {
     'checkbox-four': 'Four',
     'checkbox-lave-vaisselle': 'Lave-vaisselle',
     'checkbox-seche-linge': 'Sèche-linge',
-    'checkbox-machine-a-laver': 'Machine à laver'
+    'checkbox-machine-a-laver': 'Machine à laver',
+    'checkbox-borne-electrique': 'Borne électrique'
   };
   
   const selectedEquipements = [];
