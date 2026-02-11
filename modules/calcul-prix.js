@@ -1,4 +1,4 @@
-// Calculateur de prix principal - menage en option - week-end - personnes supplémentaires
+// Calculateur de prix principal - menage en option - week-end - personnes supplémentaires V2
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -118,11 +118,9 @@ class PriceCalculator {
       button.style.cursor = "not-allowed";
     });
 
-    // 🆕 Masquer la ligne supplément voyageurs
-      const ligneSupplementEl = document.getElementById('ligne-supplement-voyageurs');
-      if (ligneSupplementEl) {
-        ligneSupplementEl.style.display = 'none';
-      }
+    // 🆕 Masquer la ligne supplément voyageurs (desktop + mobile)
+      const ligneSupplementEls = Utils.getAllElementsById('ligne-supplement-voyageurs');
+      ligneSupplementEls.forEach(el => el.style.display = 'none');
     
     // ===== RÉINITIALISER LES RÉDUCTIONS (SIMPLIFIÉ) =====
     this.elements.prixReduction.forEach(element => {
@@ -505,23 +503,23 @@ class PriceCalculator {
     }
 
      // 🆕 NOUVEAU : Supplément voyageurs
-      const ligneSupplementEl = document.getElementById('ligne-supplement-voyageurs');
-      const calculSupplementEl = document.getElementById('calcul-supplement');
-      const prixSupplementEl = document.getElementById('prix-supplement');
+      const ligneSupplementEls = Utils.getAllElementsById('ligne-supplement-voyageurs');
+      const calculSupplementEls = Utils.getAllElementsById('calcul-supplement');
+      const prixSupplementEls = Utils.getAllElementsById('prix-supplement');
       
-      if (ligneSupplementEl) {
+      if (ligneSupplementEls.length) {
         if (details.extraGuestsFee > 0) {
-          ligneSupplementEl.style.display = 'flex';
-          if (calculSupplementEl) {
-            calculSupplementEl.textContent = `Supplément voyageurs (${details.extraGuestsCount} pers.)`;
-          }
-          if (prixSupplementEl) {
-            prixSupplementEl.textContent = `${formatPrice(details.extraGuestsFee)}€`;
-          }
+          ligneSupplementEls.forEach(el => el.style.display = 'flex');
+          calculSupplementEls.forEach(el => {
+            el.textContent = `Supplément voyageurs (${details.extraGuestsCount} pers.)`;
+          });
+          prixSupplementEls.forEach(el => {
+            el.textContent = `${formatPrice(details.extraGuestsFee)}€`;
+          });
         } else {
-          ligneSupplementEl.style.display = 'none';
+          ligneSupplementEls.forEach(el => el.style.display = 'none');
         }
-      }   
+      } 
     
     // ===== GESTION DES RÉDUCTIONS (SIMPLIFIÉ) =====
     if (details.discountAmount > 0) {
