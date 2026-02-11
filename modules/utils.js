@@ -1,4 +1,4 @@
-// Fonctions utilitaires partagées - LOG production
+// Fonctions utilitaires partagées - personnes supplémentaires
 class Utils {
   static getElementByIdWithFallback(baseId) {
     const dualIds = [
@@ -6,7 +6,8 @@ class Utils {
       "voyageurs-texte", "calcul-nuit", "prix-nuit", "prix-reduction", 
       "prix-taxe", "prix-menage", "total-prix", "adultes-moins", 
       "chiffres-adultes", "adultes-plus", "enfants-moins", "chiffres-enfants", 
-      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction"
+      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction",
+      "ligne-supplement-voyageurs", "calcul-supplement", "prix-supplement"
     ];
     
     let element = document.getElementById(baseId);
@@ -22,7 +23,8 @@ class Utils {
       "voyageurs-texte", "calcul-nuit", "prix-nuit", "prix-reduction", 
       "prix-taxe", "prix-menage", "total-prix", "adultes-moins", 
       "chiffres-adultes", "adultes-plus", "enfants-moins", "chiffres-enfants", 
-      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction"
+      "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction",
+      "ligne-supplement-voyageurs", "calcul-supplement", "prix-supplement"
     ];
     
     const elements = [];
