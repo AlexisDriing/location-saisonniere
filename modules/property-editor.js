@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V2
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1915,7 +1915,7 @@ prefillExtraGuestsOptions() {
       thresholdInput.setAttribute('data-raw-value', extraGuests.threshold);
     }
     if (extraGuests.pricePerPerson) {
-      priceInput.value = this.formatPrice(extraGuests.pricePerPerson);
+      priceInput.value = extraGuests.pricePerPerson;
       priceInput.setAttribute('data-raw-value', extraGuests.pricePerPerson);
     }
   } else {
