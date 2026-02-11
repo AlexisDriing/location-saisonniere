@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V2
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1893,16 +1893,14 @@ prefillExtraGuestsOptions() {
   const noLabel = document.getElementById('label-extra-guests-non');
   const thresholdInput = document.getElementById('extra-guests-threshold-input');
   const priceInput = document.getElementById('extra-guests-price-input');
-
+  const labelThreshold = document.getElementById('label-extra-guests');
+  const labelPrice = document.getElementById('label-extra-guests-price');
   if (!yesRadio || !noRadio || !thresholdInput || !priceInput) return;
-
   // Initialiser si absent
   if (!this.pricingData.extraGuests) {
     this.pricingData.extraGuests = { enabled: false, threshold: 2, pricePerPerson: 0 };
   }
-
   const extraGuests = this.pricingData.extraGuests;
-
   if (extraGuests.enabled) {
     yesRadio.checked = true;
     noRadio.checked = false;
@@ -1910,6 +1908,8 @@ prefillExtraGuestsOptions() {
     if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
     thresholdInput.style.display = 'block';
     priceInput.style.display = 'block';
+    if (labelThreshold) labelThreshold.style.display = 'block';
+    if (labelPrice) labelPrice.style.display = 'block';
     if (extraGuests.threshold) {
       thresholdInput.value = extraGuests.threshold;
       thresholdInput.setAttribute('data-raw-value', extraGuests.threshold);
@@ -1925,8 +1925,9 @@ prefillExtraGuestsOptions() {
     if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
     thresholdInput.style.display = 'none';
     priceInput.style.display = 'none';
+    if (labelThreshold) labelThreshold.style.display = 'none';
+    if (labelPrice) labelPrice.style.display = 'none';
   }
-
   // Sauvegarder les valeurs initiales pour le cancel
   this.initialValues.extraGuestsEnabled = extraGuests.enabled;
   this.initialValues.extraGuestsThreshold = extraGuests.threshold || 2;
@@ -1941,17 +1942,18 @@ setupExtraGuestsListeners() {
   const noLabel = document.getElementById('label-extra-guests-non');
   const thresholdInput = document.getElementById('extra-guests-threshold-input');
   const priceInput = document.getElementById('extra-guests-price-input');
-
+  const labelThreshold = document.getElementById('label-extra-guests');
+  const labelPrice = document.getElementById('label-extra-guests-price');
   if (!yesRadio || !noRadio || !thresholdInput || !priceInput) return;
-
   // Listener sur le radio "Oui"
   yesRadio.addEventListener('change', () => {
     if (yesRadio.checked) {
       if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
       if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
-
       thresholdInput.style.display = 'block';
       priceInput.style.display = 'block';
+      if (labelThreshold) labelThreshold.style.display = 'block';
+      if (labelPrice) labelPrice.style.display = 'block';
       setTimeout(() => thresholdInput.focus(), 100);
 
       if (!this.pricingData.extraGuests) {
@@ -1968,9 +1970,10 @@ setupExtraGuestsListeners() {
     if (noRadio.checked) {
       if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
       if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
-
       thresholdInput.style.display = 'none';
       priceInput.style.display = 'none';
+      if (labelThreshold) labelThreshold.style.display = 'none';
+      if (labelPrice) labelPrice.style.display = 'none';
       thresholdInput.value = '';
       thresholdInput.removeAttribute('data-raw-value');
       priceInput.value = '';
