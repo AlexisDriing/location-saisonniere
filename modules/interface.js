@@ -1,4 +1,4 @@
-// Nouveaux équipements - features condition annulation
+// Nouveaux équipements V2 - features condition annulation
 // Page google
 class InterfaceManager {
   constructor() {
@@ -323,7 +323,8 @@ setupConditionsAnnulation() {
       'Four': 'four',
       'Lave-vaisselle': 'lave-vaisselle',
       'Sèche-linge': 'seche-linge',
-      'Machine à laver': 'machine-a-laver'
+      'Machine à laver': 'machine-a-laver',
+      'Borne électrique': 'borne-electrique'
     };
     
     // Masquer tous les équipements au départ
