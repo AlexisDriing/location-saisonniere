@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -1590,7 +1590,7 @@ prefillComplexFields() {
     'MasterCard': 'checkbox-mastercard',
     'Virement bancaire': 'checkbox-virement',
     'PayPal': 'checkbox-paypal',
-    'PayLib': 'checkbox-paylib',
+    'Wero': 'checkbox-wero',
     'American Express': 'checkbox-amex',
     'Chèques acceptés': 'checkbox-cheques',
     'Chèques-vacances': 'checkbox-cheques-vacances'
@@ -3301,7 +3301,7 @@ cautionAcompteIds.forEach(id => {
   
   // NOUVEAU : Listeners pour les modes de paiement
   const paiementIds = ['checkbox-visa', 'checkbox-especes', 'checkbox-mastercard', 
-                       'checkbox-virement', 'checkbox-paypal', 'checkbox-paylib', 
+                       'checkbox-virement', 'checkbox-paypal', 'checkbox-wero', 
                        'checkbox-amex', 'checkbox-cheques', 'checkbox-cheques-vacances'];
   paiementIds.forEach(id => {
     const checkbox = document.getElementById(id);
@@ -4046,7 +4046,7 @@ setBlockState(element, isActive) {
     'checkbox-mastercard': 'MasterCard',
     'checkbox-virement': 'Virement bancaire',
     'checkbox-paypal': 'PayPal',
-    'checkbox-paylib': 'PayLib',
+    'checkbox-wero': 'Wero',
     'checkbox-amex': 'American Express',
     'checkbox-cheques': 'Chèques acceptés',
     'checkbox-cheques-vacances': 'Chèques-vacances'
