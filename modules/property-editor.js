@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero
+// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero - bouton ajout image
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -2897,6 +2897,23 @@ updateAddExtraButtonState() {
   }
 }
 
+updateAddPhotosButtonState() {
+  const addPhotosButton = document.querySelector('.add-photos');
+  if (!addPhotosButton) return;
+
+  const isAtLimit = this.currentImagesGallery.length >= 20;
+
+  if (isAtLimit) {
+    addPhotosButton.disabled = true;
+    addPhotosButton.style.opacity = '0.5';
+    addPhotosButton.style.cursor = 'not-allowed';
+  } else {
+    addPhotosButton.disabled = false;
+    addPhotosButton.style.opacity = '1';
+    addPhotosButton.style.cursor = 'pointer';
+  }
+}
+
 // Méthode pour générer la chaîne extras au format attendu
 generateExtrasString() {
   return this.extras
@@ -2930,6 +2947,21 @@ initImageManagement() {
       this.initSortable();
     }, 100);
   }
+
+  // Listener sur le bouton d'ajout de photos
+  const addPhotosButton = document.querySelector('.Add-photos');
+  if (addPhotosButton) {
+    addPhotosButton.addEventListener('click', (e) => {
+      if (this.currentImagesGallery.length >= 20) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showNotification('error', 'Limite de 20 photos maximum atteinte');
+      }
+    });
+  }
+
+  // Vérification initiale de l'état du bouton
+  this.updateAddPhotosButtonState();
 }
 
 initSortable() {
@@ -3149,6 +3181,9 @@ removeImage(index) {
   
   // Réinitialiser SortableJS
   this.initSortable();
+
+  // Mettre à jour l'état du bouton d'ajout de photos
+  this.updateAddPhotosButtonState();
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
@@ -3927,6 +3962,9 @@ setBlockState(element, isActive) {
     setTimeout(() => {
       this.initSortable();
     }, 100);
+
+    // Mettre à jour l'état du bouton d'ajout de photos
+    this.updateAddPhotosButtonState();
     // Désactiver les boutons
     this.disableButtons();
   }
