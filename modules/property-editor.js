@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero - bouton ajout image
+// Gestionnaire de la page de modification de logement - Features condition annulation V2 - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero - bouton ajout image
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -4165,7 +4165,7 @@ setBlockState(element, isActive) {
   let conditionsTexte = '';
   
   if (parseInt(cautionValue) > 0) {
-    conditionsTexte = `Caution : Une caution de ${cautionValue}€ vous sera demandée au moment de la réservation`;
+    conditionsTexte = `Caution : Une caution de ${cautionValue}€ est requise. Les modalités de remise (à l’arrivée, empreinte bancaire, etc.) sont précisées par l’hôte.`;
   }
   
   if (parseInt(acompteValue) > 0) {
