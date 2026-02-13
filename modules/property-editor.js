@@ -1,4 +1,4 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation V2 - Plages saisons - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero - bouton ajout image
+// Gestionnaire de la page de modification de logement - Features condition annulation V2 - Plages saisons V2 - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero - bouton ajout image
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -763,14 +763,45 @@ addPlageDates(isEdit = false) {
   for (let i = 2; i <= 5; i++) {
     const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
     if (block && block.style.display === 'none') {
-      block.style.display = 'flex'; // ou '' selon votre CSS
+      block.style.display = 'flex';
       
-      // Initialiser les formatters Cleave sur les nouveaux inputs
+      // Initialiser Cleave UNIQUEMENT sur les 2 nouveaux inputs (pas tout le DOM)
       const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
       const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
-      if (this.initFormFormatters) {
-        this.initFormFormatters();
-      }
+      
+      [startInput, endInput].forEach(input => {
+        if (input && typeof Cleave !== 'undefined') {
+          new Cleave(input, {
+            date: true,
+            delimiter: '/',
+            datePattern: ['d', 'm'],
+            blocks: [2, 2],
+            numericOnly: true
+          });
+          
+          // Ajouter les mêmes listeners blur/focus que setupDateFormatters
+          input.addEventListener('blur', function() {
+            const value = this.value;
+            if (value && value.includes('/')) {
+              const [jour, mois] = value.split('/');
+              const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+              const moisNum = parseInt(mois);
+              if (moisNum >= 1 && moisNum <= 12) {
+                this.setAttribute('data-date-value', value);
+                this.value = `${parseInt(jour)} ${moisNoms[moisNum]}`;
+              }
+            }
+          });
+          
+          input.addEventListener('focus', function() {
+            const originalValue = this.getAttribute('data-date-value');
+            if (originalValue) {
+              this.value = originalValue;
+            }
+          });
+        }
+      });
       
       break;
     }
