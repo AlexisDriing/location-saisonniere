@@ -1,4 +1,4 @@
-// Nouveaux équipements V2 - features condition annulation - affichage bloc
+// Nouveaux équipements V2 - features condition annulation - affichage bloc V2
 // Page google
 class InterfaceManager {
   constructor() {
@@ -132,7 +132,7 @@ class InterfaceManager {
     }
     
     // Il y a du contenu, afficher le bloc
-    blocConditions.style.display = 'flex';
+    blocConditions.style.display = 'bloc';
     
     // Vérifier si on a "Caution" ET "Acompte" dans le texte
     if (conditionsText.includes('Caution') && conditionsText.includes('Acompte')) {
