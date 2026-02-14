@@ -1,4 +1,4 @@
-// Nouveaux équipements V2 - features condition annulation
+// Nouveaux équipements V2 - features condition annulation - affichage bloc
 // Page google
 class InterfaceManager {
   constructor() {
@@ -117,16 +117,25 @@ class InterfaceManager {
   // Nouvelle méthode à ajouter dans la classe :
   setupConditionsReservation() {
     const conditionsElement = document.querySelector('[data-conditions-reservation]');
+    const blocConditions = document.getElementById('bloc-conditions');
     
-    if (!conditionsElement) {
+    if (!conditionsElement || !blocConditions) {
       return;
     }
     
     const conditionsText = conditionsElement.textContent.trim();
     
+    // Si le texte est vide, masquer le bloc entier
+    if (!conditionsText || conditionsText === '') {
+      blocConditions.style.display = 'none';
+      return;
+    }
+    
+    // Il y a du contenu, afficher le bloc
+    blocConditions.style.display = 'flex';
+    
     // Vérifier si on a "Caution" ET "Acompte" dans le texte
     if (conditionsText.includes('Caution') && conditionsText.includes('Acompte')) {
-      // Remplacer le \n par un <br> pour l'affichage HTML
       const htmlContent = conditionsText.replace(/\n/g, '<br>');
       conditionsElement.innerHTML = htmlContent;
     }
