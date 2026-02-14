@@ -1,4 +1,4 @@
-// Gestionnaire de validation pour la page modification de logement - feature condition annulation - plages saisons V2 - week-ends - personnes supplémentaires
+// Gestionnaire de validation pour la page modification de logement - texte erreur - feature condition annulation - plages saisons V2 - week-ends - personnes supplémentaires
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -19,7 +19,7 @@ class ValidationManager {
         fields: {
           'name-input': {
             required: true,
-            minLength: 5,
+            minLength: 3,
             maxLength: 80,
             messages: {
               empty: "Le nom du logement est obligatoire",
@@ -842,7 +842,7 @@ class ValidationManager {
 
   // Au moins une plage doit exister
   if (!hasAtLeastOnePeriod) {
-    this.showFieldError(`season-date-start-input-1${suffix}`, "Au moins une plage de dates est obligatoire");
+    this.showFieldError(`season-date-start-input-1${suffix}`, "Au moins une période de dates est obligatoire");
     hasError = true;
   }
 
@@ -856,7 +856,7 @@ class ValidationManager {
         const [dayB2, monthB2] = allPeriods[b].end.split('-').map(Number);
 
         if (this.datesOverlap(dayA1, monthA1, dayA2, monthA2, dayB1, monthB1, dayB2, monthB2)) {
-          const msg = `Cette plage chevauche la plage n°${allPeriods[a].index}`;
+          const msg = `Cette période chevauche la période n°${allPeriods[a].index}`;
           this.showFieldError(`season-date-start-input-${allPeriods[b].index}${suffix}`, msg);
           hasError = true;
         }
