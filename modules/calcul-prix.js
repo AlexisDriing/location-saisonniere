@@ -1,4 +1,4 @@
-// Calculateur de prix principal - menage en option - week-end - personnes supplémentaires V2
+// Calculateur de prix principal - LOG production V1.1
 class PriceCalculator {
   constructor() {
     this.elements = {
