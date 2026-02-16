@@ -1,4 +1,4 @@
-// Calculateur de prix principal - menage en option
+// Calculateur de prix principal - LOG production V1.1
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -117,6 +117,10 @@ class PriceCalculator {
       button.style.pointerEvents = "none";
       button.style.cursor = "not-allowed";
     });
+
+    // 🆕 Masquer la ligne supplément voyageurs (desktop + mobile)
+      const ligneSupplementEls = Utils.getAllElementsById('ligne-supplement-voyageurs');
+      ligneSupplementEls.forEach(el => el.style.display = 'none');
     
     // ===== RÉINITIALISER LES RÉDUCTIONS (SIMPLIFIÉ) =====
     this.elements.prixReduction.forEach(element => {
@@ -280,21 +284,54 @@ class PriceCalculator {
           continue;
         }
         
+        // NOUVEAU : Déterminer le prix de la nuit (week-end ou normal)
+        let nightPrice = season.price;
+        const dayOfWeek = currentDate.day(); // 0=dimanche, 5=vendredi, 6=samedi
+        
+        if (season === this.pricingData.defaultPricing && 
+            this.pricingData.defaultPricing.weekend?.enabled &&
+            this.pricingData.defaultPricing.weekend?.price > 0 &&
+            (dayOfWeek === 5 || dayOfWeek === 6)) {
+          nightPrice = this.pricingData.defaultPricing.weekend.price;
+        }
+        
         const nightInfo = {
           date: currentDate.format("YYYY-MM-DD"),
           formattedDate: currentDate.format("DD/MM/YYYY"),
           season: season.name,
-          price: season.price,
-          platformPrice: this.getPlatformPrice(season)
+          price: nightPrice,
+          platformPrice: this.getPlatformPrice(season, nightPrice)
         };
         
         details.nightsBreakdown.push(nightInfo);
-        details.nightsPrice += season.price;
+        details.nightsPrice += nightPrice;
         details.platformPrice += nightInfo.platformPrice;
         currentDate.add(1, "day");
       }
       
       details.originalNightsPrice = details.nightsPrice;
+
+      // 🆕 NOUVEAU : Supplément voyageurs
+      details.extraGuestsFee = 0;
+      details.extraGuestsCount = 0;
+      const extraGuests = this.pricingData.extraGuests;
+      if (extraGuests && extraGuests.enabled && extraGuests.threshold > 0 && extraGuests.pricePerPerson > 0) {
+        const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
+        const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+        const totalGuests = adultsCount + childrenCount;
+        
+        const extraCount = Math.max(0, totalGuests - extraGuests.threshold);
+        if (extraCount > 0) {
+          details.extraGuestsCount = extraCount;
+          details.extraGuestsFee = extraCount * extraGuests.pricePerPerson * details.nights;
+          
+          // Ajouter au prix des nuits (AVANT réduction)
+          details.nightsPrice += details.extraGuestsFee;
+          
+          // Ajouter aussi au prix plateforme
+          details.platformPrice += details.extraGuestsFee;
+        }
+      }
       
       // Appliquer les réductions de séjour
       if (this.pricingData.discounts && this.pricingData.discounts.length > 0) {
@@ -303,6 +340,8 @@ class PriceCalculator {
         for (const discount of sortedDiscounts) {
           if (details.nights >= discount.nights) {
             const discountPercentage = discount.percentage;
+            // 🆕 La réduction s'applique sur originalNightsPrice + supplément voyageurs
+            const baseForDiscount = details.originalNightsPrice + details.extraGuestsFee;
             const nightsDiscount = details.originalNightsPrice * discountPercentage / 100;
             const platformDiscount = details.platformPrice * discountPercentage / 100;
             
@@ -321,9 +360,9 @@ class PriceCalculator {
       
       // Prix total - Le ménage "en option" n'est PAS ajouté au total
       if (details.cleaningOptional) {
-        details.totalPrice = details.originalNightsPrice - details.discountAmount;
+        details.totalPrice = details.originalNightsPrice + details.extraGuestsFee - details.discountAmount;
       } else {
-        details.totalPrice = details.originalNightsPrice - details.discountAmount + details.cleaningFee;
+        details.totalPrice = details.originalNightsPrice + details.extraGuestsFee - details.discountAmount + details.cleaningFee;
       }
       
       if (details.cleaningFee > 0 && !details.cleaningOptional) {
@@ -382,38 +421,52 @@ class PriceCalculator {
     return this.pricingData.seasons[0];
   }
 
-  getPlatformPrice(season) {
+  getPlatformPrice(season, overridePrice = null) {
     if (!season) return 0;
     
     const usePercentage = this.pricingData.platformPricing && this.pricingData.platformPricing.usePercentage === true;
+    
+    const basePrice = overridePrice || season.price;
   
-    // Si c'est defaultPricing ET qu'il a des prix plateformes
-    if (season === this.pricingData.defaultPricing && season.platformPrices) {
-      // 🔧 FIX : Filtrer les prix à 0
+    // Si PAS de override (appel normal) → utiliser les prix manuels si disponibles
+    if (!overridePrice && season === this.pricingData.defaultPricing && season.platformPrices) {
       const prices = Object.values(season.platformPrices).filter(price => price > 0);
       if (prices.length > 0) {
         return prices.reduce((a, b) => a + b, 0) / prices.length;
       }
     }
     
-    if (!usePercentage && season.platformPrices) {
-      // 🔧 FIX : Filtrer les prix à 0
+    if (!overridePrice && !usePercentage && season.platformPrices) {
       const prices = Object.values(season.platformPrices).filter(price => price > 0);
       if (prices.length > 0) {
         return prices.reduce((a, b) => a + b, 0) / prices.length;
+      }
+    }
+    
+    // Si override (week-end) → calculer le % depuis les prix manuels du defaultPricing
+    if (overridePrice && this.pricingData.defaultPricing?.platformPrices) {
+      const manualPrices = Object.values(this.pricingData.defaultPricing.platformPrices).filter(p => p > 0);
+      if (manualPrices.length > 0) {
+        const avgPlatformPrice = manualPrices.reduce((a, b) => a + b, 0) / manualPrices.length;
+        const directPrice = this.pricingData.defaultPricing.price;
+        if (directPrice > 0) {
+          // Calculer le pourcentage : 122/100 = 1.22
+          const ratio = avgPlatformPrice / directPrice;
+          // Appliquer ce même ratio au prix week-end : 130 * 1.22 = 158.60
+          return overridePrice * ratio;
+        }
       }
     }
     
     if (this.pricingData.platformMarkup && this.pricingData.platformMarkup.percentage) {
-      return season.price * (1 + this.pricingData.platformMarkup.percentage / 100);
+      return basePrice * (1 + this.pricingData.platformMarkup.percentage / 100);
     }
     
-    // Toujours appliquer la réduction par défaut (17% ou valeur configurée)
     const defaultDiscount = (this.pricingData.platformPricing && this.pricingData.platformPricing.defaultDiscount) 
       ? this.pricingData.platformPricing.defaultDiscount 
       : 17;
     
-    return season.price * (100 / (100 - defaultDiscount));
+    return basePrice * (100 / (100 - defaultDiscount));
   }
 
   updateUI(details) {
@@ -448,6 +501,25 @@ class PriceCalculator {
         element.textContent = `${formatPrice(details.originalNightsPrice)}€`;
       });
     }
+
+     // 🆕 NOUVEAU : Supplément voyageurs
+      const ligneSupplementEls = Utils.getAllElementsById('ligne-supplement-voyageurs');
+      const calculSupplementEls = Utils.getAllElementsById('calcul-supplement');
+      const prixSupplementEls = Utils.getAllElementsById('prix-supplement');
+      
+      if (ligneSupplementEls.length) {
+        if (details.extraGuestsFee > 0) {
+          ligneSupplementEls.forEach(el => el.style.display = 'flex');
+          calculSupplementEls.forEach(el => {
+            el.textContent = `Supplément voyageurs (${details.extraGuestsCount} pers.)`;
+          });
+          prixSupplementEls.forEach(el => {
+            el.textContent = `${formatPrice(details.extraGuestsFee)}€`;
+          });
+        } else {
+          ligneSupplementEls.forEach(el => el.style.display = 'none');
+        }
+      } 
     
     // ===== GESTION DES RÉDUCTIONS (SIMPLIFIÉ) =====
     if (details.discountAmount > 0) {

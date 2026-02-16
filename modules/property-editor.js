@@ -1,4 +1,5 @@
-// Gestionnaire de la page de modification de logement - nouveaux équipements
+// LOG production V1.1
+// Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
@@ -372,7 +373,6 @@ setupTimeFormatters() {
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
       { id: 'site-internet-input', dataKey: 'site_internet' },
       { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
-      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
       { id: 'hote-input', dataKey: 'host_name' },
       { id: 'email-input', dataKey: 'email' },
       { id: 'telephone-input', dataKey: 'telephone' },
@@ -398,7 +398,11 @@ setupTimeFormatters() {
 
      // NOUVEAU : Pré-remplir les options de ménage
     this.prefillCleaningOptions();
+    // NOUVEAU : Pré-remplir l'option prix week-end
+    this.prefillWeekendOptions();
+    this.prefillExtraGuestsOptions();
     this.prefillHoraires();
+    this.prefillCancellationPolicy();
     this.prefillComplexFields();
 
     // Pré-remplir les autres champs simples
@@ -505,6 +509,8 @@ setupTallyButton() {
     
     // Configuration des boutons
     this.setupSeasonButtons();
+
+    this.setupSeasonPeriodButtons();
     
     // Cacher tous les blocs saison par défaut
     this.hideAllSeasonBlocks();
@@ -603,13 +609,20 @@ setupTallyButton() {
       weekPriceElement.textContent = weekPrice;
     }
     
-    // Dates
+    // Dates — trier chronologiquement puis afficher avec séparateur " - "
     const datesElement = document.getElementById(`dates-season-${seasonNum}`);
     if (datesElement && season.periods && season.periods.length > 0) {
-      const dateRanges = season.periods.map(period => 
+      // Trier les périodes chronologiquement pour l'affichage
+      const sortedPeriods = [...season.periods].sort((a, b) => {
+        const [dayA, monthA] = a.start.split('-').map(Number);
+        const [dayB, monthB] = b.start.split('-').map(Number);
+        return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+      });
+      
+      const dateRanges = sortedPeriods.map(period => 
         this.formatDateRange(period.start, period.end)
       );
-      datesElement.textContent = dateRanges.join(" et ");
+      datesElement.textContent = dateRanges.join(" - ");
     }
     
     // Nuits minimum
@@ -698,6 +711,153 @@ setupTallyButton() {
       this.validateAndEditSeason();
     });
   }
+}
+
+  // === GESTION DES PLAGES DE DATES MULTIPLES ===
+
+setupSeasonPeriodButtons() {
+  // --- Modal AJOUT ---
+  const addPlageBtn = document.getElementById('btn-add-plage-dates');
+  if (addPlageBtn) {
+    addPlageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addPlageDates(false);
+    });
+  }
+  
+  // Boutons supprimer pour plages 2 à 5 (modal ajout)
+  for (let i = 2; i <= 5; i++) {
+    const deleteBtn = document.getElementById(`btn-delete-plage-${i}`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removePlageDates(i, false);
+      });
+    }
+  }
+
+  // --- Modal EDIT ---
+  const addPlageBtnEdit = document.getElementById('btn-add-plage-dates-edit');
+  if (addPlageBtnEdit) {
+    addPlageBtnEdit.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addPlageDates(true);
+    });
+  }
+  
+  // Boutons supprimer pour plages 2 à 5 (modal edit)
+  for (let i = 2; i <= 5; i++) {
+    const deleteBtn = document.getElementById(`btn-delete-plage-${i}-edit`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removePlageDates(i, true);
+      });
+    }
+  }
+}
+
+addPlageDates(isEdit = false) {
+  const suffix = isEdit ? '-edit' : '';
+  
+  // Trouver le prochain bloc masqué
+  for (let i = 2; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (block && block.style.display === 'none') {
+      block.style.display = 'flex';
+      
+      // Initialiser Cleave UNIQUEMENT sur les 2 nouveaux inputs (pas tout le DOM)
+      const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+      const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
+      
+      [startInput, endInput].forEach(input => {
+        if (input && typeof Cleave !== 'undefined') {
+          new Cleave(input, {
+            date: true,
+            delimiter: '/',
+            datePattern: ['d', 'm'],
+            blocks: [2, 2],
+            numericOnly: true
+          });
+          
+          // Ajouter les mêmes listeners blur/focus que setupDateFormatters
+          input.addEventListener('blur', function() {
+            const value = this.value;
+            if (value && value.includes('/')) {
+              const [jour, mois] = value.split('/');
+              const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+              const moisNum = parseInt(mois);
+              if (moisNum >= 1 && moisNum <= 12) {
+                this.setAttribute('data-date-value', value);
+                this.value = `${parseInt(jour)} ${moisNoms[moisNum]}`;
+              }
+            }
+          });
+          
+          input.addEventListener('focus', function() {
+            const originalValue = this.getAttribute('data-date-value');
+            if (originalValue) {
+              this.value = originalValue;
+            }
+          });
+        }
+      });
+      
+      break;
+    }
+  }
+  
+  // Masquer le bouton "Ajouter" si on atteint 5 plages
+  const visibleCount = this.countVisiblePlages(isEdit);
+  if (visibleCount >= 5) {
+    const addBtn = document.getElementById(`btn-add-plage-dates${suffix}`);
+    if (addBtn) addBtn.style.display = 'none';
+  }
+}
+
+removePlageDates(index, isEdit = false) {
+  const suffix = isEdit ? '-edit' : '';
+  const block = document.getElementById(`bloc-plage-dates-${index}${suffix}`);
+  
+  if (block) {
+    // Vider les inputs
+    const startInput = document.getElementById(`season-date-start-input-${index}${suffix}`);
+    const endInput = document.getElementById(`season-date-end-input-${index}${suffix}`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+    
+    // Masquer le bloc
+    block.style.display = 'none';
+    
+    // Nettoyer les erreurs éventuelles
+    if (this.validationManager) {
+      this.validationManager.hideFieldError(`season-date-start-input-${index}${suffix}`);
+      this.validationManager.hideFieldError(`season-date-end-input-${index}${suffix}`);
+    }
+  }
+  
+  // Réafficher le bouton "Ajouter"
+  const addBtn = document.getElementById(`btn-add-plage-dates${suffix}`);
+  if (addBtn) addBtn.style.display = '';
+}
+
+countVisiblePlages(isEdit = false) {
+  const suffix = isEdit ? '-edit' : '';
+  let count = 0;
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (block && block.style.display !== 'none') {
+      count++;
+    }
+  }
+  return count;
 }
 
   displayHostImage() {    
@@ -873,22 +1033,37 @@ openEditSeasonModal(seasonIndex) {
   const nameInput = document.getElementById('season-name-input-edit');
   if (nameInput) nameInput.value = season.name;
   
-  // Gérer les dates
-  if (season.periods && season.periods[0]) {
-    const startInput = document.getElementById('season-date-start-input-edit');
-    const endInput = document.getElementById('season-date-end-input-edit');
-    
-    if (startInput) {
-      // Convertir "28-07" en "28/07" pour l'input
-      const [day, month] = season.periods[0].start.split('-');
-      startInput.value = `${day}/${month}`;
-      startInput.setAttribute('data-date-value', `${day}/${month}`);
-    }
-    
-    if (endInput) {
-      const [day, month] = season.periods[0].end.split('-');
-      endInput.value = `${day}/${month}`;
-      endInput.setAttribute('data-date-value', `${day}/${month}`);
+  // Pré-remplir TOUTES les plages de dates
+  if (season.periods && season.periods.length > 0) {
+    season.periods.forEach((period, i) => {
+      const index = i + 1; // bloc-plage-dates-1, bloc-plage-dates-2, etc.
+      
+      // Afficher le bloc si i > 0 (le bloc 1 est toujours visible)
+      if (index > 1) {
+        const block = document.getElementById(`bloc-plage-dates-${index}-edit`);
+        if (block) block.style.display = 'flex'; // ou '' selon votre CSS
+      }
+      
+      const startInput = document.getElementById(`season-date-start-input-${index}-edit`);
+      const endInput = document.getElementById(`season-date-end-input-${index}-edit`);
+      
+      if (startInput) {
+        const [day, month] = period.start.split('-');
+        startInput.value = `${day}/${month}`;
+        startInput.setAttribute('data-date-value', `${day}/${month}`);
+      }
+      
+      if (endInput) {
+        const [day, month] = period.end.split('-');
+        endInput.value = `${day}/${month}`;
+        endInput.setAttribute('data-date-value', `${day}/${month}`);
+      }
+    });
+
+    // Masquer le bouton "Ajouter" si 5 plages
+    if (season.periods.length >= 5) {
+      const addBtn = document.getElementById('btn-add-plage-dates-edit');
+      if (addBtn) addBtn.style.display = 'none';
     }
   }
   
@@ -934,11 +1109,8 @@ openEditSeasonModal(seasonIndex) {
 }
   
 resetSeasonModal() {
-  // Réinitialiser tous les champs
   const fields = [
     'season-name-input',
-    'season-date-start-input',
-    'season-date-end-input',
     'season-price-input',
     'season-min-nights-input'
   ];
@@ -952,13 +1124,36 @@ resetSeasonModal() {
     }
   });
 
-  // NOUVEAU : Réinitialiser les prix plateformes
+  // Réinitialiser TOUTES les plages de dates (1 à 5)
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}`);
+    const endInput = document.getElementById(`season-date-end-input-${i}`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+
+    // Masquer les blocs 2 à 5, garder le bloc 1 visible
+    if (i > 1) {
+      const block = document.getElementById(`bloc-plage-dates-${i}`);
+      if (block) block.style.display = 'none';
+    }
+  }
+
+  // Réafficher le bouton "Ajouter une plage"
+  const addBtn = document.getElementById('btn-add-plage-dates');
+  if (addBtn) addBtn.style.display = '';
+
+  // Réinitialiser les prix plateformes
   const platformIds = [
     'season-airbnb-price-input',
     'season-booking-price-input',
     'season-other-price-input'
   ];
-  
   platformIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
@@ -980,14 +1175,18 @@ validateAndAddSeason() {
   const seasonData = this.getSeasonFormData();
   
   // Créer l'objet saison pour le JSON
+  // Trier les périodes chronologiquement (par mois de début)
+  const sortedPeriods = [...seasonData.periods].sort((a, b) => {
+    const [dayA, monthA] = a.start.split('-').map(Number);
+    const [dayB, monthB] = b.start.split('-').map(Number);
+    return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+  });
+
   const newSeason = {
     name: seasonData.name,
     price: parseInt(seasonData.price),
     minNights: parseInt(seasonData.minNights) || 1,
-    periods: [{
-      start: seasonData.dateStart,
-      end: seasonData.dateEnd
-    }]
+    periods: sortedPeriods
   };
   
   // NOUVEAU : Ajouter les prix plateformes s'ils existent
@@ -1035,15 +1234,19 @@ validateAndEditSeason() {
   // Récupérer les valeurs des champs
   const seasonData = this.getEditSeasonFormData();
   
-  /// Mettre à jour la saison existante
+  // Mettre à jour la saison existante
+  // Trier les périodes chronologiquement
+  const sortedPeriods = [...seasonData.periods].sort((a, b) => {
+    const [dayA, monthA] = a.start.split('-').map(Number);
+    const [dayB, monthB] = b.start.split('-').map(Number);
+    return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+  });
+
   const updatedSeason = {
     name: seasonData.name,
     price: parseInt(seasonData.price),
     minNights: parseInt(seasonData.minNights) || 1,
-    periods: [{
-      start: seasonData.dateStart,
-      end: seasonData.dateEnd
-    }]
+    periods: sortedPeriods
   };
   
   // NOUVEAU : Ajouter les prix plateformes s'ils existent
@@ -1073,13 +1276,29 @@ validateAndEditSeason() {
 }
   
 getSeasonFormData() {
+  // Récupérer toutes les plages de dates visibles
+  const periods = [];
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}`);
+    const endInput = document.getElementById(`season-date-end-input-${i}`);
+    
+    // Vérifier que le bloc est visible (pas display:none)
+    const block = document.getElementById(`bloc-plage-dates-${i}`);
+    if (!block || block.style.display === 'none') continue;
+    
+    const start = this.getDateValue(startInput);
+    const end = this.getDateValue(endInput);
+    
+    if (start && end) {
+      periods.push({ start, end });
+    }
+  }
+
   return {
     name: document.getElementById('season-name-input')?.value.trim(),
-    dateStart: this.getDateValue(document.getElementById('season-date-start-input')),
-    dateEnd: this.getDateValue(document.getElementById('season-date-end-input')),
+    periods: periods,
     price: this.getRawValue(document.getElementById('season-price-input')),
     minNights: this.getRawValue(document.getElementById('season-min-nights-input')) || '1',
-    // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input')) || '0',
     otherPrice: this.getRawValue(document.getElementById('season-other-price-input')) || '0'
@@ -1088,13 +1307,29 @@ getSeasonFormData() {
 
   // 🆕 Récupérer les données du formulaire de modification
 getEditSeasonFormData() {
+  // Récupérer toutes les plages de dates visibles
+  const periods = [];
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}-edit`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-edit`);
+    
+    // Vérifier que le bloc est visible
+    const block = document.getElementById(`bloc-plage-dates-${i}-edit`);
+    if (!block || block.style.display === 'none') continue;
+    
+    const start = this.getDateValue(startInput);
+    const end = this.getDateValue(endInput);
+    
+    if (start && end) {
+      periods.push({ start, end });
+    }
+  }
+
   return {
     name: document.getElementById('season-name-input-edit')?.value.trim(),
-    dateStart: this.getDateValue(document.getElementById('season-date-start-input-edit')),
-    dateEnd: this.getDateValue(document.getElementById('season-date-end-input-edit')),
+    periods: periods,
     price: this.getRawValue(document.getElementById('season-price-input-edit')),
     minNights: this.getRawValue(document.getElementById('season-min-nights-input-edit')) || '1',
-    // NOUVEAU : Prix plateformes
     airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-edit')) || '0',
     bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-edit')) || '0',
     otherPrice: this.getRawValue(document.getElementById('season-other-price-input-edit')) || '0'
@@ -1151,8 +1386,6 @@ closeSeasonModal() {
 resetEditSeasonModal() {
   const fields = [
     'season-name-input-edit',
-    'season-date-start-input-edit',
-    'season-date-end-input-edit',
     'season-price-input-edit',
     'season-min-nights-input-edit'
   ];
@@ -1165,13 +1398,36 @@ resetEditSeasonModal() {
       input.removeAttribute('data-date-value');
     }
   });
-  // NOUVEAU : Réinitialiser les prix plateformes
+
+  // Réinitialiser TOUTES les plages de dates (1 à 5)
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}-edit`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-edit`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+
+    // Masquer les blocs 2 à 5, garder le bloc 1 visible
+    if (i > 1) {
+      const block = document.getElementById(`bloc-plage-dates-${i}-edit`);
+      if (block) block.style.display = 'none';
+    }
+  }
+
+  // Réafficher le bouton "Ajouter une plage"
+  const addBtn = document.getElementById('btn-add-plage-dates-edit');
+  if (addBtn) addBtn.style.display = '';
+
   const platformIds = [
     'season-airbnb-price-input-edit',
     'season-booking-price-input-edit',
     'season-other-price-input-edit'
   ];
-  
   platformIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
@@ -1307,7 +1563,8 @@ prefillComplexFields() {
     'Four': 'checkbox-four',
     'Lave-vaisselle': 'checkbox-lave-vaisselle',
     'Sèche-linge': 'checkbox-seche-linge',
-    'Machine à laver': 'checkbox-machine-a-laver'
+    'Machine à laver': 'checkbox-machine-a-laver',
+    'Borne électrique': 'checkbox-borne-electrique'
   };
   
   // Cocher les bonnes cases
@@ -1365,7 +1622,7 @@ prefillComplexFields() {
     'MasterCard': 'checkbox-mastercard',
     'Virement bancaire': 'checkbox-virement',
     'PayPal': 'checkbox-paypal',
-    'PayLib': 'checkbox-paylib',
+    'Wero': 'checkbox-wero',
     'American Express': 'checkbox-amex',
     'Chèques acceptés': 'checkbox-cheques',
     'Chèques-vacances': 'checkbox-cheques-vacances'
@@ -1510,6 +1767,42 @@ prefillHoraires() {
   
   this.initialValues.horaires_arrivee_depart = horairesStr;
 }
+
+
+prefillCancellationPolicy() {
+  const value = this.propertyData.conditions_annulation || '';
+  const predefinedPolicies = ['flexible', 'moderate', 'limited', 'strict'];
+  const customBloc = document.getElementById('bloc-custom-annulation');
+  const textarea = document.getElementById('conditions-annulation-input');
+  
+  // Déterminer si c'est un choix prédéfini ou du texte custom
+  let selectedPolicy;
+  
+  if (predefinedPolicies.includes(value)) {
+    selectedPolicy = value;
+    if (customBloc) customBloc.style.display = 'none';
+  } else {
+    // Texte libre (ancien format ou personnalisé)
+    selectedPolicy = 'custom';
+    if (customBloc) customBloc.style.display = 'block';
+    if (textarea) textarea.value = value;
+  }
+  
+  // Cocher le bon radio button
+  const radio = document.getElementById(`radio-${selectedPolicy}`);
+  if (radio) {
+    radio.checked = true;
+    // Mettre à jour le visuel Webflow
+    document.querySelectorAll('input[name="cancellation-policy"]').forEach(r => {
+      r.closest('.w-radio')?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    });
+    radio.closest('.w-radio')?.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+  }
+  
+  // Sauvegarder la valeur initiale
+  this.initialValues.conditions_annulation = value;
+}
+
   
 // 🆕 NOUVELLE MÉTHODE : Pré-remplir les options de ménage
 prefillCleaningOptions() {
@@ -1579,6 +1872,244 @@ prefillCleaningOptions() {
   this.initialValues.cleaningIncluded = cleaning?.included ?? true;
   this.initialValues.cleaningOptional = cleaning?.optional ?? false;
   this.initialValues.cleaningPrice = cleaning?.price || 0;
+}
+
+prefillWeekendOptions() {
+  const yesRadio = document.getElementById('weekend-oui');
+  const noRadio = document.getElementById('weekend-non');
+  const priceInput = document.getElementById('weekend-price-input');
+  
+  if (!yesRadio || !noRadio || !priceInput) {
+    console.warn('⚠️ Éléments week-end non trouvés dans le DOM');
+    return;
+  }
+  
+  // Récupérer les labels Webflow
+  const yesLabel = document.getElementById('label-weekend-oui');
+  const noLabel = document.getElementById('label-weekend-non');
+  
+  const weekend = this.pricingData.defaultPricing?.weekend;
+  
+  if (weekend && weekend.enabled) {
+    // Activer "Oui"
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (weekend.price) {
+      priceInput.value = weekend.price;
+      priceInput.setAttribute('data-raw-value', weekend.price);
+    }
+  } else {
+    // "Non" par défaut
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+  }
+  
+  // Sauvegarder l'état initial
+  this.initialValues.weekendEnabled = weekend?.enabled ?? false;
+  this.initialValues.weekendPrice = weekend?.price || 0;
+}
+
+  // 🆕 Pré-remplir les options de supplément voyageurs
+prefillExtraGuestsOptions() {
+  const yesRadio = document.getElementById('extra-guests-oui');
+  const noRadio = document.getElementById('extra-guests-non');
+  const yesLabel = document.getElementById('label-extra-guests-oui');
+  const noLabel = document.getElementById('label-extra-guests-non');
+  const thresholdInput = document.getElementById('extra-guests-threshold-input');
+  const priceInput = document.getElementById('extra-guests-price-input');
+  const labelThreshold = document.getElementById('label-extra-guests');
+  const labelPrice = document.getElementById('label-extra-guests-price');
+  if (!yesRadio || !noRadio || !thresholdInput || !priceInput) return;
+  // Initialiser si absent
+  if (!this.pricingData.extraGuests) {
+    this.pricingData.extraGuests = { enabled: false, threshold: 2, pricePerPerson: 0 };
+  }
+  const extraGuests = this.pricingData.extraGuests;
+  if (extraGuests.enabled) {
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    thresholdInput.style.display = 'block';
+    priceInput.style.display = 'block';
+    if (labelThreshold) labelThreshold.style.display = 'block';
+    if (labelPrice) labelPrice.style.display = 'block';
+    if (extraGuests.threshold) {
+      thresholdInput.value = extraGuests.threshold;
+      thresholdInput.setAttribute('data-raw-value', extraGuests.threshold);
+    }
+    if (extraGuests.pricePerPerson) {
+      priceInput.value = extraGuests.pricePerPerson;
+      priceInput.setAttribute('data-raw-value', extraGuests.pricePerPerson);
+    }
+  } else {
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    thresholdInput.style.display = 'none';
+    priceInput.style.display = 'none';
+    if (labelThreshold) labelThreshold.style.display = 'none';
+    if (labelPrice) labelPrice.style.display = 'none';
+  }
+  // Sauvegarder les valeurs initiales pour le cancel
+  this.initialValues.extraGuestsEnabled = extraGuests.enabled;
+  this.initialValues.extraGuestsThreshold = extraGuests.threshold || 2;
+  this.initialValues.extraGuestsPrice = extraGuests.pricePerPerson || 0;
+}
+
+// 🆕 Configurer les listeners pour le supplément voyageurs
+setupExtraGuestsListeners() {
+  const yesRadio = document.getElementById('extra-guests-oui');
+  const noRadio = document.getElementById('extra-guests-non');
+  const yesLabel = document.getElementById('label-extra-guests-oui');
+  const noLabel = document.getElementById('label-extra-guests-non');
+  const thresholdInput = document.getElementById('extra-guests-threshold-input');
+  const priceInput = document.getElementById('extra-guests-price-input');
+  const labelThreshold = document.getElementById('label-extra-guests');
+  const labelPrice = document.getElementById('label-extra-guests-price');
+  if (!yesRadio || !noRadio || !thresholdInput || !priceInput) return;
+  // Listener sur le radio "Oui"
+  yesRadio.addEventListener('change', () => {
+    if (yesRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      thresholdInput.style.display = 'block';
+      priceInput.style.display = 'block';
+      if (labelThreshold) labelThreshold.style.display = 'block';
+      if (labelPrice) labelPrice.style.display = 'block';
+      setTimeout(() => thresholdInput.focus(), 100);
+
+      if (!this.pricingData.extraGuests) {
+        this.pricingData.extraGuests = {};
+      }
+      this.pricingData.extraGuests.enabled = true;
+
+      this.enableButtons();
+    }
+  });
+
+  // Listener sur le radio "Non"
+  noRadio.addEventListener('change', () => {
+    if (noRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      thresholdInput.style.display = 'none';
+      priceInput.style.display = 'none';
+      if (labelThreshold) labelThreshold.style.display = 'none';
+      if (labelPrice) labelPrice.style.display = 'none';
+      thresholdInput.value = '';
+      thresholdInput.removeAttribute('data-raw-value');
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+
+      if (!this.pricingData.extraGuests) {
+        this.pricingData.extraGuests = {};
+      }
+      this.pricingData.extraGuests.enabled = false;
+      this.pricingData.extraGuests.threshold = 0;
+      this.pricingData.extraGuests.pricePerPerson = 0;
+
+      this.enableButtons();
+    }
+  });
+
+  // Changement du seuil
+  thresholdInput.addEventListener('blur', () => {
+    let threshold = parseInt(thresholdInput.value) || 0;
+    
+    // Valider : min 1, max capacity - 1
+    const maxThreshold = (this.pricingData.capacity || 8) - 1;
+    if (threshold < 1) threshold = 1;
+    if (threshold > maxThreshold) threshold = maxThreshold;
+    
+    thresholdInput.value = threshold;
+    thresholdInput.setAttribute('data-raw-value', threshold);
+
+    if (!this.pricingData.extraGuests) {
+      this.pricingData.extraGuests = {};
+    }
+    this.pricingData.extraGuests.threshold = threshold;
+
+    this.enableButtons();
+  });
+
+  // Changement du prix
+  priceInput.addEventListener('blur', () => {
+    const price = parseInt(this.getRawValue(priceInput)) || 0;
+    if (!this.pricingData.extraGuests) {
+      this.pricingData.extraGuests = {};
+    }
+    this.pricingData.extraGuests.pricePerPerson = price;
+    this.enableButtons();
+  });
+}
+  
+setupWeekendListeners() {
+  const yesRadio = document.getElementById('weekend-oui');
+  const noRadio = document.getElementById('weekend-non');
+  const yesLabel = document.getElementById('label-weekend-oui');
+  const noLabel = document.getElementById('label-weekend-non');
+  const priceInput = document.getElementById('weekend-price-input');
+  
+  if (!yesRadio || !noRadio || !priceInput) return;
+  
+  // Listener sur le radio "Oui"
+  yesRadio.addEventListener('change', () => {
+    if (yesRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      
+      priceInput.style.display = 'block';
+      setTimeout(() => priceInput.focus(), 100);
+      
+      if (!this.pricingData.defaultPricing.weekend) {
+        this.pricingData.defaultPricing.weekend = {};
+      }
+      this.pricingData.defaultPricing.weekend.enabled = true;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Listener sur le radio "Non"
+  noRadio.addEventListener('change', () => {
+    if (noRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      
+      priceInput.style.display = 'none';
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+      
+      if (!this.pricingData.defaultPricing.weekend) {
+        this.pricingData.defaultPricing.weekend = {};
+      }
+      this.pricingData.defaultPricing.weekend.enabled = false;
+      this.pricingData.defaultPricing.weekend.price = 0;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Changement du prix
+  priceInput.addEventListener('blur', () => {
+    const price = parseInt(this.getRawValue(priceInput)) || 0;
+    if (!this.pricingData.defaultPricing.weekend) {
+      this.pricingData.defaultPricing.weekend = {};
+    }
+    this.pricingData.defaultPricing.weekend.price = price;
+    this.enableButtons();
+  });
 }
 
 // 🆕 NOUVELLE MÉTHODE : Formater tous les champs avec suffixes au chargement
@@ -2398,6 +2929,23 @@ updateAddExtraButtonState() {
   }
 }
 
+updateAddPhotosButtonState() {
+  const addPhotosButton = document.querySelector('.add-photos');
+  if (!addPhotosButton) return;
+
+  const isAtLimit = this.currentImagesGallery.length >= 20;
+
+  if (isAtLimit) {
+    addPhotosButton.disabled = true;
+    addPhotosButton.style.opacity = '0.5';
+    addPhotosButton.style.cursor = 'not-allowed';
+  } else {
+    addPhotosButton.disabled = false;
+    addPhotosButton.style.opacity = '1';
+    addPhotosButton.style.cursor = 'pointer';
+  }
+}
+
 // Méthode pour générer la chaîne extras au format attendu
 generateExtrasString() {
   return this.extras
@@ -2431,6 +2979,21 @@ initImageManagement() {
       this.initSortable();
     }, 100);
   }
+
+  // Listener sur le bouton d'ajout de photos
+  const addPhotosButton = document.querySelector('.Add-photos');
+  if (addPhotosButton) {
+    addPhotosButton.addEventListener('click', (e) => {
+      if (this.currentImagesGallery.length >= 20) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.showNotification('error', 'Limite de 20 photos maximum atteinte');
+      }
+    });
+  }
+
+  // Vérification initiale de l'état du bouton
+  this.updateAddPhotosButtonState();
 }
 
 initSortable() {
@@ -2650,6 +3213,9 @@ removeImage(index) {
   
   // Réinitialiser SortableJS
   this.initSortable();
+
+  // Mettre à jour l'état du bouton d'ajout de photos
+  this.updateAddPhotosButtonState();
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
@@ -2668,14 +3234,13 @@ setupFieldListeners() {
     { id: 'code-enregistrement-input' },
     { id: 'site-internet-input' },
     { id: 'inclus-reservation-input' },
-    { id: 'conditions-annulation-input' },
     { id: 'hote-input' },
     { id: 'email-input' },
     { id: 'telephone-input' },
     { id: 'annonce-airbnb-input' },
     { id: 'annonce-booking-input' },
     { id: 'annonce-gites-input' },
-    { id: 'page-google' }
+    { id: 'page-google' },
   ];
   
   fields.forEach(field => {
@@ -2739,7 +3304,7 @@ setupFieldListeners() {
   const equipementIds = ['checkbox-piscine', 'checkbox-jacuzzi', 'checkbox-barbecue', 
                       'checkbox-climatisation', 'checkbox-equipement-bebe', 'checkbox-parking',
                       'checkbox-wifi', 'checkbox-four', 'checkbox-lave-vaisselle',
-                      'checkbox-seche-linge', 'checkbox-machine-a-laver'];
+                      'checkbox-seche-linge', 'checkbox-machine-a-laver', 'checkbox-borne-electrique'];
   equipementIds.forEach(id => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
@@ -2803,7 +3368,7 @@ cautionAcompteIds.forEach(id => {
   
   // NOUVEAU : Listeners pour les modes de paiement
   const paiementIds = ['checkbox-visa', 'checkbox-especes', 'checkbox-mastercard', 
-                       'checkbox-virement', 'checkbox-paypal', 'checkbox-paylib', 
+                       'checkbox-virement', 'checkbox-paypal', 'checkbox-wero', 
                        'checkbox-amex', 'checkbox-cheques', 'checkbox-cheques-vacances'];
   paiementIds.forEach(id => {
     const checkbox = document.getElementById(id);
@@ -2829,6 +3394,36 @@ cautionAcompteIds.forEach(id => {
     });
     }
   });
+
+// Listeners pour la politique d'annulation (radio buttons)
+  document.querySelectorAll('input[name="cancellation-policy"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const customBloc = document.getElementById('bloc-custom-annulation');
+      if (customBloc) {
+        if (e.target.value === 'custom') {
+          customBloc.style.display = 'block';
+          const textarea = document.getElementById('conditions-annulation-input');
+          if (textarea) setTimeout(() => textarea.focus(), 100);
+        } else {
+          customBloc.style.display = 'none';
+        }
+      }
+      this.enableButtons();
+    });
+  });
+
+  // Listener sur le textarea pour le mode personnalisé
+  const conditionsTextarea = document.getElementById('conditions-annulation-input');
+  if (conditionsTextarea) {
+    conditionsTextarea.addEventListener('input', () => {
+      this.enableButtons();
+    });
+    conditionsTextarea.addEventListener('blur', () => {
+      if (this.validationManager) {
+        this.validationManager.validateFieldOnBlur('conditions-annulation-input');
+      }
+    });
+  }
   
   // NOUVEAU : Listeners pour taille maison avec synchronisation capacity
   const tailleMaisonIds = ['voyageurs-input', 'chambres-input', 'lits-input', 'salles-bain-input'];
@@ -2856,7 +3451,8 @@ cautionAcompteIds.forEach(id => {
   this.setupDefaultPricingListeners();
 
   this.setupCleaningListeners();
-
+  this.setupWeekendListeners();
+  this.setupExtraGuestsListeners();
   // 🆕 AJOUTER les gestionnaires d'opacité
   this.setupPriceOpacityHandlers();
 }
@@ -3285,6 +3881,7 @@ setBlockState(element, isActive) {
     
   }
 
+  
   cancelModifications() {
 
     if (this.validationManager) {
@@ -3299,7 +3896,6 @@ setBlockState(element, isActive) {
       { id: 'code-enregistrement-input', dataKey: 'code_enregistrement' },
       { id: 'site-internet-input', dataKey: 'site_internet' },
       { id: 'inclus-reservation-input', dataKey: 'inclus_reservation' },
-      { id: 'conditions-annulation-input', dataKey: 'conditions_annulation' },
       { id: 'hote-input', dataKey: 'host_name' },
       { id: 'email-input', dataKey: 'email' },
       { id: 'telephone-input', dataKey: 'telephone' },
@@ -3320,6 +3916,7 @@ setBlockState(element, isActive) {
     this.prefillComplexFields();
     this.prefillTailleMaison();
     this.prefillHoraires();
+    this.prefillCancellationPolicy();
     this.prefillCautionAcompte();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
@@ -3346,7 +3943,8 @@ setBlockState(element, isActive) {
     this.prefillDefaultPricing();    
     // 🆕 AJOUTER : Restaurer les options de ménage
     this.prefillCleaningOptions();
-
+    this.prefillWeekendOptions();
+    this.prefillExtraGuestsOptions();
     // Réinitialiser les iCals depuis les valeurs initiales
     for (let i = 1; i <= 4; i++) {
       const input = document.getElementById(`ical-url-${i}`);
@@ -3396,6 +3994,9 @@ setBlockState(element, isActive) {
     setTimeout(() => {
       this.initSortable();
     }, 100);
+
+    // Mettre à jour l'état du bouton d'ajout de photos
+    this.updateAddPhotosButtonState();
     // Désactiver les boutons
     this.disableButtons();
   }
@@ -3443,7 +4044,6 @@ setBlockState(element, isActive) {
     { id: 'code-enregistrement-input', dataKey: 'code_enregistrement', dbKey: 'code_enregistrement' },
     { id: 'site-internet-input', dataKey: 'site_internet', dbKey: 'site_internet' },
     { id: 'inclus-reservation-input', dataKey: 'inclus_reservation', dbKey: 'inclus_reservation' },
-    { id: 'conditions-annulation-input', dataKey: 'conditions_annulation', dbKey: 'conditions_annulation' },
     { id: 'hote-input', dataKey: 'host_name', dbKey: 'host_name' },
     { id: 'email-input', dataKey: 'email', dbKey: 'email' },
     { id: 'telephone-input', dataKey: 'telephone', dbKey: 'telephone' },
@@ -3480,7 +4080,8 @@ setBlockState(element, isActive) {
     'checkbox-four': 'Four',
     'checkbox-lave-vaisselle': 'Lave-vaisselle',
     'checkbox-seche-linge': 'Sèche-linge',
-    'checkbox-machine-a-laver': 'Machine à laver'
+    'checkbox-machine-a-laver': 'Machine à laver',
+    'checkbox-borne-electrique': 'Borne électrique'
   };
   
   const selectedEquipements = [];
@@ -3515,7 +4116,7 @@ setBlockState(element, isActive) {
     'checkbox-mastercard': 'MasterCard',
     'checkbox-virement': 'Virement bancaire',
     'checkbox-paypal': 'PayPal',
-    'checkbox-paylib': 'PayLib',
+    'checkbox-wero': 'Wero',
     'checkbox-amex': 'American Express',
     'checkbox-cheques': 'Chèques acceptés',
     'checkbox-cheques-vacances': 'Chèques-vacances'
@@ -3596,7 +4197,7 @@ setBlockState(element, isActive) {
   let conditionsTexte = '';
   
   if (parseInt(cautionValue) > 0) {
-    conditionsTexte = `Caution : Une caution de ${cautionValue}€ vous sera demandée au moment de la réservation`;
+    conditionsTexte = `Caution : Une caution de ${cautionValue}€ est requise. Les modalités de remise (à l’arrivée, empreinte bancaire, etc.) sont précisées par l’hôte.`;
   }
   
   if (parseInt(acompteValue) > 0) {
@@ -3607,6 +4208,17 @@ setBlockState(element, isActive) {
   }
   
   currentValues.conditions_reservation = conditionsTexte;
+
+// Collecter la politique d'annulation
+  const selectedPolicy = document.querySelector('input[name="cancellation-policy"]:checked');
+  if (selectedPolicy) {
+    if (selectedPolicy.value === 'custom') {
+      const customText = document.getElementById('conditions-annulation-input')?.value.trim() || '';
+      currentValues.conditions_annulation = customText;
+    } else {
+      currentValues.conditions_annulation = selectedPolicy.value;
+    }
+  }
     
   const updates = {};
   // Comparer avec les valeurs initiales

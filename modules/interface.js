@@ -1,4 +1,4 @@
-// Nouveaux équipements
+// LOG production V1.1
 // Page google
 class InterfaceManager {
   constructor() {
@@ -21,6 +21,7 @@ class InterfaceManager {
     this.setupItineraireButton();
     this.setupSeasonButton();
     this.setupConditionsReservation();
+    this.setupConditionsAnnulation();
     this.setupExtras();
     this.setupEquipements();
     this.setupOptionsAccueil();
@@ -116,20 +117,64 @@ class InterfaceManager {
   // Nouvelle méthode à ajouter dans la classe :
   setupConditionsReservation() {
     const conditionsElement = document.querySelector('[data-conditions-reservation]');
+    const blocConditions = document.getElementById('bloc-conditions');
     
-    if (!conditionsElement) {
+    if (!conditionsElement || !blocConditions) {
       return;
     }
     
     const conditionsText = conditionsElement.textContent.trim();
     
+    // Si le texte est vide, masquer le bloc entier
+    if (!conditionsText || conditionsText === '') {
+      blocConditions.style.display = 'none';
+      return;
+    }
+    
+    // Il y a du contenu, afficher le bloc
+    blocConditions.style.display = 'bloc';
+    
     // Vérifier si on a "Caution" ET "Acompte" dans le texte
     if (conditionsText.includes('Caution') && conditionsText.includes('Acompte')) {
-      // Remplacer le \n par un <br> pour l'affichage HTML
       const htmlContent = conditionsText.replace(/\n/g, '<br>');
       conditionsElement.innerHTML = htmlContent;
     }
   }
+
+setupConditionsAnnulation() {
+    // Récupérer la valeur depuis le CMS
+    const conditionsElement = document.querySelector('[data-conditions-annulation]');
+    if (!conditionsElement) return;
+    
+    const value = conditionsElement.getAttribute('data-conditions-annulation') || 
+                  conditionsElement.textContent.trim();
+    
+    if (!value) return;
+    
+    const predefinedPolicies = ['flexible', 'moderate', 'limited', 'strict'];
+    
+    // Masquer tous les blocs par défaut
+    ['flexible', 'moderate', 'limited', 'strict', 'custom'].forEach(policy => {
+      const bloc = document.getElementById(`annulation-${policy}`);
+      if (bloc) bloc.style.display = 'none';
+    });
+    
+    if (predefinedPolicies.includes(value)) {
+      // Choix prédéfini : afficher le bloc correspondant
+      const bloc = document.getElementById(`annulation-${value}`);
+      if (bloc) bloc.style.display = 'block';
+    } else {
+      // Texte personnalisé : afficher le bloc custom avec le texte
+      const customBloc = document.getElementById('annulation-custom');
+      if (customBloc) {
+        customBloc.style.display = 'block';
+        // Mettre le texte dans le bloc
+        const textElement = customBloc.querySelector('[data-custom-annulation-text]') || customBloc;
+        textElement.textContent = value;
+      }
+    }
+  }
+  
   setupMainImages() {
   
   // Utiliser les classes que vous avez données
@@ -287,7 +332,8 @@ class InterfaceManager {
       'Four': 'four',
       'Lave-vaisselle': 'lave-vaisselle',
       'Sèche-linge': 'seche-linge',
-      'Machine à laver': 'machine-a-laver'
+      'Machine à laver': 'machine-a-laver',
+      'Borne électrique': 'borne-electrique'
     };
     
     // Masquer tous les équipements au départ

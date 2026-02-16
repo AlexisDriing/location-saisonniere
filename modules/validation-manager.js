@@ -1,4 +1,5 @@
-// Gestionnaire de validation pour la page modification de logement - menage en option
+// LOG production V1.1
+// Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
@@ -19,7 +20,7 @@ class ValidationManager {
         fields: {
           'name-input': {
             required: true,
-            minLength: 5,
+            minLength: 3,
             maxLength: 80,
             messages: {
               empty: "Le nom du logement est obligatoire",
@@ -186,11 +187,19 @@ class ValidationManager {
               min: "La caution ne peut pas être négative"
             }
           },
-          'conditions-annulation-input': {
+          'cancellation-policy': {
             required: true,
-            maxLength: 1000,
+            type: 'radio',
             messages: {
-              empty: "Les conditions d'annulation sont obligatoires",
+              empty: "Veuillez choisir une politique d'annulation"
+            }
+          },
+          'conditions-annulation-input': {
+            required: false,
+            maxLength: 1000,
+            conditionalRequired: true,
+            messages: {
+              empty: "Le texte personnalisé est obligatoire",
               maxLength: "Maximum 1000 caractères (actuellement: {count})"
             }
           },
@@ -441,6 +450,52 @@ class ValidationManager {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
+
+    // NOUVEAU : Validation du prix week-end
+    const weekendOui = document.getElementById('weekend-oui');
+    const weekendPriceInput = document.getElementById('weekend-price-input');
+    
+    if (weekendOui && weekendOui.checked) {
+      const weekendPrice = parseInt(this.editor.getRawValue(weekendPriceInput)) || 0;
+      if (weekendPrice < 10) {
+        this.showFieldError('weekend-price-input', "Le prix week-end doit être d'au moins 10€");
+        hasError = true;
+      } else {
+        this.hideFieldError('weekend-price-input');
+      }
+    } else {
+      this.hideFieldError('weekend-price-input');
+    }
+
+    // 🆕 NOUVEAU : Validation du supplément voyageurs
+    const extraGuestsOui = document.getElementById('extra-guests-oui');
+    const extraGuestsThresholdInput = document.getElementById('extra-guests-threshold-input');
+    const extraGuestsPriceInput = document.getElementById('extra-guests-price-input');
+
+    if (extraGuestsOui && extraGuestsOui.checked) {
+      const threshold = parseInt(extraGuestsThresholdInput?.value) || 0;
+      const price = parseInt(this.editor.getRawValue(extraGuestsPriceInput)) || 0;
+      const maxCapacity = (this.editor.pricingData?.capacity || 8) - 1;
+
+      if (threshold < 1 || threshold > maxCapacity) {
+        this.showFieldError('extra-guests-threshold-input', `Le seuil doit être entre 1 et ${maxCapacity}`);
+        isValid = false;
+        this.showTabError('error-indicator-tab3');
+      } else {
+        this.hideFieldError('extra-guests-threshold-input');
+      }
+
+      if (price < 1) {
+        this.showFieldError('extra-guests-price-input', "Le prix par personne doit être d'au moins 1€");
+        isValid = false;
+        this.showTabError('error-indicator-tab3');
+      } else {
+        this.hideFieldError('extra-guests-price-input');
+      }
+    } else {
+      this.hideFieldError('extra-guests-threshold-input');
+      this.hideFieldError('extra-guests-price-input');
+    }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
     return isValid;
@@ -459,6 +514,16 @@ class ValidationManager {
       // Pour les groupes checkbox
       if (fieldConfig.type === 'checkbox-group' && value.length === 0) {
         return fieldConfig.messages.empty;
+      }
+    }
+    
+    // Validation conditionnelle (textarea requis seulement si radio "custom" sélectionné)
+    if (fieldConfig.conditionalRequired) {
+      const customRadio = document.getElementById('radio-custom');
+      if (customRadio && customRadio.checked) {
+        if (value === '' || value === null || value === undefined) {
+          return fieldConfig.messages.empty;
+        }
       }
     }
     
@@ -720,51 +785,96 @@ class ValidationManager {
       this.hideFieldError(`season-name-input${suffix}`);
     }
     
-    // Validation des dates
-    const startDate = this.editor.getDateValue(startInput);
-    const endDate = this.editor.getDateValue(endInput);
-    
-    if (!startDate) {
-      this.showFieldError(`season-date-start-input${suffix}`, "La date de début est obligatoire");
-      hasError = true;
-    } else {
-      this.hideFieldError(`season-date-start-input${suffix}`);
-    }
-    
-    if (!endDate) {
-      this.showFieldError(`season-date-end-input${suffix}`, "La date de fin est obligatoire");
-      hasError = true;
-    } else {
-      this.hideFieldError(`season-date-end-input${suffix}`);
-    }
-    
     // Validation du prix
-    const price = parseInt(this.editor.getRawValue(priceInput)) || 0;
+    const price = priceInput ? parseInt(this.editor.getRawValue(priceInput)) || 0 : 0;
     if (price < 10) {
-      this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
+      if (priceInput) {
+        this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
+      }
       hasError = true;
     } else {
       this.hideFieldError(`season-price-input${suffix}`);
     }
     
     // Validation des nuits minimum
-    const minNights = parseInt(this.editor.getRawValue(minNightsInput)) || 0;
+    const minNights = minNightsInput ? parseInt(this.editor.getRawValue(minNightsInput)) || 0 : 0;
     if (minNights < 1) {
-      this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
+      if (minNightsInput) {
+        this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
+      }
       hasError = true;
     } else {
       this.hideFieldError(`season-min-nights-input${suffix}`);
     }
+
+    // Validation de TOUTES les plages de dates
+    const allPeriods = [];
+  let hasAtLeastOnePeriod = false;
+
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (!block || block.style.display === 'none') continue;
+
+    const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+    const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
     
-    // Si pas d'erreur de base, vérifier les chevauchements de dates
-    if (!hasError && startDate && endDate) {
-      const overlap = this.checkSeasonDateOverlap(startDate, endDate, isEdit);
+    const startDate = startInput ? this.editor.getDateValue(startInput) : null;
+    const endDate = endInput ? this.editor.getDateValue(endInput) : null;
+
+    if (!startDate) {
+      this.showFieldError(`season-date-start-input-${i}${suffix}`, "La date de début est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-date-start-input-${i}${suffix}`);
+    }
+
+    if (!endDate) {
+      this.showFieldError(`season-date-end-input-${i}${suffix}`, "La date de fin est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-date-end-input-${i}${suffix}`);
+    }
+
+    if (startDate && endDate) {
+      allPeriods.push({ start: startDate, end: endDate, index: i });
+      hasAtLeastOnePeriod = true;
+    }
+  }
+
+  // Au moins une plage doit exister
+  if (!hasAtLeastOnePeriod) {
+    this.showFieldError(`season-date-start-input-1${suffix}`, "Au moins une période de dates est obligatoire");
+    hasError = true;
+  }
+
+  // Vérifier les chevauchements INTRA-saison (entre plages de la même saison)
+  if (!hasError && allPeriods.length > 1) {
+    for (let a = 0; a < allPeriods.length; a++) {
+      for (let b = a + 1; b < allPeriods.length; b++) {
+        const [dayA1, monthA1] = allPeriods[a].start.split('-').map(Number);
+        const [dayA2, monthA2] = allPeriods[a].end.split('-').map(Number);
+        const [dayB1, monthB1] = allPeriods[b].start.split('-').map(Number);
+        const [dayB2, monthB2] = allPeriods[b].end.split('-').map(Number);
+
+        if (this.datesOverlap(dayA1, monthA1, dayA2, monthA2, dayB1, monthB1, dayB2, monthB2)) {
+          const msg = `Cette période chevauche la période n°${allPeriods[a].index}`;
+          this.showFieldError(`season-date-start-input-${allPeriods[b].index}${suffix}`, msg);
+          hasError = true;
+        }
+      }
+    }
+  }
+
+  // Vérifier les chevauchements INTER-saisons (avec les autres saisons)
+  if (!hasError) {
+    for (const period of allPeriods) {
+      const overlap = this.checkSeasonDateOverlap(period.start, period.end, isEdit);
       if (overlap) {
-        this.showFieldError(`season-date-start-input${suffix}`, overlap);
-        this.showFieldError(`season-date-end-input${suffix}`, overlap);
+        this.showFieldError(`season-date-start-input-${period.index}${suffix}`, overlap);
         hasError = true;
       }
     }
+  }
     
     // Validation des prix plateformes (si renseignés)
     if (!hasError && price > 0) {

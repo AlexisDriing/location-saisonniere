@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - Production
+// Gestionnaire principal des propriétés pour la page liste - LOG production V1.1
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -226,8 +226,13 @@ class PropertyManager {
         return;
       }
       
+      // 🆕 Récupérer le nombre total de voyageurs (adultes + enfants, hors bébés)
+      const childrenElement = document.getElementById('chiffres-enfants');
+      const childrenCount = childrenElement ? parseInt(childrenElement.textContent, 10) : 0;
+      const totalGuests = adultsCount + childrenCount;
+      
       // Construire l'URL pour la requête
-      let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}`;
+      let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}&total_guests=${totalGuests}`;
       visiblePropertyIds.forEach(id => {
         url += `&property_ids=${encodeURIComponent(id)}`;
       });
@@ -582,7 +587,13 @@ class PropertyManager {
         url += `types=${encodeURIComponent(filters.types.join(','))}&`;
       }
       
+      // 🆕 Ajouter le nombre de voyageurs pour le calcul du supplément
+      if (filters.totalGuests) {
+        url += `adults=${filters.adults}&total_guests=${filters.totalGuests}&`;
+      }
+      
       url += `page=${this.currentPage}&limit=${this.pageSize}`;
+
 
       // Afficher indicateur de chargement
       this.showLoading(true);
@@ -906,9 +917,12 @@ if (hostImageElement) {
     }
     
     const adultsElement = document.getElementById('chiffres-adultes');
+    const childrenElement = document.getElementById('chiffres-enfants');
     if (adultsElement) {
       filters.adults = parseInt(adultsElement.textContent, 10) || 1;
     }
+    filters.children = childrenElement ? parseInt(childrenElement.textContent, 10) : 0;
+    filters.totalGuests = (filters.adults || 1) + filters.children;
     
     // Prix maximum - vérifier d'abord FiltersManager
     if (window.filtersManager && window.filtersManager.state.prixMax) {

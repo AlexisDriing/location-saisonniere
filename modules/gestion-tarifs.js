@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison - LOG production
+// Gestion de l'affichage des tarifs par saison - LOG production V1.1
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -79,7 +79,7 @@ class TariffsDisplayManager {
       const dateRanges = season.periods.map(period => 
         this.formatDateRange(period.start, period.end)
       );
-      datesElement.textContent = dateRanges.join(" et ");
+      datesElement.textContent = dateRanges.join(" - ");
     }
     
     // Pourcentage de réduction
