@@ -1,4 +1,5 @@
-// Fonctions utilitaires partagées - personnes supplémentaires
+// LOG production V1.1
+// Fonctions utilitaires partagées
 class Utils {
   static getElementByIdWithFallback(baseId) {
     const dualIds = [
