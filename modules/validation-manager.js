@@ -1,4 +1,5 @@
-// Gestionnaire de validation pour la page modification de logement - texte erreur - feature condition annulation - plages saisons V2 - week-ends - personnes supplémentaires
+// LOG production V1.1
+// Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
     this.editor = propertyEditor;
