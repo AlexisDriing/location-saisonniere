@@ -1,4 +1,5 @@
-// Gestion des données de réservation et récupération des informations - menage option - Personnes supplémentaires
+// LOG production V1.1
+// Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
     this.init();
