@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison - features condition d'annualtion - plages saison
+// Gestion de l'affichage des tarifs par saison - LOG production V1.1
 class TariffsDisplayManager {
   constructor() {
     this.init();
