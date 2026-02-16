@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.11
+// Calculateur de prix principal - LOG production V1.111
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -524,6 +524,8 @@ class PriceCalculator {
           });
         } else {
           ligneSupplementEls.forEach(el => el.style.display = 'none');
+          calculSupplementEls.forEach(el => el.textContent = '');
+          prixSupplementEls.forEach(el => el.textContent = '');
         }
       } 
     
