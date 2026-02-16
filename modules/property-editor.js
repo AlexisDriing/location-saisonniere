@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.11
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -2930,17 +2930,15 @@ updateAddExtraButtonState() {
 }
 
 updateAddPhotosButtonState() {
-  const addPhotosButton = document.querySelector('.add-photos');
+  const addPhotosButton = document.querySelector('.Add-photos');
   if (!addPhotosButton) return;
 
   const isAtLimit = this.currentImagesGallery.length >= 20;
 
   if (isAtLimit) {
-    addPhotosButton.disabled = true;
     addPhotosButton.style.opacity = '0.5';
     addPhotosButton.style.cursor = 'not-allowed';
   } else {
-    addPhotosButton.disabled = false;
     addPhotosButton.style.opacity = '1';
     addPhotosButton.style.cursor = 'pointer';
   }
