@@ -1,4 +1,5 @@
-// Gestionnaire de la page de modification de logement - Features condition annulation V2 - Plages saisons V2 - Week-ends v4 - prix supplémentaire V3 - borne electrique - wero - bouton ajout image
+// LOG production V1.1
+// Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
     this.propertyId = null;
