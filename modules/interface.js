@@ -1,4 +1,4 @@
-// Nouveaux équipements V2 - features condition annulation - affichage bloc V2
+// LOG production V1.1
 // Page google
 class InterfaceManager {
   constructor() {
