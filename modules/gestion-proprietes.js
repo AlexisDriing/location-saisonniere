@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V1.111
+// Gestionnaire principal des propriétés pour la page liste - LOG production V1.1
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1150,8 +1150,12 @@ if (hostImageElement) {
             timestamp: Date.now()
           }));
           
-          self.applyFilters();
-          self.updatePricesForDates(self.startDate, self.endDate);
+          // Appliquer les filtres SEULEMENT si on n'attend pas le géocodage
+          // (évite le bug des 0km quand on vient de la page d'accueil avec lieu + dates)
+          if (!self._waitingForGeocode) {
+            self.applyFilters();
+            self.updatePricesForDates(self.startDate, self.endDate);
+          }
         }
       });
       
