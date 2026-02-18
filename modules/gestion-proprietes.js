@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V1.11
+// Gestionnaire principal des propriétés pour la page liste - LOG production V1.111
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -100,7 +100,10 @@ class PropertyManager {
     
     // Charger la première page de propriétés
     setTimeout(() => {
-      this.applyFilters(true);
+      // Ne pas appeler applyFilters si on attend le géocodage (évite le bug des 0km)
+      if (!this._waitingForGeocode) {
+        this.applyFilters(true);
+      }
     }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
 
     // Export global
