@@ -1,4 +1,4 @@
-// Gestion du calendrier pour la page liste des logements LOG production
+// Gestion du calendrier pour la page liste des logements - LOG production V2
 class CalendarListManager {
   constructor() {
     this.dateButton = null;
@@ -97,12 +97,17 @@ class CalendarListManager {
             timestamp: Date.now()
           }));
           
-          // Appliquer les filtres
-          window.propertyManager.applyFilters();
-          window.propertyManager.updatePricesForDates(
-            window.propertyManager.startDate, 
-            window.propertyManager.endDate
-          );
+          // Appliquer les filtres SEULEMENT si on n'attend pas un géocodage en cours
+          // (évite le bug des 0km quand on vient de la page d'accueil avec lieu + dates)
+          const isWaitingForGeocode = window.propertyManager._waitingForGeocode;
+          
+          if (!isWaitingForGeocode) {
+            window.propertyManager.applyFilters();
+            window.propertyManager.updatePricesForDates(
+              window.propertyManager.startDate, 
+              window.propertyManager.endDate
+            );
+          }
         }
       }
     });

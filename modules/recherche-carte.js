@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production V2
+// Gestionnaire de recherche géographique avec Mapbox - LOG production V3
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -190,10 +190,19 @@ class SearchMapManager {
     }
   }
 
-  async handleSearch(inputElement) {
+    async handleSearch(inputElement) {
     const city = inputElement.value;
     const userLocation = await this.getCoordinatesFromAddress(city);
-
+  
+    // Réinitialiser le flag d'attente de géocodage et annuler le timeout de sécurité
+    if (window.propertyManager) {
+      window.propertyManager._waitingForGeocode = false;
+      if (window.propertyManager._geocodeTimeout) {
+        clearTimeout(window.propertyManager._geocodeTimeout);
+        window.propertyManager._geocodeTimeout = null;
+      }
+    }
+  
     if (userLocation) {    
       if (window.propertyManager) {
         window.propertyManager.setSearchLocation(userLocation);
@@ -201,6 +210,10 @@ class SearchMapManager {
       }
     } else {
       console.error('Impossible de récupérer les coordonnées de la ville recherchée.');
+      // Appliquer quand même les filtres (sans coordonnées) si on a des dates
+      if (window.propertyManager && window.propertyManager.startDate) {
+        window.propertyManager.applyFilters();
+      }
     }
   }
 

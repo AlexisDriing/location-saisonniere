@@ -100,7 +100,10 @@ class PropertyManager {
     
     // Charger la première page de propriétés
     setTimeout(() => {
-      this.applyFilters(true);
+      // Ne pas appeler applyFilters si on attend le géocodage (évite le bug des 0km)
+      if (!this._waitingForGeocode) {
+        this.applyFilters(true);
+      }
     }, window.CONFIG?.PERFORMANCE?.lazyLoadDelay || 100);
 
     // Export global
@@ -1147,8 +1150,12 @@ if (hostImageElement) {
             timestamp: Date.now()
           }));
           
-          self.applyFilters();
-          self.updatePricesForDates(self.startDate, self.endDate);
+          // Appliquer les filtres SEULEMENT si on n'attend pas le géocodage
+          // (évite le bug des 0km quand on vient de la page d'accueil avec lieu + dates)
+          if (!self._waitingForGeocode) {
+            self.applyFilters();
+            self.updatePricesForDates(self.startDate, self.endDate);
+          }
         }
       });
       
@@ -1190,20 +1197,36 @@ if (hostImageElement) {
       const searchInputMobile = document.getElementById('search-input-mobile');
       
       if (searchInput) {
-        searchInput.value = data.locationText; // Afficher le texte desktop
+        searchInput.value = data.locationText;
       }
       
       if (searchInputMobile) {
-        searchInputMobile.value = data.locationText; // Afficher le texte mobile
+        searchInputMobile.value = data.locationText;
       }
+      
+      // Indiquer qu'on attend le géocodage (évite le bug des 0km)
+      this._waitingForGeocode = true;
+      
+      // Sécurité : remettre à false au bout de 5s max (évite un blocage permanent)
+      this._geocodeTimeout = setTimeout(() => {
+        if (this._waitingForGeocode) {
+          console.warn('⚠️ Timeout géocodage atteint, flag remis à false');
+          this._waitingForGeocode = false;
+        }
+      }, 5000);
       
       // Déclencher la recherche après un court délai
       setTimeout(() => {
         if (window.searchMapManager) {
-          // Utiliser l'input visible (mobile ou desktop)
           const activeInput = searchInputMobile && window.innerWidth < 768 ? searchInputMobile : searchInput;
           if (activeInput) {
             window.searchMapManager.handleSearch(activeInput);
+          }
+        } else {
+          // Si searchMapManager n'existe pas, remettre le flag à false
+          this._waitingForGeocode = false;
+          if (this._geocodeTimeout) {
+            clearTimeout(this._geocodeTimeout);
           }
         }
       }, 1000);
