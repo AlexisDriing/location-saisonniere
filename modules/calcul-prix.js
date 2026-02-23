@@ -301,12 +301,15 @@ class PriceCalculator {
           nightPrice = this.pricingData.defaultPricing.weekend.price;
         }
         
+        // Ne passer overridePrice QUE si c'est un prix week-end (différent du prix normal de la saison)
+        const isWeekendPrice = nightPrice !== season.price;
+        
         const nightInfo = {
           date: currentDate.format("YYYY-MM-DD"),
           formattedDate: currentDate.format("DD/MM/YYYY"),
           season: season.name,
           price: nightPrice,
-          platformPrice: this.getPlatformPrice(season, nightPrice)
+          platformPrice: this.getPlatformPrice(season, isWeekendPrice ? nightPrice : null)
         };
         
         details.nightsBreakdown.push(nightInfo);
