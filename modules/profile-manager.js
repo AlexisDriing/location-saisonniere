@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement - LOG production
+// Gestionnaire de profil - gestion de boutons intégré et création de logement - LOG production V1.1
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -545,6 +545,9 @@ checkPopupTrigger() {
   }
 
   // NOUVEAU : Bloquer les chiffres dans le champ ville-creation
+  const paysCreationInput = document.getElementById('pays-creation');
+  if (paysCreationInput) paysCreationInput.setAttribute('autocomplete', 'country-name');
+  
   const villeCreationInput = document.getElementById('ville-creation');
   if (villeCreationInput) {
     villeCreationInput.addEventListener('input', (e) => {
