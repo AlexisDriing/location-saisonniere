@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.111
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -458,6 +458,9 @@ setupTallyButton() {
 }
   
   prefillAddress() {
+    
+    const paysInput = document.getElementById('pays-input');
+    if (paysInput) paysInput.setAttribute('autocomplete', 'country-name');
     
     const address = this.propertyData.address || '';
     
