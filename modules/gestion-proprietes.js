@@ -704,9 +704,21 @@ class PropertyManager {
   const priceElement = newCard.querySelector('.texte-prix');
   const pourcentageElement = newCard.querySelector('.pourcentage');
   
-  if (priceElement && propData.pricing_data) {
+  if (priceElement && (propData.pricing_data || propData.is_chambre_hotes)) {
+    // Pour les chambres d'hotes, utiliser le prix minimum des chambres
+    if (propData.is_chambre_hotes && propData.chambres_min_price) {
+      priceElement.textContent = '';
+      priceElement.appendChild(document.createTextNode('Dès '));
+      const strong = document.createElement('strong');
+      strong.textContent = `${propData.chambres_min_price}\u20AC / nuit`;
+      priceElement.appendChild(strong);
+
+      if (pourcentageElement) {
+        pourcentageElement.style.display = 'none';
+      }
+    } else if (propData.pricing_data) {
     const pricingData = propData.pricing_data;
-    
+
     // SIMPLIFICATION : Trouver le prix le plus bas
     let lowestPrice = Infinity;
     let lowestPriceData = null;
@@ -781,6 +793,7 @@ class PropertyManager {
         pourcentageElement.style.display = 'none';
       }
     }
+    } // fermeture du else if (propData.pricing_data)
   } else if (priceElement && propData.price) {
     // Fallback si pas de pricing_data
     priceElement.textContent = '';  // ✅ SÉCURISÉ
@@ -794,13 +807,18 @@ class PropertyManager {
     }
   }
     
-    // Capacité
+    // Capacite
     const capacityElement = newCard.querySelector('[data-voyageurs]');
-    if (capacityElement && propData.capacity) {
-      capacityElement.setAttribute('data-voyageurs', propData.capacity);
-      const capacityText = propData.capacity > 1 ? 
-        `${propData.capacity} voyageurs` : '1 voyageur';
-      capacityElement.textContent = capacityText;
+    if (capacityElement) {
+      const displayCapacity = propData.is_chambre_hotes && propData.chambres_total_capacity
+        ? propData.chambres_total_capacity
+        : propData.capacity;
+      if (displayCapacity) {
+        capacityElement.setAttribute('data-voyageurs', displayCapacity);
+        const capacityText = displayCapacity > 1
+          ? `${displayCapacity} voyageurs` : '1 voyageur';
+        capacityElement.textContent = capacityText;
+      }
     }
     
     // Distance (si recherche géographique)
@@ -864,11 +882,18 @@ if (hostImageElement) {
       typeElement.setAttribute('data-mode-location', propData.type);
     }
 
-    // Afficher/masquer l'élément chambre d'hôtes
+    // Afficher/masquer l'element chambre d'hotes avec infos supplementaires
     const chambreHoteElement = newCard.querySelector('.chambres-hote');
     if (chambreHoteElement) {
-      if (propData.type === "Chambre d'hôtes") {
-        chambreHoteElement.style.display = 'block'; // ou 'flex' selon votre CSS
+      if (propData.type === "Chambre d'hôtes" || propData.is_chambre_hotes) {
+        chambreHoteElement.style.display = 'block';
+        // Afficher le nombre de chambres disponibles si on a l'info
+        if (propData.chambres_count) {
+          const countInfo = propData.chambres_disponibles
+            ? `${propData.chambres_disponibles}/${propData.chambres_count} chambre${propData.chambres_count > 1 ? 's' : ''} dispo`
+            : `${propData.chambres_count} chambre${propData.chambres_count > 1 ? 's' : ''}`;
+          chambreHoteElement.textContent = countInfo;
+        }
       } else {
         chambreHoteElement.style.display = 'none';
       }

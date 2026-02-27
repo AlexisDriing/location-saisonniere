@@ -40,7 +40,8 @@ class PriceCalculator {
     
     this.resetPrices();
     this.listenForDateChanges();
-    
+    this.listenForChambresChanges();
+
     // Export global pour autres modules
     window.priceCalculator = this;
   }
@@ -93,6 +94,26 @@ class PriceCalculator {
     } else {
       console.warn("⚠️ jQuery ou DateRangePicker non disponible");
     }
+  }
+
+  // Ecouter les changements de selection de chambres
+  listenForChambresChanges() {
+    this.selectedChambresData = null;
+
+    window.addEventListener('chambres-selection-changed', (event) => {
+      const { chambresData, totalPrice } = event.detail;
+
+      if (chambresData && chambresData.length > 0) {
+        this.selectedChambresData = chambresData;
+      } else {
+        this.selectedChambresData = null;
+      }
+
+      // Recalculer les prix si des dates sont selectionnees
+      if (this.startDate && this.endDate) {
+        this.calculateAndDisplayPrices();
+      }
+    });
   }
 
   getReserverButtons() {
@@ -229,22 +250,98 @@ class PriceCalculator {
   }
 
   calculateAndDisplayPrices() {
-    if (!this.pricingData || !this.startDate || !this.endDate) {
-      console.warn('⚠️ Données manquantes pour le calcul:', {
-        pricingData: !!this.pricingData,
-        startDate: !!this.startDate,
-        endDate: !!this.endDate
-      });
+    if (!this.startDate || !this.endDate) {
       return;
     }
-    
+
+    // Si des chambres sont selectionnees, calculer le prix combine
+    if (this.selectedChambresData && this.selectedChambresData.length > 0) {
+      const combinedDetails = this.calculateChambresStayDetails();
+      if (combinedDetails) {
+        this.updateUI(combinedDetails);
+        this.hideMinNightsError();
+      } else {
+        this.showMinNightsError();
+      }
+      return;
+    }
+
+    // Logique standard pour les logements classiques
+    if (!this.pricingData) {
+      return;
+    }
+
     const stayDetails = this.calculateStayDetails();
     if (stayDetails) {
       this.updateUI(stayDetails);
       this.hideMinNightsError();
     } else {
-      console.warn('❌ Impossible de calculer les détails du séjour');
       this.showMinNightsError();
+    }
+  }
+
+  // Calculer le prix pour un sejour en combinant plusieurs chambres
+  calculateChambresStayDetails() {
+    if (!this.selectedChambresData || !this.startDate || !this.endDate) return null;
+
+    try {
+      const nights = this.endDate.diff(this.startDate, 'days');
+      if (nights <= 0) return null;
+
+      let totalNightsPrice = 0;
+      let totalPlatformPrice = 0;
+      let totalCleaningFee = 0;
+      let cleaningOptional = false;
+      const chambresBreakdown = [];
+
+      for (const chambre of this.selectedChambresData) {
+        if (!chambre.pricing_data) continue;
+
+        // Sauvegarder et restaurer le pricingData du PriceCalculator pour chaque chambre
+        const originalPricingData = this.pricingData;
+        this.pricingData = chambre.pricing_data;
+
+        const chambreDetails = this.calculateStayDetails();
+        this.pricingData = originalPricingData; // Restaurer
+
+        if (!chambreDetails) continue;
+
+        totalNightsPrice += chambreDetails.originalNightsPrice || 0;
+        totalPlatformPrice += chambreDetails.platformPrice || 0;
+        totalCleaningFee += chambreDetails.cleaningFee || 0;
+        if (chambreDetails.cleaningOptional) cleaningOptional = true;
+
+        chambresBreakdown.push({
+          name: chambre.name,
+          price: chambreDetails.originalNightsPrice,
+          nights: chambreDetails.nights
+        });
+      }
+
+      // Construire le resultat combine
+      const totalPrice = cleaningOptional
+        ? totalNightsPrice
+        : totalNightsPrice + totalCleaningFee;
+
+      return {
+        nights,
+        nightsBreakdown: [],
+        nightsPrice: totalNightsPrice,
+        originalNightsPrice: totalNightsPrice,
+        extraGuestsFee: 0,
+        extraGuestsCount: 0,
+        discountAmount: 0,
+        cleaningFee: totalCleaningFee,
+        cleaningOptional,
+        totalPrice: Math.round(totalPrice),
+        platformPrice: Math.round(totalPlatformPrice + totalCleaningFee),
+        chambresBreakdown,
+        isChambresHotes: true
+      };
+
+    } catch (error) {
+      console.error('Erreur calculateChambresStayDetails:', error);
+      return null;
     }
   }
 

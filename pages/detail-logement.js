@@ -80,7 +80,13 @@ class DetailLogementPage {
       // 6. Données de réservation - SIXIÈME 
       this.managers.reservationData = new ReservationDataManager();
       
-      // 7. Améliorations mobile - DERNIER
+      // 7. Chambres d'hotes (si applicable)
+      if (typeof ChambresManager !== 'undefined') {
+        this.managers.chambres = new ChambresManager();
+        window.chambresManager = this.managers.chambres;
+      }
+
+      // 8. Améliorations mobile - DERNIER
       this.managers.mobileEnhancements = new MobileEnhancementsManager();
       
       

@@ -6,8 +6,10 @@ class CalendarManager {
     this.cache = new CalendarCache();
     this.icalManager = new ICalManager();
     this.nextUnavailableDate = null;
-    this.isCalculatingNextDate = false; // 🔧 NOUVEAU : Protection contre doubles calculs
+    this.isCalculatingNextDate = false;
+    this.chambresUnavailableDates = null; // Dates bloquees par les chambres selectionnees
     this.init();
+    this.listenForChambresChanges();
   }
 
   init() {
@@ -41,6 +43,11 @@ class CalendarManager {
             const startDate = this.picker.startDate;
             if (date.isBefore(startDate, 'day')) return true;
             if (this.nextUnavailableDate && date.isSameOrAfter(this.nextUnavailableDate, 'day')) return true;
+          }
+          // Si des chambres sont selectionnees, utiliser leurs dispos
+          if (this.chambresUnavailableDates && this.chambresUnavailableDates.size > 0) {
+            const dateStr = date.format('YYYY-MM-DD');
+            return this.chambresUnavailableDates.has(dateStr);
           }
           return this.icalManager.isDateUnavailable(date);
         },
@@ -411,10 +418,33 @@ enhancePickerPositioning() {
       nextUnavailableDate: this.nextUnavailableDate ? this.nextUnavailableDate.format('YYYY-MM-DD') : null,
       isCalculating: this.isCalculatingNextDate,
       // Détecter l'état "buggé"
-      isProbablyInBuggedState: picker && picker.startDate && 
-                              picker.startDate.isSame(moment().startOf('day'), 'day') && 
+      isProbablyInBuggedState: picker && picker.startDate &&
+                              picker.startDate.isSame(moment().startOf('day'), 'day') &&
                               !this.nextUnavailableDate
     };
+  }
+
+  // Ecouter les changements de selection de chambres
+  listenForChambresChanges() {
+    window.addEventListener('chambres-selection-changed', (event) => {
+      const { selectedChambres } = event.detail;
+
+      if (selectedChambres.length === 0) {
+        // Aucune chambre selectionnee, revenir au comportement normal (iCal du logement)
+        this.chambresUnavailableDates = null;
+      } else {
+        // Recuperer les dates indisponibles des chambres selectionnees
+        if (window.chambresManager) {
+          this.chambresUnavailableDates = window.chambresManager.getSelectedUnavailableDates();
+        }
+      }
+
+      // Mettre a jour le calendrier
+      if (this.picker && this.picker.updateCalendars) {
+        this.picker.updateCalendars();
+        this.updateCalendarUI();
+      }
+    });
   }
 }
 
