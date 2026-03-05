@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production V3
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -265,33 +265,74 @@ class SearchMapManager {
   }
 
   filterAndFormatSuggestions(features) {
-    const allowedKeywords = ['museum', 'monument', 'tour', 'tower', 'eiffel', 'statue', 'cathedral', 'church', 'attraction'];
+    const seen = new Set(); // Anti-doublons
     
     return features
-      .filter((feature) => {
-        const placeType = feature.place_type?.[0];
-        const name = feature.text?.toLowerCase() || '';
-        const fullName = feature.place_name?.toLowerCase() || '';
-
-        if (placeType === 'poi') {
-          return allowedKeywords.some(kw => name.includes(kw) || fullName.includes(kw));
-        }
-
-        return placeType === 'place' || placeType === 'region';
-      })
       .map((feature) => {
-        let placeType = "place";
-        if (feature.place_type && Array.isArray(feature.place_type) && feature.place_type.length > 0) {
-          placeType = feature.place_type[0];
+        const placeType = feature.place_type?.[0] || 'place';
+        const name = feature.text || '';
+        const placeName = feature.place_name || '';
+        
+        // Extraire les parties du contexte Mapbox
+        // place_name = "Chambord, Loir-et-Cher, Centre-Val de Loire, France"
+        const contextParts = placeName.split(',').map(p => p.trim());
+        
+        // Construire la ligne 2 selon le type
+        let subtitle = '';
+        let country = contextParts.length > 0 ? contextParts[contextParts.length - 1] : '';
+        
+        if (placeType === 'region') {
+          // Région → "Région, France"
+          subtitle = `Région, ${country}`;
+        } else if (placeType === 'district') {
+          // Département → "Département, France"
+          subtitle = `Département, ${country}`;
+        } else if (placeType === 'poi') {
+          // POI → "Paris, France" (ville + pays)
+          if (contextParts.length >= 3) {
+            // Chercher la ville dans le contexte (généralement le 2e élément)
+            subtitle = `${contextParts[1]}, ${country}`;
+          } else {
+            subtitle = country;
+          }
+        } else {
+          // Ville / locality / neighborhood → "Département, Pays"
+          if (contextParts.length >= 3) {
+            subtitle = `${contextParts[1]}, ${country}`;
+          } else if (contextParts.length === 2) {
+            subtitle = country;
+          } else {
+            subtitle = '';
+          }
+        }
+        
+        // Déduplication par nom + subtitle
+        const dedupeKey = `${name.toLowerCase()}|${subtitle.toLowerCase()}`;
+        if (seen.has(dedupeKey)) {
+          return null;
+        }
+        seen.add(dedupeKey);
+        
+        // Déterminer le template à utiliser
+        let templateType = 'city';
+        if (placeType === 'poi') {
+          templateType = 'poi';
+        } else if (placeType === 'region' || placeType === 'district') {
+          templateType = 'region';
         }
         
         return {
-          name: feature.text,
-          context: feature.place_name,
+          name: name,
+          subtitle: subtitle,
+          context: placeName,
           coordinates: feature.geometry?.coordinates || [0, 0],
-          placeType: placeType
+          placeType: placeType,
+          templateType: templateType,
+          fullContext: placeName // Pour la recherche quand on clique
         };
-      });
+      })
+      .filter(item => item !== null)
+      .slice(0, 5);
   }
 
   // ================================
@@ -316,61 +357,34 @@ class SearchMapManager {
   }
 
   createSuggestionItem(suggestion, inputElement, suggestionsElement) {
-    // Extraire le pays depuis le contexte
-    let country = "";
-    if (suggestion.context) {
-      const contextParts = suggestion.context.split(',').map(part => part.trim());
-      if (contextParts.length > 0) {
-        country = contextParts[contextParts.length - 1];
-      }
+    // Déterminer le template selon le type
+    let templateId = 'template-city';
+    if (suggestion.templateType === 'poi') {
+      templateId = 'template-poi';
+    } else if (suggestion.templateType === 'region') {
+      templateId = 'template-region';
     }
     
-    const displayName = suggestion.name + (country ? ", " + country : "");
-    
-    // Déterminer le type et le template
-    let templateId = "template-city";
-    let typeLabel = "Ville";
-    
-    switch(suggestion.placeType) {
-      case 'city':
-      case 'place':
-        templateId = "template-city";
-        typeLabel = "Ville";
-        break;
-      case 'poi':
-        templateId = "template-poi";
-        typeLabel = "Monument";
-        break;
-      case 'region':
-        templateId = "template-region";
-        typeLabel = "Région";
-        break;
-      default:
-        templateId = "template-city";
-        break;
-    }
-    
-    // Récupérer le template
     const template = document.getElementById(templateId);
     if (!template) {
       console.error(`Template ${templateId} introuvable`);
       return;
     }
     
-    // Cloner et configurer l'élément
     const suggestionItem = template.cloneNode(true);
     suggestionItem.id = '';
     suggestionItem.style.display = 'flex';
     
-    // Remplir le contenu
+    // Ligne 1 : Nom du lieu (en gras dans ton design)
     const nameElement = suggestionItem.querySelector('.suggestion-name');
     if (nameElement) {
-      nameElement.textContent = displayName;
+      nameElement.textContent = suggestion.name;
     }
     
+    // Ligne 2 : Contexte (département + pays, ou type + pays)
     const typeElement = suggestionItem.querySelector('.suggestion-type');
     if (typeElement) {
-      typeElement.textContent = typeLabel;
+      typeElement.textContent = suggestion.subtitle;
     }
     
     const contextElement = suggestionItem.querySelector('.suggestion-context');
@@ -378,15 +392,14 @@ class SearchMapManager {
       contextElement.style.display = 'none';
     }
     
-    // Stocker le contexte complet
-    suggestion.fullContext = displayName;
+    // Stocker le nom pour remplir l'input quand on clique
+    suggestion.fullContext = suggestion.name;
     
     // Gestionnaire de clic
     suggestionItem.addEventListener('click', () => {
       this.selectSuggestion(suggestion, inputElement, suggestionsElement);
     });
     
-    // Ajouter à la liste
     suggestionsElement.appendChild(suggestionItem);
   }
 
