@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.1
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.2
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -246,6 +246,8 @@ class SearchMapManager {
     let searchType = 'place';
     if (placeType === 'region' || placeType === 'district') {
       searchType = 'region';
+    } else if (placeType === 'poi') {
+      searchType = 'place'; // Les POI se comportent comme des villes (distance en km)
     }
     
     // Pour les zones, résoudre le polygone via le serveur (SANS appel Mapbox)
@@ -290,7 +292,6 @@ class SearchMapManager {
 
   async fetchSuggestions(query) {
     try {
-      // 🔒 MAINTENANT on utilise VOTRE serveur au lieu de l'API Mapbox directement
       const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}`;
       
       const response = await fetch(url);
@@ -300,13 +301,32 @@ class SearchMapManager {
       
       const data = await response.json();
       if (!data.features || !Array.isArray(data.features)) {
-        console.error("Réponse inattendue du serveur:", data);
+        console.error("Reponse inattendue du serveur:", data);
         return [];
       }
       
-      return this.filterAndFormatSuggestions(data.features);
+      // Formater les résultats Mapbox
+      const mapboxResults = this.filterAndFormatSuggestions(data.features);
+      
+      // Formater les POI locaux
+      const localPOIs = (data.local_pois || []).map(poi => ({
+        name: poi.name,
+        subtitle: poi.subtitle,
+        context: `${poi.name}, ${poi.subtitle}`,
+        coordinates: [poi.lng, poi.lat],
+        placeType: 'poi',
+        templateType: 'poi',
+        fullContext: poi.name,
+        bbox: null,
+        shortCode: null
+      }));
+      
+      // Combiner : POI en premier, puis résultats Mapbox, max 5 au total
+      const combined = [...localPOIs, ...mapboxResults].slice(0, 5);
+      
+      return combined;
     } catch (error) {
-      console.error('❌ Erreur lors de la récupération des suggestions :', error);
+      console.error('Erreur lors de la recuperation des suggestions :', error);
       return [];
     }
   }
