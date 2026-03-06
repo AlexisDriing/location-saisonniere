@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production map
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -192,9 +192,8 @@ class SearchMapManager {
 
     async handleSearch(inputElement) {
     const city = inputElement.value;
-    const userLocation = await this.getCoordinatesFromAddress(city);
+    const geocodeResult = await this.getCoordinatesFromAddress(city);
   
-    // Réinitialiser le flag d'attente de géocodage et annuler le timeout de sécurité
     if (window.propertyManager) {
       window.propertyManager._waitingForGeocode = false;
       if (window.propertyManager._geocodeTimeout) {
@@ -203,17 +202,85 @@ class SearchMapManager {
       }
     }
   
-    if (userLocation) {    
+    if (geocodeResult) {
+      let zoneInfo = null;
+      if (geocodeResult.search_type === 'region') {
+        zoneInfo = {
+          polygon_source: geocodeResult.polygon_source || 'bbox',
+          geo_feature_name: geocodeResult.geo_feature_name || geocodeResult.display_name,
+          geo_feature_code: geocodeResult.geo_feature_code || null,
+          bbox: geocodeResult.bbox || null
+        };
+      }
+      
       if (window.propertyManager) {
-        window.propertyManager.setSearchLocation(userLocation);
+        window.propertyManager.setSearchLocation(geocodeResult.coordinates, geocodeResult.search_type, zoneInfo);
         window.propertyManager.applyFilters();
       }
     } else {
-      console.error('Impossible de récupérer les coordonnées de la ville recherchée.');
-      // Appliquer quand même les filtres (sans coordonnées) si on a des dates
+      console.error('Impossible de recuperer les coordonnees de la ville recherchee.');
       if (window.propertyManager && window.propertyManager.startDate) {
         window.propertyManager.applyFilters();
       }
+    }
+  }
+
+  async handleSuggestionClick(suggestion) {
+    // Les coordonnées sont déjà dans la suggestion → 0 appel Mapbox
+    const coordinates = {
+      lng: suggestion.coordinates[0],
+      lat: suggestion.coordinates[1]
+    };
+    
+    // Réinitialiser le flag de géocodage
+    if (window.propertyManager) {
+      window.propertyManager._waitingForGeocode = false;
+      if (window.propertyManager._geocodeTimeout) {
+        clearTimeout(window.propertyManager._geocodeTimeout);
+        window.propertyManager._geocodeTimeout = null;
+      }
+    }
+    
+    // Déterminer le type de recherche
+    const placeType = suggestion.placeType || 'place';
+    let searchType = 'place';
+    if (placeType === 'region' || placeType === 'district') {
+      searchType = 'region';
+    }
+    
+    // Pour les zones, résoudre le polygone via le serveur (SANS appel Mapbox)
+    let zoneInfo = null;
+    
+    if (searchType === 'region') {
+      try {
+        let resolveUrl = `${window.CONFIG.API_URL}/resolve-zone?name=${encodeURIComponent(suggestion.name)}&type=${encodeURIComponent(placeType)}`;
+        if (suggestion.shortCode) {
+          resolveUrl += `&code=${encodeURIComponent(suggestion.shortCode)}`;
+        }
+        
+        const response = await fetch(resolveUrl);
+        const data = await response.json();
+        
+        zoneInfo = {
+          polygon_source: data.polygon_source || 'bbox',
+          geo_feature_name: data.geo_feature_name || suggestion.name,
+          geo_feature_code: data.geo_feature_code || null,
+          bbox: suggestion.bbox || null
+        };
+      } catch (error) {
+        console.error('Erreur resolve-zone:', error);
+        zoneInfo = {
+          polygon_source: 'bbox',
+          geo_feature_name: suggestion.name,
+          geo_feature_code: null,
+          bbox: suggestion.bbox || null
+        };
+      }
+    }
+    
+    if (window.propertyManager) {
+      window.propertyManager.setSearchLocation(coordinates, searchType, zoneInfo);
+      window.propertyManager.applyFilters();
     }
   }
 
@@ -253,7 +320,15 @@ class SearchMapManager {
       const data = await response.json();
 
       if (data.coordinates) {
-        return data.coordinates;
+        return {
+          coordinates: data.coordinates,
+          search_type: data.search_type || 'place',
+          display_name: data.display_name || address,
+          polygon_source: data.polygon_source || null,
+          geo_feature_name: data.geo_feature_name || null,
+          geo_feature_code: data.geo_feature_code || null,
+          bbox: data.bbox || null
+        };
       } else {
         console.error('Adresse introuvable :', address);
         return null;
@@ -265,7 +340,7 @@ class SearchMapManager {
   }
 
   filterAndFormatSuggestions(features) {
-    const seen = new Set(); // Anti-doublons
+    const seen = new Set();
     
     return features
       .map((feature) => {
@@ -273,30 +348,17 @@ class SearchMapManager {
         const name = feature.text || '';
         const placeName = feature.place_name || '';
         
-        // Extraire les parties du contexte Mapbox
-        // place_name = "Chambord, Loir-et-Cher, Centre-Val de Loire, France"
         const contextParts = placeName.split(',').map(p => p.trim());
         
-        // Construire la ligne 2 selon le type
         let subtitle = '';
         let country = contextParts.length > 0 ? contextParts[contextParts.length - 1] : '';
         
         if (placeType === 'region') {
-          // Région → "Région, France"
           subtitle = `Région, ${country}`;
         } else if (placeType === 'district') {
-          // Département → "Département, France"
           subtitle = `Département, ${country}`;
-        } else if (placeType === 'poi') {
-          // POI → "Paris, France" (ville + pays)
-          if (contextParts.length >= 3) {
-            // Chercher la ville dans le contexte (généralement le 2e élément)
-            subtitle = `${contextParts[1]}, ${country}`;
-          } else {
-            subtitle = country;
-          }
         } else {
-          // Ville / locality / neighborhood → "Département, Pays"
+          // Villes, locality, neighborhood : département + pays
           if (contextParts.length >= 3) {
             subtitle = `${contextParts[1]}, ${country}`;
           } else if (contextParts.length === 2) {
@@ -306,18 +368,14 @@ class SearchMapManager {
           }
         }
         
-        // Déduplication par nom + subtitle
         const dedupeKey = `${name.toLowerCase()}|${subtitle.toLowerCase()}`;
         if (seen.has(dedupeKey)) {
           return null;
         }
         seen.add(dedupeKey);
         
-        // Déterminer le template à utiliser
         let templateType = 'city';
-        if (placeType === 'poi') {
-          templateType = 'poi';
-        } else if (placeType === 'region' || placeType === 'district') {
+        if (placeType === 'region' || placeType === 'district') {
           templateType = 'region';
         }
         
@@ -328,10 +386,19 @@ class SearchMapManager {
           coordinates: feature.geometry?.coordinates || [0, 0],
           placeType: placeType,
           templateType: templateType,
-          fullContext: placeName // Pour la recherche quand on clique
+          fullContext: placeName,
+          bbox: feature.bbox || null,
+          shortCode: feature.properties?.short_code || null
         };
       })
       .filter(item => item !== null)
+      .sort((a, b) => {
+        // Régions/départements en premier dans les suggestions
+        const priority = { 'region': 0, 'district': 0, 'place': 1, 'locality': 1, 'neighborhood': 2 };
+        const prioA = priority[a.placeType] ?? 1;
+        const prioB = priority[b.placeType] ?? 1;
+        return prioA - prioB;
+      })
       .slice(0, 5);
   }
 
@@ -404,15 +471,13 @@ class SearchMapManager {
   }
 
   selectSuggestion(suggestion, inputElement, suggestionsElement) {
-    // Mettre à jour le champ de saisie
-    inputElement.value = suggestion.fullContext;
+    inputElement.value = suggestion.name;
     
-    // Masquer les suggestions
     suggestionsElement.innerHTML = '';
     suggestionsElement.style.display = 'none';
     
-    // Déclencher la recherche
-    this.handleSearch(inputElement);
+    // Utiliser directement les coordonnées de la suggestion → 0 appel Mapbox
+    this.handleSuggestionClick(suggestion);
   }
 
   // ================================
@@ -441,12 +506,21 @@ class SearchMapManager {
 
   // Méthode pour rechercher programmatiquement
   async searchLocation(address) {
-    const coordinates = await this.getCoordinatesFromAddress(address);
-    if (coordinates && window.propertyManager) {
-      window.propertyManager.setSearchLocation(coordinates);
+    const result = await this.getCoordinatesFromAddress(address);
+    if (result && window.propertyManager) {
+      let zoneInfo = null;
+      if (result.search_type === 'region') {
+        zoneInfo = {
+          polygon_source: result.polygon_source || 'bbox',
+          geo_feature_name: result.geo_feature_name || result.display_name,
+          geo_feature_code: result.geo_feature_code || null,
+          bbox: result.bbox || null
+        };
+      }
+      window.propertyManager.setSearchLocation(result.coordinates, result.search_type, zoneInfo);
       window.propertyManager.applyFilters();
     }
-    return coordinates;
+    return result ? result.coordinates : null;
   }
 
   // Méthode pour nettoyer la recherche
