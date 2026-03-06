@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.1
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -822,12 +822,8 @@ class PropertyManager {
       const separatorElement = newCard.querySelector('.separateur');
       
       if (distanceElement) {
-        if (this.searchType === 'region' && this.zoneInfo?.geo_feature_name) {
-          distanceElement.textContent = this.zoneInfo.geo_feature_name;
-          distanceElement.style.display = 'inline';
-        } else if (this.searchType === 'region') {
-          distanceElement.textContent = 'dans la zone';
-          distanceElement.style.display = 'inline';
+        if (this.searchType === 'region') {
+          distanceElement.style.display = 'none';
         } else if (propData.distance !== undefined && propData.distance !== null) {
           distanceElement.textContent = `${Math.round(propData.distance)} km`;
           distanceElement.style.display = 'inline';
