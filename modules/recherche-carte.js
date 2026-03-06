@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.1
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -344,7 +344,10 @@ class SearchMapManager {
     
     return features
       .map((feature) => {
-        const placeType = feature.place_type?.[0] || 'place';
+        let placeType = feature.place_type?.[0] || 'place';
+        if (Array.isArray(feature.place_type) && feature.place_type.includes('region')) {
+          placeType = 'region';
+        }
         const name = feature.text || '';
         const placeName = feature.place_name || '';
         
@@ -353,10 +356,17 @@ class SearchMapManager {
         let subtitle = '';
         let country = contextParts.length > 0 ? contextParts[contextParts.length - 1] : '';
         
-        if (placeType === 'region') {
-          subtitle = `Région, ${country}`;
-        } else if (placeType === 'district') {
-          subtitle = `Département, ${country}`;
+        if (placeType === 'region' || placeType === 'district') {
+          const shortCode = feature.properties?.short_code || '';
+          const isDepartement = /^FR-\d{2,3}[AB]?$/i.test(shortCode);
+          
+          if (isDepartement) {
+            subtitle = `Département, ${country}`;
+          } else if (country && country !== name) {
+            subtitle = `Région, ${country}`;
+          } else {
+            subtitle = 'Région';
+          }
         } else {
           // Villes, locality, neighborhood : département + pays
           if (contextParts.length >= 3) {
