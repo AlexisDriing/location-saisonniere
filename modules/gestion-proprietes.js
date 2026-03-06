@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V1.1
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -576,6 +576,19 @@ class PropertyManager {
       
       if (filters.latitude && filters.longitude) {
         url += `latitude=${filters.latitude}&longitude=${filters.longitude}&`;
+        
+        if (filters.polygon_source) {
+          url += `polygon_source=${encodeURIComponent(filters.polygon_source)}&`;
+        }
+        if (filters.geo_feature_name) {
+          url += `geo_feature_name=${encodeURIComponent(filters.geo_feature_name)}&`;
+        }
+        if (filters.geo_feature_code) {
+          url += `geo_feature_code=${encodeURIComponent(filters.geo_feature_code)}&`;
+        }
+        if (filters.bbox) {
+          url += `bbox=${encodeURIComponent(filters.bbox)}&`;
+        }
       }
       
       if (filters.amenities && filters.amenities.length > 0) {
@@ -803,17 +816,27 @@ class PropertyManager {
       capacityElement.textContent = capacityText;
     }
     
-    // Distance (si recherche géographique)
-    if (this.searchLocation && propData.distance !== undefined) {
+    // Distance ou nom de zone
+    if (this.searchLocation) {
       const distanceElement = newCard.querySelector('.distance');
       const separatorElement = newCard.querySelector('.separateur');
       
       if (distanceElement) {
-        distanceElement.textContent = `${Math.round(propData.distance)} km`;
-        distanceElement.style.display = 'inline';
+        if (this.searchType === 'region' && this.zoneInfo?.geo_feature_name) {
+          distanceElement.textContent = this.zoneInfo.geo_feature_name;
+          distanceElement.style.display = 'inline';
+        } else if (this.searchType === 'region') {
+          distanceElement.textContent = 'dans la zone';
+          distanceElement.style.display = 'inline';
+        } else if (propData.distance !== undefined && propData.distance !== null) {
+          distanceElement.textContent = `${Math.round(propData.distance)} km`;
+          distanceElement.style.display = 'inline';
+        } else {
+          distanceElement.style.display = 'none';
+        }
       }
       if (separatorElement) {
-        separatorElement.style.display = 'inline';
+        separatorElement.style.display = distanceElement?.style.display === 'inline' ? 'inline' : 'none';
       }
     }
     
@@ -917,6 +940,17 @@ if (hostImageElement) {
       filters.latitude = this.searchLocation.lat;
       filters.longitude = this.searchLocation.lng;
       filters.distance_max = 100;
+      
+      if (this.zoneInfo) {
+        filters.polygon_source = this.zoneInfo.polygon_source;
+        filters.geo_feature_name = this.zoneInfo.geo_feature_name;
+        filters.geo_feature_code = this.zoneInfo.geo_feature_code;
+        if (this.zoneInfo.bbox) {
+          filters.bbox = Array.isArray(this.zoneInfo.bbox) 
+            ? this.zoneInfo.bbox.join(',') 
+            : this.zoneInfo.bbox;
+        }
+      }
     }
     
     const adultsElement = document.getElementById('chiffres-adultes');
@@ -1304,8 +1338,10 @@ if (hostImageElement) {
     return `${startDay}-${endDay} ${month}`;
   }
 
-  setSearchLocation(location) {
+  setSearchLocation(location, searchType, zoneInfo) {
     this.searchLocation = location;
+    this.searchType = searchType || 'place';
+    this.zoneInfo = zoneInfo || null;
   }
 
   // ================================
@@ -1315,6 +1351,8 @@ if (hostImageElement) {
   resetFilters() {
     this.currentFilters = {};
     this.searchLocation = null;
+    this.searchType = null;
+    this.zoneInfo = null;
     
     document.querySelectorAll('.distance').forEach(element => {
       element.classList.remove('visible');
