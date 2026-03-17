@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.2
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -169,9 +169,27 @@ class ValidationManager {
       tab4: {
         fields: {
           'heure-arrivee-input': {
-            required: true,
+            required: false,
+            conditionalRequired: true,
+            conditionalCheck: () => document.getElementById('arrivee-fixe')?.checked,
             messages: {
               empty: "L'heure d'arrivée est obligatoire"
+            }
+          },
+          'heure-arrivee-debut-input': {
+            required: false,
+            conditionalRequired: true,
+            conditionalCheck: () => document.getElementById('arrivee-creneau')?.checked,
+            messages: {
+              empty: "L'heure de début est obligatoire"
+            }
+          },
+          'heure-arrivee-fin-input': {
+            required: false,
+            conditionalRequired: true,
+            conditionalCheck: () => document.getElementById('arrivee-creneau')?.checked,
+            messages: {
+              empty: "L'heure de fin est obligatoire"
             }
           },
           'heure-depart-input': {
@@ -344,6 +362,21 @@ class ValidationManager {
       return;
     }
     
+    // Validation créneau arrivée : début doit être avant fin
+    if (fieldId === 'heure-arrivee-debut-input' || fieldId === 'heure-arrivee-fin-input') {
+      const debutInput = document.getElementById('heure-arrivee-debut-input');
+      const finInput = document.getElementById('heure-arrivee-fin-input');
+      const debut = debutInput?.value || '';
+      const fin = finInput?.value || '';
+      
+      if (debut && fin && debut >= fin) {
+        this.showFieldError('heure-arrivee-debut-input', "L'heure de début doit être avant l'heure de fin");
+        return;
+      } else {
+        this.hideFieldError('heure-arrivee-debut-input');
+      }
+    }
+    
     // Si on arrive ici, pas d'erreur
     this.hideFieldError(fieldId);
   }
@@ -467,6 +500,19 @@ class ValidationManager {
       this.hideFieldError('weekend-price-input');
     }
 
+    // Validation créneau arrivée : début < fin
+    const creneauRadio = document.getElementById('arrivee-creneau');
+    if (creneauRadio && creneauRadio.checked) {
+      const debut = document.getElementById('heure-arrivee-debut-input')?.value || '';
+      const fin = document.getElementById('heure-arrivee-fin-input')?.value || '';
+      
+      if (debut && fin && debut >= fin) {
+        this.showFieldError('heure-arrivee-debut-input', "L'heure de début doit être avant l'heure de fin");
+        isValid = false;
+        this.showTabError('error-indicator-tab4');
+      }
+    }
+    
     // 🆕 NOUVEAU : Validation du supplément voyageurs
     const extraGuestsOui = document.getElementById('extra-guests-oui');
     const extraGuestsThresholdInput = document.getElementById('extra-guests-threshold-input');
@@ -519,10 +565,16 @@ class ValidationManager {
     
     // Validation conditionnelle (textarea requis seulement si radio "custom" sélectionné)
     if (fieldConfig.conditionalRequired) {
-      const customRadio = document.getElementById('radio-custom');
-      if (customRadio && customRadio.checked) {
-        if (value === '' || value === null || value === undefined) {
+      if (fieldConfig.conditionalCheck) {
+        if (fieldConfig.conditionalCheck() && (value === '' || value === null || value === undefined)) {
           return fieldConfig.messages.empty;
+        }
+      } else {
+        const customRadio = document.getElementById('radio-custom');
+        if (customRadio && customRadio.checked) {
+          if (value === '' || value === null || value === undefined) {
+            return fieldConfig.messages.empty;
+          }
         }
       }
     }
