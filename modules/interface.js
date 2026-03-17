@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.2
 // Page google
 class InterfaceManager {
   constructor() {
@@ -475,62 +475,45 @@ setupConditionsAnnulation() {
     const horairesString = horairesElement.getAttribute('data-heure-arrivee-depart');
     
     if (!horairesString || horairesString.trim() === '') {
-      console.log('📋 Aucun horaire personnalisé défini');
       return;
     }
     
-    // Parser les horaires (séparés par une virgule)
     const horaires = horairesString.split(',').map(h => h.trim());
     
     if (horaires.length !== 2) {
-      console.warn('⚠️ Format d\'horaires incorrect. Attendu: "HH:MM,HH:MM"');
       return;
     }
     
-    // NOUVEAU : Formater de HH:MM vers HHhMM
     const formatHeure = (heure) => {
-      // Si c'est déjà au format HH:MM
-      if (/^\d{1,2}:\d{2}$/.test(heure)) {
-        return heure.replace(':', 'h');
-      }
-      // Si c'est juste un nombre (ancien format)
-      if (/^\d+$/.test(heure)) {
-        return `${heure}h00`;
-      }
-      // Si c'est au format XXh sans minutes
-      if (/^\d+h$/.test(heure)) {
-        return `${heure}00`;
-      }
-      // Si c'est au format XXhYY
-      if (/^\d+h\d+$/.test(heure)) {
-        return heure;
-      }
+      if (/^\d{1,2}:\d{2}$/.test(heure)) return heure.replace(':', 'h');
+      if (/^\d+$/.test(heure)) return `${heure}h00`;
+      if (/^\d+h$/.test(heure)) return `${heure}00`;
+      if (/^\d+h\d+$/.test(heure)) return heure;
       return heure;
     };
     
-    const heureArrivee = formatHeure(horaires[0]);
+    const partieArrivee = horaires[0];
     const heureDepart = formatHeure(horaires[1]);
     
+    // Construire le texte d'arrivée selon le format
+    let texteArrivee = '';
+    
+    if (partieArrivee.includes('-')) {
+      // Créneau : "14:00-18:00" → "Entre 14h00 et 18h00"
+      const [debut, fin] = partieArrivee.split('-').map(h => formatHeure(h.trim()));
+      texteArrivee = `Arrivée entre ${debut} et ${fin}`;
+    } else {
+      // Heure fixe : "16:00" → "Arrivée à partir de 16h00"
+      texteArrivee = `Arrivée à partir de ${formatHeure(partieArrivee)}`;
+    }
     
     const textHorairesElement = document.querySelector('.text-horaires');
     
     if (!textHorairesElement) {
-      console.warn('⚠️ Élément .text-horaires non trouvé');
       return;
     }
     
-    let texteActuel = textHorairesElement.textContent;
-    const heuresExistantes = texteActuel.match(/\d+h\d+/g) || [];
-    
-    if (heuresExistantes.length >= 2) {
-      texteActuel = texteActuel.replace(heuresExistantes[0], heureArrivee);
-      texteActuel = texteActuel.replace(heuresExistantes[1], heureDepart);
-    } else {
-      console.warn('⚠️ Impossible de trouver 2 horaires dans le texte');
-      return;
-    }
-    
-    textHorairesElement.textContent = texteActuel;
+    textHorairesElement.textContent = `${texteArrivee} - Départ avant ${heureDepart}`;
   }
 
   // Gestion des réductions
