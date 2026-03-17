@@ -1107,6 +1107,12 @@ if (hostImageElement) {
     if (endPage - startPage + 1 < maxVisiblePages && startPage > 1) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
+
+    // Mobile : réduire à 3 pages visibles quand on est au milieu (ellipses des 2 côtés)
+    if (isMobile && startPage > 1 && endPage < this.totalPages) {
+      startPage = this.currentPage - 1;
+      endPage = this.currentPage + 1;
+    }
     
     if (startPage > 1) {
       this.addPageButton(paginationList, 1);
