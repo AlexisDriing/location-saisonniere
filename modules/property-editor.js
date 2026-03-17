@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.2
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -1741,25 +1741,50 @@ prefillHoraires() {
     const horaires = horairesStr.split(',').map(h => h.trim());
     
     if (horaires.length === 2) {
-      // Nouveau format HH:MM
       if (horaires[0].includes(':')) {
         heureArrivee = horaires[0];
         heureDepart = horaires[1];
       } else {
-        // Ancien format (juste les heures)
         heureArrivee = horaires[0].padStart(2, '0') + ':00';
         heureDepart = horaires[1].padStart(2, '0') + ':00';
       }
     }
   }
   
+  const fixeRadio = document.getElementById('arrivee-fixe');
+  const creneauRadio = document.getElementById('arrivee-creneau');
+  const fixeLabel = document.getElementById('label-arrivee-fixe');
+  const creneauLabel = document.getElementById('label-arrivee-creneau');
   const arriveeInput = document.getElementById('heure-arrivee-input');
+  const debutInput = document.getElementById('heure-arrivee-debut-input');
+  const finInput = document.getElementById('heure-arrivee-fin-input');
   const departInput = document.getElementById('heure-depart-input');
   
-  if (arriveeInput) {
-    arriveeInput.value = heureArrivee;
-    arriveeInput.setAttribute('data-format', 'heure-minute');
+  // Détecter si c'est un créneau (format "14:00-18:00")
+  const isCreneau = heureArrivee.includes('-');
+  
+  if (isCreneau) {
+    const [debut, fin] = heureArrivee.split('-').map(h => h.trim());
+    
+    if (creneauRadio) creneauRadio.checked = true;
+    if (fixeRadio) fixeRadio.checked = false;
+    if (creneauLabel) creneauLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (fixeLabel) fixeLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    if (arriveeInput) arriveeInput.style.display = 'none';
+    if (debutInput) { debutInput.style.display = 'block'; debutInput.value = debut; }
+    if (finInput) { finInput.style.display = 'block'; finInput.value = fin; }
+  } else {
+    if (fixeRadio) fixeRadio.checked = true;
+    if (creneauRadio) creneauRadio.checked = false;
+    if (fixeLabel) fixeLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (creneauLabel) creneauLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    if (arriveeInput) { arriveeInput.style.display = 'block'; arriveeInput.value = heureArrivee; }
+    if (debutInput) debutInput.style.display = 'none';
+    if (finInput) finInput.style.display = 'none';
   }
+  
   if (departInput) {
     departInput.value = heureDepart;
     departInput.setAttribute('data-format', 'heure-minute');
@@ -2109,6 +2134,46 @@ setupWeekendListeners() {
     }
     this.pricingData.defaultPricing.weekend.price = price;
     this.enableButtons();
+  });
+}
+
+setupArriveeModelisteners() {
+  const fixeRadio = document.getElementById('arrivee-fixe');
+  const creneauRadio = document.getElementById('arrivee-creneau');
+  const fixeLabel = document.getElementById('label-arrivee-fixe');
+  const creneauLabel = document.getElementById('label-arrivee-creneau');
+  const arriveeInput = document.getElementById('heure-arrivee-input');
+  const debutInput = document.getElementById('heure-arrivee-debut-input');
+  const finInput = document.getElementById('heure-arrivee-fin-input');
+  
+  if (!fixeRadio || !creneauRadio) return;
+  
+  fixeRadio.addEventListener('change', () => {
+    if (fixeRadio.checked) {
+      if (fixeLabel) fixeLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (creneauLabel) creneauLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      
+      if (arriveeInput) arriveeInput.style.display = 'block';
+      if (debutInput) { debutInput.style.display = 'none'; debutInput.value = ''; }
+      if (finInput) { finInput.style.display = 'none'; finInput.value = ''; }
+      
+      setTimeout(() => arriveeInput?.focus(), 100);
+      this.enableButtons();
+    }
+  });
+  
+  creneauRadio.addEventListener('change', () => {
+    if (creneauRadio.checked) {
+      if (creneauLabel) creneauLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (fixeLabel) fixeLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      
+      if (arriveeInput) { arriveeInput.style.display = 'none'; arriveeInput.value = ''; }
+      if (debutInput) debutInput.style.display = 'block';
+      if (finInput) finInput.style.display = 'block';
+      
+      setTimeout(() => debutInput?.focus(), 100);
+      this.enableButtons();
+    }
   });
 }
 
@@ -3380,7 +3445,7 @@ cautionAcompteIds.forEach(id => {
   });
 
   // NOUVEAU : Listeners pour les horaires (Cleave s'occupe de la validation)
-  const horaireIds = ['heure-arrivee-input', 'heure-depart-input'];
+  const horaireIds = ['heure-arrivee-input', 'heure-arrivee-debut-input', 'heure-arrivee-fin-input', 'heure-depart-input'];
   horaireIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
@@ -3388,12 +3453,15 @@ cautionAcompteIds.forEach(id => {
         this.enableButtons();
       });
       input.addEventListener('blur', () => {
-      if (this.validationManager) {
-        this.validationManager.validateFieldOnBlur(id);
-      }
-    });
+        if (this.validationManager) {
+          this.validationManager.validateFieldOnBlur(id);
+        }
+      });
     }
   });
+
+  // Radio buttons arrivée (mode fixe / créneau)
+  this.setupArriveeModelisteners();
 
 // Listeners pour la politique d'annulation (radio buttons)
   document.querySelectorAll('input[name="cancellation-policy"]').forEach(radio => {
@@ -4153,7 +4221,19 @@ setBlockState(element, isActive) {
   }
 
   // Collecter les horaires
-  const heureArrivee = document.getElementById('heure-arrivee-input')?.value || '';
+  const arriveeMode = document.querySelector('input[name="arrivee-mode"]:checked')?.value || 'fixe';
+  let heureArrivee = '';
+  
+  if (arriveeMode === 'creneau') {
+    const debut = document.getElementById('heure-arrivee-debut-input')?.value || '';
+    const fin = document.getElementById('heure-arrivee-fin-input')?.value || '';
+    if (debut && fin) {
+      heureArrivee = `${debut}-${fin}`;
+    }
+  } else {
+    heureArrivee = document.getElementById('heure-arrivee-input')?.value || '';
+  }
+  
   const heureDepart = document.getElementById('heure-depart-input')?.value || '';
   
   if (heureArrivee && heureDepart) {
