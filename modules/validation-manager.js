@@ -1,4 +1,4 @@
-// LOG production V1.2
+// LOG production V1.3
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -100,10 +100,9 @@ class ValidationManager {
             messages: { empty: "Les frais de ménage doivent être définis" }
           },
           'ical-url-1': {
-            required: true,
+            required: false,
             pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
             messages: { 
-              empty: "Au moins un lien calendrier est obligatoire",
               invalid: "Le lien doit être une URL de calendrier valide"
             }
           },
@@ -1117,6 +1116,78 @@ class ValidationManager {
     }
   }
 
+  // Afficher un avertissement (style warning, non bloquant)
+  showFieldWarning(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    field.style.borderColor = '#F67F1D';
+    
+    let errorDiv = field.nextElementSibling;
+    
+    if (errorDiv?.classList.contains('character-counter')) {
+      errorDiv = errorDiv.nextElementSibling;
+    }
+    
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = field.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.querySelector('.error');
+      }
+    }
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = message;
+      errorDiv.style.color = '#F67F1D';
+      errorDiv.classList.add('show');
+    }
+  }
+
+  // Masquer un avertissement
+  hideFieldWarning(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    field.style.borderColor = '';
+    
+    let errorDiv = field.nextElementSibling;
+    
+    if (errorDiv?.classList.contains('character-counter')) {
+      errorDiv = errorDiv.nextElementSibling;
+    }
+    
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = field.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.querySelector('.error');
+      }
+    }
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = '';
+      errorDiv.style.color = '';
+      errorDiv.classList.remove('show');
+    }
+  }
+
+  // Afficher la pastille warning sur un tab
+  showTabWarning(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    if (indicator) {
+      indicator.style.display = 'block';
+      indicator.style.backgroundColor = '#F67F1D';
+    }
+  }
+
+  // Masquer la pastille warning sur un tab
+  hideTabWarning(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    if (indicator) {
+      indicator.style.display = 'none';
+      indicator.style.backgroundColor = '';
+    }
+  }
+  
   // Afficher l'indicateur d'erreur sur une tab
   showTabError(indicatorId) {
     const indicator = document.getElementById(indicatorId);
