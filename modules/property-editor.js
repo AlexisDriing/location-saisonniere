@@ -1,4 +1,4 @@
-// LOG production V1.2
+// LOG production V1.3
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -11,6 +11,7 @@ class PropertyEditor {
     this.sortableInstance = null;
 
     this.icalUrls = []; // Stockage des URLs iCal
+    this.DEFAULT_ICAL_URL = 'https://calendar.google.com/calendar/ical/c_20c899760ed3ef0d0fb0db69c71909b19c0584bbbdf32e9714b224fc005ae2c0%40group.calendar.google.com/public/basic.ics';
     this.icalFieldMapping = [
     'url-calendrier',    // Position 0 → Premier iCal
     'ical-booking',      // Position 1 → Deuxième iCal
@@ -80,6 +81,7 @@ class PropertyEditor {
 
     this.initDiscountManagement();
     this.initIcalManagement();
+    this.checkDefaultIcalWarning();
     this.initExtrasManagement();
     this.initImageManagement();
     this.updatePlatformBlocksVisibility();
@@ -2500,6 +2502,19 @@ displayIcals() {
   this.updateAddIcalButton();
 }
 
+checkDefaultIcalWarning() {
+  const icalInput = document.getElementById('ical-url-1');
+  if (!icalInput) return;
+  
+  if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
+    // Afficher l'avertissement via le validationManager
+    if (this.validationManager) {
+      this.validationManager.showFieldWarning('ical-url-1', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
+      this.validationManager.showTabWarning('error-indicator-tab3');
+    }
+  }
+}
+  
 addIcal() {
   
   // Trouver le premier bloc caché
@@ -2580,6 +2595,11 @@ setupIcalListeners() {
       input.parentNode.replaceChild(newInput, input);
       
       newInput.addEventListener('input', () => {
+        // Masquer l'avertissement si c'est ical-url-1 et que la valeur change
+        if (newInput.id === 'ical-url-1' && this.validationManager) {
+          this.validationManager.hideFieldWarning('ical-url-1');
+          this.validationManager.hideTabWarning('error-indicator-tab3');
+        }
         this.enableButtons();
       });
     }
@@ -4347,6 +4367,23 @@ setBlockState(element, isActive) {
     updates.extras = currentExtrasString;
   }
     
+  // Injecter l'URL par défaut si aucun iCal n'est rempli
+  let hasAnyIcal = false;
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}`);
+    if (input && input.value.trim() !== '') {
+      hasAnyIcal = true;
+      break;
+    }
+  }
+  
+  if (!hasAnyIcal) {
+    const firstIcalInput = document.getElementById('ical-url-1');
+    if (firstIcalInput) {
+      firstIcalInput.value = this.DEFAULT_ICAL_URL;
+    }
+  }
+  
   // NOUVEAU : Collecter les iCals modifiés avec la bonne logique
   const currentIcalValues = [];
   for (let i = 1; i <= 4; i++) {
