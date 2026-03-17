@@ -1,4 +1,4 @@
-// LOG production V1.3
+// LOG production V1.4
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -87,6 +87,9 @@ class PropertyEditor {
     this.updatePlatformBlocksVisibility();
   }
   this.validationManager = new ValidationManager(this);
+  
+  // Vérifier l'iCal par défaut (après init du validationManager)
+  this.checkDefaultIcalWarning();
     
   window.propertyEditor = this;
 }
