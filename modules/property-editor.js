@@ -1,4 +1,4 @@
-// LOG production V1.4
+// LOG production V1.4.1
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -1777,8 +1777,10 @@ prefillHoraires() {
     if (fixeLabel) fixeLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
     
     if (arriveeInput) arriveeInput.style.display = 'none';
-    if (debutInput) { debutInput.style.display = 'block'; debutInput.value = debut; }
-    if (finInput) { finInput.style.display = 'block'; finInput.value = fin; }
+    const blocCreneau = document.getElementById('bloc-arrivee-creneau');
+    if (blocCreneau) blocCreneau.style.display = 'block';
+    if (debutInput) debutInput.value = debut;
+    if (finInput) finInput.value = fin;
   } else {
     if (fixeRadio) fixeRadio.checked = true;
     if (creneauRadio) creneauRadio.checked = false;
@@ -1786,8 +1788,8 @@ prefillHoraires() {
     if (creneauLabel) creneauLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
     
     if (arriveeInput) { arriveeInput.style.display = 'block'; arriveeInput.value = heureArrivee; }
-    if (debutInput) debutInput.style.display = 'none';
-    if (finInput) finInput.style.display = 'none';
+    const blocCreneau2 = document.getElementById('bloc-arrivee-creneau');
+    if (blocCreneau2) blocCreneau2.style.display = 'none';
   }
   
   if (departInput) {
@@ -2159,8 +2161,10 @@ setupArriveeModelisteners() {
       if (creneauLabel) creneauLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
       
       if (arriveeInput) arriveeInput.style.display = 'block';
-      if (debutInput) { debutInput.style.display = 'none'; debutInput.value = ''; }
-      if (finInput) { finInput.style.display = 'none'; finInput.value = ''; }
+      const blocCreneau = document.getElementById('bloc-arrivee-creneau');
+      if (blocCreneau) blocCreneau.style.display = 'none';
+      if (debutInput) debutInput.value = '';
+      if (finInput) finInput.value = '';
       
       setTimeout(() => arriveeInput?.focus(), 100);
       this.enableButtons();
@@ -2173,8 +2177,8 @@ setupArriveeModelisteners() {
       if (fixeLabel) fixeLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
       
       if (arriveeInput) { arriveeInput.style.display = 'none'; arriveeInput.value = ''; }
-      if (debutInput) debutInput.style.display = 'block';
-      if (finInput) finInput.style.display = 'block';
+      const blocCreneau = document.getElementById('bloc-arrivee-creneau');
+      if (blocCreneau) blocCreneau.style.display = 'block';
       
       setTimeout(() => debutInput?.focus(), 100);
       this.enableButtons();
