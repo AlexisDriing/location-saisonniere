@@ -1,4 +1,4 @@
-// LOG production V1.4.1
+// LOG production V1.5 - chambres d'hôtes
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -57,6 +57,8 @@ class PropertyEditor {
     
     // 1. Récupérer l'ID depuis l'URL
   this.propertyId = this.getPropertyIdFromUrl();
+  this.roomId = this.getRoomIdFromUrl();
+  this.isRoomEdit = !!this.roomId;
   
   if (!this.propertyId) {
     console.error('❌ Aucun ID de logement dans l\'URL');
@@ -97,6 +99,11 @@ class PropertyEditor {
   getPropertyIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('id');
+  }
+
+  getRoomIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('room');
   }
 
   async loadPropertyData() {
