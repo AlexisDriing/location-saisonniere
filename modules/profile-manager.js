@@ -1,4 +1,4 @@
-// Gestionnaire de profil - gestion de boutons intégré et création de logement - LOG production
+// Gestionnaire de profil - chambres d'hôtes - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -32,6 +32,8 @@ class ProfileManager {
     this.checkPaymentSuccess();
     this.checkPopupTrigger();
 
+    // Configurer le bouton de création de chambre
+    this.setupAddRoomSubmit();
     
     // Export global
     window.profileManager = this;
@@ -167,6 +169,9 @@ class ProfileManager {
   // Ligne existante qui passe déjà targetElement
   this.setupVerificationButton(property, targetElement);
   this.setupPaymentButton(property, targetElement);
+  
+  // 6. Affichage conditionnel chambres d'hôtes
+  this.displayChambreHoteElements(property, targetElement);
 }
 
 // 🆕 NOUVELLE MÉTHODE à ajouter après fillPropertyImages
@@ -404,6 +409,331 @@ setupViewPropertyButton(property, targetElement = document) {
     window.open(propertyUrl, '_blank');
   });
 }
+
+// ================================
+// 🛏️ GESTION DES CHAMBRES D'HÔTES
+// ================================
+
+displayChambreHoteElements(property, targetElement = document) {
+  const isChambreHote = property.mode_location === "Chambre d'hôtes";
+  const rooms = property.rooms || [];
+  const hasRooms = rooms.length > 0;
+  const status = this.getPropertyStatus(property);
+  
+  // 1. Tag chambre d'hôte
+  const tag = targetElement.querySelector('.Tag-element.chambres-hote.profile');
+  if (tag) {
+    tag.style.display = isChambreHote ? 'flex' : 'none';
+  }
+  
+  // 2. Bloc chambres d'hôte
+  const bloc = targetElement.querySelector('.bloc-chambres-hote');
+  if (bloc) {
+    bloc.style.display = isChambreHote ? 'block' : 'none';
+  }
+  
+  // 3. Séparateur
+  const separator = targetElement.querySelector('.line.separateur.chambres-hote');
+  if (separator) {
+    separator.style.display = isChambreHote ? 'block' : 'none';
+  }
+  
+  // Si ce n'est pas une chambre d'hôte, on s'arrête ici
+  if (!isChambreHote) return;
+  
+  // 4. Bloc images des chambres (masqué si pas de chambres)
+  const blocCardChambres = targetElement.querySelector('.bloc-card-chambres');
+  if (blocCardChambres) {
+    blocCardChambres.style.display = hasRooms ? 'flex' : 'none';
+  }
+  
+  // 5. Bouton gérer/modifier (masqué si pas de chambres)
+  const buttonEdit = targetElement.querySelector('.button-edit-chambres');
+  if (buttonEdit) {
+    buttonEdit.style.display = hasRooms ? 'flex' : 'none';
+  }
+  
+  // 6. Bouton ajouter chambre
+  // Visible SEULEMENT sur pending-none ET si pas encore de chambres
+  const buttonAdd = targetElement.querySelector('.bouton-image.add-chambres:not(.button-edit-chambres)');
+  if (buttonAdd) {
+    if (status === 'pending-none' && !hasRooms) {
+      buttonAdd.style.display = 'flex';
+    } else {
+      buttonAdd.style.display = 'none';
+    }
+  }
+  
+  // 7. Afficher les images des chambres
+  if (hasRooms) {
+    this.displayRoomImagesOnCard(rooms, targetElement);
+  }
+  
+  // 8. Configurer les boutons
+  this.setupRoomButtons(property, targetElement);
+}
+
+displayRoomImagesOnCard(rooms, targetElement) {
+  for (let i = 0; i < 5; i++) {
+    const slot = targetElement.querySelector(`.image-chambre-slot-${i + 1}`);
+    if (!slot) continue;
+    
+    if (i < rooms.length) {
+      const room = rooms[i];
+      const photos = room.photos || [];
+      
+      let photoUrl = null;
+      if (photos.length > 0) {
+        const firstPhoto = photos[0];
+        photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
+      }
+      
+      if (photoUrl) {
+        if (slot.tagName === 'IMG') {
+          slot.src = photoUrl;
+        } else {
+          slot.style.backgroundImage = `url(${photoUrl})`;
+          slot.style.backgroundSize = 'cover';
+          slot.style.backgroundPosition = 'center';
+        }
+      }
+      
+      slot.style.display = 'block';
+    } else {
+      slot.style.display = 'none';
+    }
+  }
+}
+
+setupRoomButtons(property, targetElement) {
+  // Bouton ajouter chambre (sur pending-none seulement, sans chambres)
+  const buttonAdd = targetElement.querySelector('.bouton-image.add-chambres:not(.button-edit-chambres)');
+  if (buttonAdd) {
+    buttonAdd.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openAddRoomModal(property);
+    });
+  }
+  
+  // Bouton gérer chambres
+  const buttonEdit = targetElement.querySelector('.button-edit-chambres');
+  if (buttonEdit) {
+    buttonEdit.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openManageRoomsModal(property);
+    });
+  }
+}
+
+openAddRoomModal(property) {
+  this._currentPropertyForRoom = property;
+  
+  // Réinitialiser les champs
+  const nameInput = document.getElementById('nom-chambre');
+  const voyageursInput = document.getElementById('voyageurs-input');
+  if (nameInput) nameInput.value = '';
+  if (voyageursInput) voyageursInput.value = '';
+  
+  // Afficher la modale
+  const modal = document.getElementById('modal-add-chambres');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+openManageRoomsModal(property) {
+  this._currentPropertyForRoom = property;
+  const rooms = property.rooms || [];
+  
+  // Masquer tous les blocs de chambres (1 à 5)
+  for (let i = 1; i <= 5; i++) {
+    const bloc = document.getElementById(`gerer-chambre-${i}`);
+    if (bloc) bloc.style.display = 'none';
+  }
+  
+  // Afficher les chambres existantes
+  rooms.forEach((room, index) => {
+    const bloc = document.getElementById(`gerer-chambre-${index + 1}`);
+    if (!bloc) return;
+    
+    bloc.style.display = 'flex';
+    
+    // Image
+    const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
+    if (imageEl) {
+      const photos = room.photos || [];
+      if (photos.length > 0) {
+        const photoUrl = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+        if (photoUrl) {
+          if (imageEl.tagName === 'IMG') {
+            imageEl.src = photoUrl;
+          } else {
+            imageEl.style.backgroundImage = `url(${photoUrl})`;
+            imageEl.style.backgroundSize = 'cover';
+            imageEl.style.backgroundPosition = 'center';
+          }
+        }
+      }
+    }
+    
+    // Nom
+    const nameEl = document.getElementById(`nom-chambre-${index + 1}`);
+    if (nameEl) nameEl.textContent = room.name || 'Chambre';
+    
+    // Nombre de voyageurs
+    const voyageursEl = document.getElementById(`nombre-voyageurs-${index + 1}`);
+    if (voyageursEl) {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const voyageurs = match ? match[1] : '0';
+      voyageursEl.textContent = `${voyageurs} voyageur${parseInt(voyageurs) > 1 ? 's' : ''}`;
+    }
+    
+    // Bouton modifier — cloner pour éviter doublons de listeners
+    const editBtn = document.getElementById(`edit-chambre-${index + 1}`);
+    if (editBtn) {
+      const newEditBtn = editBtn.cloneNode(true);
+      editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+      
+      newEditBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = `/mon-espace/modification-logement?id=${property.webflow_item_id}&room=${room.id}`;
+      });
+    }
+    
+    // Bouton supprimer
+    const deleteBtn = document.getElementById(`delete-chambre-${index + 1}`);
+    if (deleteBtn) {
+      const newDeleteBtn = deleteBtn.cloneNode(true);
+      deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+      
+      // Masquer si une seule chambre (règle minimum 1)
+      if (rooms.length <= 1) {
+        newDeleteBtn.style.display = 'none';
+      } else {
+        newDeleteBtn.style.display = 'flex';
+        newDeleteBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          await this.deleteRoom(room.id, property);
+        });
+      }
+    }
+  });
+  
+  // Bouton ajouter dans la modale de gestion
+  const addBtn = document.getElementById('button-add-gerer-chambre');
+  if (addBtn) {
+    addBtn.style.display = rooms.length < 5 ? 'flex' : 'none';
+    
+    const newAddBtn = addBtn.cloneNode(true);
+    addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+    
+    newAddBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const manageModal = document.getElementById('modal-edit-chambres');
+      if (manageModal) manageModal.style.display = 'none';
+      this.openAddRoomModal(property);
+    });
+  }
+  
+  // Afficher la modale
+  const modal = document.getElementById('modal-edit-chambres');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+async deleteRoom(roomId, property) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette chambre ?')) return;
+  
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/delete-room/${roomId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      // Mettre à jour la propriété locale
+      if (property.rooms) {
+        property.rooms = property.rooms.filter(r => r.id !== roomId);
+      }
+      
+      // Rafraîchir la modale
+      this.openManageRoomsModal(property);
+      
+      // Rafraîchir l'affichage complet
+      await this.reload();
+    } else {
+      alert(result.error || 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('❌ Erreur suppression chambre:', error);
+    alert('Erreur lors de la suppression');
+  }
+}
+
+setupAddRoomSubmit() {
+  const submitBtn = document.getElementById('chambre-creation');
+  if (!submitBtn) return;
+  
+  const newBtn = submitBtn.cloneNode(true);
+  submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+  
+  newBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    const property = this._currentPropertyForRoom;
+    if (!property) {
+      console.error('Aucune propriété sélectionnée');
+      return;
+    }
+    
+    const nameInput = document.getElementById('nom-chambre');
+    const voyageursInput = document.getElementById('voyageurs-input');
+    
+    const name = nameInput?.value?.trim();
+    const voyageursMax = parseInt(voyageursInput?.value) || 1;
+    
+    if (!name) {
+      alert('Le nom de la chambre est obligatoire');
+      return;
+    }
+    
+    newBtn.disabled = true;
+    const originalText = newBtn.textContent;
+    newBtn.textContent = 'Création...';
+    
+    try {
+      const response = await fetch(`${window.CONFIG.API_URL}/create-room`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          voyageursMax: voyageursMax,
+          parentPropertyId: property.webflow_item_id
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        const modal = document.getElementById('modal-add-chambres');
+        if (modal) modal.style.display = 'none';
+        
+        await this.reload();
+      } else {
+        alert(result.error || 'Erreur lors de la création');
+      }
+    } catch (error) {
+      console.error('❌ Erreur création chambre:', error);
+      alert('Erreur lors de la création');
+    } finally {
+      newBtn.disabled = false;
+      newBtn.textContent = originalText;
+    }
+  });
+}
+  
   // Vérifier le retour de paiement
 checkPaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -589,6 +919,10 @@ checkPopupTrigger() {
     }
     
     
+    // Récupérer le mode de location sélectionné
+    const selectedModeLocation = document.querySelector('input[name="mode-location-creation"]:checked');
+    const modeLocation = selectedModeLocation ? selectedModeLocation.value : 'Logement entier';
+    
     // Désactiver le bouton
     submitButton.disabled = true;
     submitButton.value = 'Création...';
@@ -600,7 +934,8 @@ checkPopupTrigger() {
         body: JSON.stringify({
           name: nomLogement,
           address: adresse,
-          memberId: this.currentUser.id
+          memberId: this.currentUser.id,
+          modeLocation: modeLocation
         })
       });
       
