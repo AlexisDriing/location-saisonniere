@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.032 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.033 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -641,10 +641,16 @@ openManageRoomsModal(property) {
     });
   }
   
-  // Afficher la modale
+  // Afficher la modale (réinitialiser les styles Webflow)
   const modal = document.getElementById('modal-edit-chambres');
   if (modal) {
     modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    const innerBloc = modal.querySelector('.bloc-popup');
+    if (innerBloc) {
+      innerBloc.style.opacity = '1';
+      innerBloc.style.transform = 'translate3d(0px, 0px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg)';
+    }
   }
 }
 
