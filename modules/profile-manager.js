@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.03 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.031 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -482,7 +482,7 @@ displayRoomImagesOnCard(rooms, targetElement, status) {
     
     if (i < rooms.length) {
       // Slot correspond à une chambre existante : afficher
-      slot.style.display = 'block';
+      slot.style.display = 'flex';
       
       // Remplir l'image seulement si verified ou published
       if (showImages) {
