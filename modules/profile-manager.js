@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.02 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.03 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -464,42 +464,49 @@ displayChambreHoteElements(property, targetElement = document) {
     }
   }
   
-  // 7. Afficher les images des chambres (seulement verified et published)
-  if (hasRooms && (status === 'verified' || status === 'published')) {
-    this.displayRoomImagesOnCard(rooms, targetElement);
+  // 7. Gérer les slots d'images des chambres
+  if (hasRooms) {
+    this.displayRoomImagesOnCard(rooms, targetElement, status);
   }
   
   // 8. Configurer les boutons
   this.setupRoomButtons(property, targetElement);
 }
 
-displayRoomImagesOnCard(rooms, targetElement) {
+displayRoomImagesOnCard(rooms, targetElement, status) {
+  const showImages = (status === 'verified' || status === 'published');
+  
   for (let i = 0; i < 5; i++) {
     const slot = targetElement.querySelector(`.image-chambre-slot-${i + 1}`);
     if (!slot) continue;
     
     if (i < rooms.length) {
-      const room = rooms[i];
-      const photos = room.photos || [];
+      // Slot correspond à une chambre existante : afficher
+      slot.style.display = 'block';
       
-      let photoUrl = null;
-      if (photos.length > 0) {
-        const firstPhoto = photos[0];
-        photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
-      }
-      
-      if (photoUrl) {
-        if (slot.tagName === 'IMG') {
-          slot.src = photoUrl;
-        } else {
-          slot.style.backgroundImage = `url(${photoUrl})`;
-          slot.style.backgroundSize = 'cover';
-          slot.style.backgroundPosition = 'center';
+      // Remplir l'image seulement si verified ou published
+      if (showImages) {
+        const room = rooms[i];
+        const photos = room.photos || [];
+        
+        let photoUrl = null;
+        if (photos.length > 0) {
+          const firstPhoto = photos[0];
+          photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
+        }
+        
+        if (photoUrl) {
+          if (slot.tagName === 'IMG') {
+            slot.src = photoUrl;
+          } else {
+            slot.style.backgroundImage = `url(${photoUrl})`;
+            slot.style.backgroundSize = 'cover';
+            slot.style.backgroundPosition = 'center';
+          }
         }
       }
-      
-      slot.style.display = 'flex';
     } else {
+      // Pas de chambre pour ce slot : masquer
       slot.style.display = 'none';
     }
   }
