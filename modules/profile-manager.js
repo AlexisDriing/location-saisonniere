@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.0 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.01 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -421,7 +421,7 @@ displayChambreHoteElements(property, targetElement = document) {
   const status = this.getPropertyStatus(property);
   
   // 1. Tag chambre d'hôte
-  const tag = targetElement.querySelector('.Tag-element.chambres-hote.profile');
+  const tag = targetElement.querySelector('.tag-element.chambres-hote.profile');
   if (tag) {
     tag.style.display = isChambreHote ? 'flex' : 'none';
   }
@@ -433,7 +433,7 @@ displayChambreHoteElements(property, targetElement = document) {
   }
   
   // 3. Séparateur
-  const separator = targetElement.querySelector('.line.separateur.chambres-hote');
+  const separator = targetElement.querySelector('.line-separateur.chambres-hote');
   if (separator) {
     separator.style.display = isChambreHote ? 'block' : 'none';
   }
