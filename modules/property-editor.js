@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes
+// LOG production V1.5 - chambres d'hôtes v1.02
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
   constructor() {
@@ -69,8 +69,10 @@ class PropertyEditor {
   // 2. Charger les données du logement
   await this.loadPropertyData();
   
-  // 3. Si les données sont chargées
   if (this.propertyData) {
+    // Gérer l'affichage conditionnel des tabs selon le contexte
+    this.setupTabsDisplay();
+    
     // 🆕 IMPORTANT : Charger les données pricing AVANT prefillForm
     this.loadPricingData();
     
@@ -106,6 +108,101 @@ class PropertyEditor {
     return urlParams.get('room');
   }
 
+  setupTabsDisplay() {
+  const modeLocation = this.propertyData.mode_location || '';
+  const isChambreHote = modeLocation === "Chambre d'hôtes";
+  const isRoomEdit = this.isRoomEdit;
+  
+  // Tag chambres d'hôtes sur la page modification
+  const tagChambres = document.getElementById('tag-chambres');
+  if (tagChambres) {
+    tagChambres.style.display = isChambreHote ? 'flex' : 'none';
+  }
+  
+  // Gestion des tabs
+  const tabsLogement = document.getElementById('tabs-logement-entier');
+  const tabsChambres = document.getElementById('tabs-chambres-hotes');
+  
+  if (isRoomEdit) {
+    // Modification d'une chambre : afficher tabs chambres, cacher tabs logement
+    if (tabsLogement) tabsLogement.style.display = 'none';
+    if (tabsChambres) tabsChambres.style.display = 'flex';
+    
+    // Charger les données de la chambre
+    this.loadRoomData();
+  } else {
+    // Modification du logement : afficher tabs logement, cacher tabs chambres
+    if (tabsLogement) tabsLogement.style.display = 'flex';
+    if (tabsChambres) tabsChambres.style.display = 'none';
+  }
+  
+  // Titre : afficher le nom de la chambre ou du logement
+  const titleElement = document.getElementById('logement-name-edit');
+  if (titleElement && isRoomEdit && this.roomData) {
+    titleElement.textContent = this.roomData.name;
+  }
+}
+
+async loadRoomData() {
+  if (!this.roomId) return;
+  
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${this.propertyId}`);
+    if (!response.ok) throw new Error(`Erreur: ${response.status}`);
+    
+    const data = await response.json();
+    const rooms = data.rooms || [];
+    
+    // Trouver la chambre correspondante
+    this.roomData = rooms.find(r => r.id === this.roomId);
+    
+    if (!this.roomData) {
+      console.error('❌ Chambre non trouvée:', this.roomId);
+      return;
+    }
+    
+    console.log('✅ Données chambre chargées:', this.roomData.name);
+    
+    // Mettre à jour le titre
+    const titleElement = document.getElementById('logement-name-edit');
+    if (titleElement) {
+      titleElement.textContent = this.roomData.name;
+    }
+    
+    // Pré-remplir les champs de la chambre
+    this.prefillRoomFields();
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement chambre:', error);
+  }
+}
+
+prefillRoomFields() {
+  if (!this.roomData) return;
+  
+  // Nom de la chambre
+  const nameInput = document.getElementById('name-input-chambre');
+  if (nameInput) nameInput.value = this.roomData.name || '';
+  
+  // Parser taille_chambre : "2 voyageurs - 1 lit - 25 m²"
+  const taille = this.roomData.taille_chambre || '';
+  const voyageursMatch = taille.match(/^(\d+)/);
+  const litsMatch = taille.match(/(\d+)\s*lit/);
+  const tailleMatch = taille.match(/(\d+)\s*m²/);
+  
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  if (voyageursInput) voyageursInput.value = voyageursMatch ? voyageursMatch[1] : '';
+  
+  const litsInput = document.getElementById('lits-input-chambre');
+  if (litsInput) litsInput.value = litsMatch ? litsMatch[1] : '';
+  
+  const tailleInput = document.getElementById('taille-chambre');
+  if (tailleInput) tailleInput.value = tailleMatch ? tailleMatch[1] : '';
+  
+  // Description (champ CMS : texte description chambre -> pas encore dans la route serveur)
+  // À ajouter quand le champ sera mappé côté serveur
+}
+  
   async loadPropertyData() {
     try {
       
