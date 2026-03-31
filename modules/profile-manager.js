@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.031 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.032 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -636,8 +636,7 @@ openManageRoomsModal(property) {
     
     newAddBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      const manageModal = document.getElementById('modal-edit-chambres');
-      if (manageModal) manageModal.style.display = 'none';
+      this.closeManageRoomsModal();
       this.openAddRoomModal(property);
     });
   }
@@ -660,15 +659,11 @@ async deleteRoom(roomId, property) {
     const result = await response.json();
     
     if (response.ok && result.success) {
-      // Mettre à jour la propriété locale
       if (property.rooms) {
         property.rooms = property.rooms.filter(r => r.id !== roomId);
       }
       
-      // Rafraîchir la modale
-      this.openManageRoomsModal(property);
-      
-      // Rafraîchir l'affichage complet
+      this.closeManageRoomsModal();
       await this.reload();
     } else {
       alert(result.error || 'Erreur lors de la suppression');
@@ -724,8 +719,7 @@ setupAddRoomSubmit() {
       const result = await response.json();
       
       if (response.ok && result.success) {
-        const modal = document.getElementById('modal-add-chambres');
-        if (modal) modal.style.display = 'none';
+        this.closeAddRoomModal();
         
         await this.reload();
       } else {
@@ -739,6 +733,25 @@ setupAddRoomSubmit() {
       newBtn.textContent = originalText;
     }
   });
+}
+
+closeAddRoomModal() {
+  const modal = document.getElementById('modal-add-chambres');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  // Réinitialiser les champs
+  const nameInput = document.getElementById('nom-chambre');
+  const voyageursInput = document.getElementById('voyageurs-input');
+  if (nameInput) nameInput.value = '';
+  if (voyageursInput) voyageursInput.value = '';
+}
+
+closeManageRoomsModal() {
+  const modal = document.getElementById('modal-edit-chambres');
+  if (modal) {
+    modal.style.display = 'none';
+  }
 }
   
   // Vérifier le retour de paiement
