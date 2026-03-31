@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.01 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.02 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -464,8 +464,8 @@ displayChambreHoteElements(property, targetElement = document) {
     }
   }
   
-  // 7. Afficher les images des chambres
-  if (hasRooms) {
+  // 7. Afficher les images des chambres (seulement verified et published)
+  if (hasRooms && (status === 'verified' || status === 'published')) {
     this.displayRoomImagesOnCard(rooms, targetElement);
   }
   
@@ -589,7 +589,7 @@ openManageRoomsModal(property) {
     }
     
     // Bouton modifier — cloner pour éviter doublons de listeners
-    const editBtn = document.getElementById(`edit-chambre-${index + 1}`);
+    const editBtn = document.getElementById(`edit-${index + 1}`);
     if (editBtn) {
       const newEditBtn = editBtn.cloneNode(true);
       editBtn.parentNode.replaceChild(newEditBtn, editBtn);
@@ -601,7 +601,7 @@ openManageRoomsModal(property) {
     }
     
     // Bouton supprimer
-    const deleteBtn = document.getElementById(`delete-chambre-${index + 1}`);
+    const deleteBtn = document.getElementById(`delete-${index + 1}`);
     if (deleteBtn) {
       const newDeleteBtn = deleteBtn.cloneNode(true);
       deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
