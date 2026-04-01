@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.037 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.038 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -596,8 +596,9 @@ openManageRoomsModal(property) {
     // Nombre de voyageurs
     const voyageursEl = document.getElementById(`nombre-voyageurs-${index + 1}`);
     if (voyageursEl) {
-      const parsed = PropertyEditor.parseTailleChambre(room.taille_chambre);
-      voyageursEl.textContent = `${parsed.voyageurs} voyageur${parseInt(parsed.voyageurs) > 1 ? 's' : ''}`;
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const voyageurs = match ? match[1] : '0';
+      voyageursEl.textContent = `${voyageurs} voyageur${parseInt(voyageurs) > 1 ? 's' : ''}`;
     }
     
     // Bouton modifier — cloner pour éviter doublons de listeners
