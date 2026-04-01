@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.034 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.035 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -571,12 +571,12 @@ openManageRoomsModal(property) {
     
     bloc.style.display = 'flex';
     
-    // Image
+    // Image (seulement si verified ou published)
     const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
     if (imageEl) {
-      const photos = room.photos || [];
-      if (photos.length > 0) {
-        const photoUrl = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+      const status = this.getPropertyStatus(property);
+      if ((status === 'verified' || status === 'published') && room.photos && room.photos.length > 0) {
+        const photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
         if (photoUrl) {
           if (imageEl.tagName === 'IMG') {
             imageEl.src = photoUrl;
@@ -586,6 +586,9 @@ openManageRoomsModal(property) {
             imageEl.style.backgroundPosition = 'center';
           }
         }
+        imageEl.style.display = 'block';
+      } else {
+        imageEl.style.display = 'none';
       }
     }
     
