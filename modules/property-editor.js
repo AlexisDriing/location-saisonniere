@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.031
+// LOG production V1.5 - chambres d'hôtes v1.032
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -107,15 +107,11 @@ class PropertyEditor {
   await this.loadPropertyData();
   
   if (this.propertyData) {
-    // Gérer l'affichage conditionnel des tabs selon le contexte
     this.setupTabsDisplay();
     
     if (this.isRoomEdit) {
-      // Mode chambre : charger les données de la chambre
-      this.validationManager = new ValidationManager(this);
       await this.loadRoomData();
     } else {
-      // Mode logement : comportement existant
       this.loadPricingData();
       this.prefillForm();
       this.setupSaveButton();
@@ -126,11 +122,9 @@ class PropertyEditor {
       this.initExtrasManagement();
       this.initImageManagement();
       this.updatePlatformBlocksVisibility();
-      this.validationManager = new ValidationManager(this);
     }
-  } else {
-    this.validationManager = new ValidationManager(this);
   }
+  this.validationManager = new ValidationManager(this);
   
   // Vérifier l'iCal par défaut (après init du validationManager)
   this.checkDefaultIcalWarning();
