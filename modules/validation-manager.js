@@ -1,4 +1,4 @@
-// LOG production V1.3
+// LOG production V1.4
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -275,6 +275,55 @@ class ValidationManager {
     };
   }
 
+  // Config de validation pour les chambres
+    this.roomValidationConfig = {
+      fields: {
+        'name-input-chambre': {
+          required: true,
+          minLength: 2,
+          maxLength: 80,
+          messages: {
+            empty: "Le nom de la chambre est obligatoire",
+            minLength: "Le nom doit contenir au moins 2 caractères",
+            maxLength: "Le nom ne peut pas dépasser 80 caractères"
+          }
+        },
+        'voyageurs-input-chambre': {
+          required: true,
+          min: 1,
+          messages: {
+            empty: "Le nombre de voyageurs est obligatoire",
+            min: "Minimum 1 voyageur"
+          }
+        },
+        'lits-input-chambre': {
+          required: true,
+          min: 1,
+          messages: {
+            empty: "Le nombre de lits est obligatoire",
+            min: "Minimum 1 lit"
+          }
+        },
+        'taille-chambre': {
+          required: true,
+          min: 1,
+          messages: {
+            empty: "La taille en m² est obligatoire",
+            min: "La taille doit être supérieure à 0"
+          }
+        },
+        'texte-chambre': {
+          required: true,
+          maxLength: 1000,
+          messages: {
+            empty: "La description de la chambre est obligatoire",
+            maxLength: "Maximum 1000 caractères (actuellement: {count})"
+          }
+        }
+      }
+    };
+  }
+  
   // Configurer les compteurs de caractères
   setupCharacterCounters() {
     const textareasWithLimit = [
@@ -543,6 +592,26 @@ class ValidationManager {
     }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
+    return isValid;
+  }
+
+validateRoomFields() {
+    this.errors.clear();
+    let isValid = true;
+    
+    for (const [fieldId, fieldConfig] of Object.entries(this.roomValidationConfig.fields)) {
+      const error = this.validateField(fieldId, fieldConfig);
+      
+      if (error) {
+        this.errors.set(fieldId, error);
+        this.showFieldError(fieldId, error);
+        isValid = false;
+      } else {
+        this.hideFieldError(fieldId);
+      }
+    }
+    
+    console.log(isValid ? '✅ Validation chambre réussie' : '❌ Validation chambre échouée');
     return isValid;
   }
 
