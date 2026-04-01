@@ -1,4 +1,4 @@
-// LOG production V1.4
+// LOG production V1.41
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -273,7 +273,7 @@ class ValidationManager {
         tabIndicatorId: 'error-indicator-tab5'
       }
     };
-  }
+  
 
   // Config de validation pour les chambres
     this.roomValidationConfig = {
