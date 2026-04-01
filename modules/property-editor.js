@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.032
+// LOG production V1.5 - chambres d'hôtes v1.033
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -246,8 +246,14 @@ prefillRoomFields() {
   // Sauvegarder taille initiale
   this.initialValues.room_taille_chambre = this.roomData.taille_chambre || '';
   
+  // Détails des lits
+  this.initialValues.room_details_lits = this.roomData.details_lits || '';
+  
   // Listeners
   this.setupRoomFieldListeners();
+  
+  // Détails des lits (après les listeners)
+  this.initLitsDetails();
 }
 
 prefillRoomEquipements() {
@@ -502,6 +508,141 @@ setupRoomFieldListeners() {
   });
 }
 
+// ================================
+// 🛏️ GESTION DES DÉTAILS DE LITS
+// ================================
+
+initLitsDetails() {
+  // Écouter les changements du nombre de lits
+  const litsInput = document.getElementById('lits-input-chambre');
+  if (!litsInput) return;
+  
+  litsInput.addEventListener('input', () => {
+    this.updateLitsBlocs();
+    this.enableButtons();
+  });
+  
+  // Afficher les blocs existants au chargement
+  this.prefillLitsDetails();
+}
+
+prefillLitsDetails() {
+  const detailsStr = this.roomData?.details_lits || '';
+  
+  if (!detailsStr) {
+    // Pas de détails, juste afficher les blocs vides selon le nombre de lits
+    this.updateLitsBlocs();
+    return;
+  }
+  
+  // Parser "2 Lit simple, 1 Lit double" → [{type: 'Lit simple', count: 2}, ...]
+  const groups = detailsStr.split(',').map(part => part.trim()).filter(Boolean);
+  const expandedTypes = [];
+  
+  groups.forEach(group => {
+    const match = group.match(/^(\d+)\s+(.+)$/);
+    if (match) {
+      const count = parseInt(match[1]);
+      const type = match[2].trim();
+      for (let i = 0; i < count; i++) {
+        expandedTypes.push(type);
+      }
+    }
+  });
+  
+  // Stocker pour comparaison au save
+  this.initialValues.room_details_lits = detailsStr;
+  
+  // Afficher les blocs et remplir les selects
+  this.showLitsBlocs(expandedTypes.length);
+  
+  expandedTypes.forEach((type, index) => {
+    const bloc = this.getLitBloc(index);
+    if (bloc) {
+      const select = bloc.querySelector('[data-lit="type"]');
+      if (select) select.value = type;
+    }
+  });
+}
+
+updateLitsBlocs() {
+  const litsInput = document.getElementById('lits-input-chambre');
+  const count = parseInt(litsInput?.value) || 0;
+  this.showLitsBlocs(count);
+}
+
+showLitsBlocs(count) {
+  const blocGlobal = document.getElementById('bloc-details-lits');
+  
+  if (count <= 0) {
+    if (blocGlobal) blocGlobal.style.display = 'none';
+    // Masquer tous les blocs
+    for (let i = 0; i < 10; i++) {
+      const bloc = this.getLitBloc(i);
+      if (bloc) bloc.style.display = 'none';
+    }
+    return;
+  }
+  
+  if (blocGlobal) blocGlobal.style.display = 'block';
+  
+  for (let i = 0; i < 10; i++) {
+    const bloc = this.getLitBloc(i);
+    if (bloc) {
+      if (i < count) {
+        bloc.style.display = 'flex';
+        // Ajouter listener sur le select si pas déjà fait
+        const select = bloc.querySelector('[data-lit="type"]');
+        if (select && !select.dataset.listenerAdded) {
+          select.addEventListener('change', () => this.enableButtons());
+          select.dataset.listenerAdded = 'true';
+        }
+      } else {
+        bloc.style.display = 'none';
+        // Réinitialiser le select des blocs masqués
+        const select = bloc.querySelector('[data-lit="type"]');
+        if (select) select.selectedIndex = 0;
+      }
+    }
+  }
+}
+
+getLitBloc(index) {
+  if (index === 0) {
+    return document.querySelector('.bloc-detail-lit:not(.next)');
+  } else {
+    const nextBlocs = document.querySelectorAll('.bloc-detail-lit.next');
+    return nextBlocs[index - 1] || null;
+  }
+}
+
+collectLitsDetails() {
+  // Collecter tous les types sélectionnés dans les blocs visibles
+  const types = [];
+  const litsInput = document.getElementById('lits-input-chambre');
+  const count = parseInt(litsInput?.value) || 0;
+  
+  for (let i = 0; i < count; i++) {
+    const bloc = this.getLitBloc(i);
+    if (bloc && bloc.style.display !== 'none') {
+      const select = bloc.querySelector('[data-lit="type"]');
+      if (select && select.value) {
+        types.push(select.value);
+      }
+    }
+  }
+  
+  // Regrouper les types identiques : ['Lit simple', 'Lit simple', 'Lit double'] → "2 Lit simple, 1 Lit double"
+  const counts = {};
+  types.forEach(type => {
+    counts[type] = (counts[type] || 0) + 1;
+  });
+  
+  return Object.entries(counts)
+    .map(([type, nb]) => `${nb} ${type}`)
+    .join(', ');
+}
+  
 setupRoomSaveButton() {
   const saveButton = document.getElementById('button-save-modifications');
   const cancelButton = document.getElementById('annulation');
@@ -575,6 +716,12 @@ async saveRoomModifications() {
     updates.equipements = currentEquipStr;
   }
   
+  // Détails des lits
+  const currentDetailsLits = this.collectLitsDetails();
+  if (currentDetailsLits !== (this.initialValues.room_details_lits || '')) {
+    updates.details_lits = currentDetailsLits;
+  }
+  
   // Photos
   const originalPhotosJson = JSON.stringify(this.roomOriginalPhotos);
   const currentPhotosJson = JSON.stringify(this.roomCurrentPhotos);
@@ -621,6 +768,10 @@ async saveRoomModifications() {
       if (updates.equipements !== undefined) {
         this.initialValues.room_equipements = selectedEquipements;
         this.roomData.equipements = updates.equipements;
+      }
+      if (updates.details_lits !== undefined) {
+        this.initialValues.room_details_lits = updates.details_lits;
+        this.roomData.details_lits = updates.details_lits;
       }
       if (updates['photos-de-la-chambre'] !== undefined) {
         this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
@@ -671,6 +822,10 @@ cancelRoomModifications() {
   
   // Restaurer équipements
   this.prefillRoomEquipements();
+  
+  // Restaurer détails lits
+  this.roomData.details_lits = this.initialValues.room_details_lits || '';
+  this.prefillLitsDetails();
   
   // Restaurer photos
   this.roomCurrentPhotos = JSON.parse(JSON.stringify(this.initialValues.room_photos || []));
