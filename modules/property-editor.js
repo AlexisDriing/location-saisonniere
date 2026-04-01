@@ -1,14 +1,51 @@
-// LOG production V1.5 - chambres d'hôtes v1.02
+// LOG production V1.5 - chambres d'hôtes v1.03
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
+
+  // Helpers statiques pour parser/construire taille_chambre
+  static parseTailleChambre(taille) {
+    const voyageursMatch = (taille || '').match(/^(\d+)/);
+    const litsMatch = (taille || '').match(/(\d+)\s*lit/);
+    const tailleMatch = (taille || '').match(/(\d+)\s*m²/);
+    return {
+      voyageurs: voyageursMatch ? voyageursMatch[1] : '0',
+      lits: litsMatch ? litsMatch[1] : '0',
+      tailleM2: tailleMatch ? tailleMatch[1] : '0'
+    };
+  }
+
+  static buildTailleChambre(voyageurs, lits, tailleM2) {
+    const v = parseInt(voyageurs) || 0;
+    const l = parseInt(lits) || 0;
+    return `${v} voyageur${v > 1 ? 's' : ''} - ${l} lit${l > 1 ? 's' : ''} - ${tailleM2 || 0} m²`;
+  }
+
+  // Mapping unique des équipements chambre
+  static ROOM_EQUIPEMENTS_MAPPING = {
+    'Climatisation': 'checkbox-climatisation-chambre',
+    'Télévision': 'checkbox-television',
+    'Bureau': 'checkbox-bureau',
+    'Salle de bain privée': 'checkbox-salle-de-bain-privee',
+    'Toilettes privées': 'checkbox-toilettes-prive',
+    'Wifi': 'checkbox-wifi-chambre',
+    'Balcon': 'checkbox-balcon',
+    'Micro-ondes': 'checkbox-micro-ondes',
+    'Sèche cheveux': 'checkbox-seche-cheveux',
+    'Machine à café': 'checkbox-machine-cafe'
+  };
+
   constructor() {
     this.propertyId = null;
     this.propertyData = null;
-    this.initialValues = {}; // Stockage de TOUTES les valeurs initiales
+    this.initialValues = {};
     this.editingSeasonIndex = null;
     this.originalImagesGallery = [];
     this.currentImagesGallery = [];
     this.sortableInstance = null;
+    this.roomData = null;
+    this.roomOriginalPhotos = [];
+    this.roomCurrentPhotos = [];
+    this.roomSortableInstance = null;
 
     this.icalUrls = []; // Stockage des URLs iCal
     this.DEFAULT_ICAL_URL = 'https://calendar.google.com/calendar/ical/c_20c899760ed3ef0d0fb0db69c71909b19c0584bbbdf32e9714b224fc005ae2c0%40group.calendar.google.com/public/basic.ics';
@@ -73,24 +110,27 @@ class PropertyEditor {
     // Gérer l'affichage conditionnel des tabs selon le contexte
     this.setupTabsDisplay();
     
-    // 🆕 IMPORTANT : Charger les données pricing AVANT prefillForm
-    this.loadPricingData();
-    
-    // ENSUITE seulement pré-remplir les champs
-    this.prefillForm();
-    this.setupSaveButton();
-    this.setupTallyButton();
-    // Et finir par l'init des saisons
-    this.initSeasonManagement();
-
-    this.initDiscountManagement();
-    this.initIcalManagement();
-    this.checkDefaultIcalWarning();
-    this.initExtrasManagement();
-    this.initImageManagement();
-    this.updatePlatformBlocksVisibility();
+    if (this.isRoomEdit) {
+      // Mode chambre : charger les données de la chambre
+      this.validationManager = new ValidationManager(this);
+      await this.loadRoomData();
+    } else {
+      // Mode logement : comportement existant
+      this.loadPricingData();
+      this.prefillForm();
+      this.setupSaveButton();
+      this.setupTallyButton();
+      this.initSeasonManagement();
+      this.initDiscountManagement();
+      this.initIcalManagement();
+      this.initExtrasManagement();
+      this.initImageManagement();
+      this.updatePlatformBlocksVisibility();
+      this.validationManager = new ValidationManager(this);
+    }
+  } else {
+    this.validationManager = new ValidationManager(this);
   }
-  this.validationManager = new ValidationManager(this);
   
   // Vérifier l'iCal par défaut (après init du validationManager)
   this.checkDefaultIcalWarning();
@@ -111,9 +151,8 @@ class PropertyEditor {
   setupTabsDisplay() {
   const modeLocation = this.propertyData.mode_location || '';
   const isChambreHote = modeLocation === "Chambre d'hôtes";
-  const isRoomEdit = this.isRoomEdit;
   
-  // Tag chambres d'hôtes sur la page modification
+  // Tag chambres d'hôtes
   const tagChambres = document.getElementById('tag-chambres');
   if (tagChambres) {
     tagChambres.style.display = isChambreHote ? 'flex' : 'none';
@@ -123,23 +162,12 @@ class PropertyEditor {
   const tabsLogement = document.getElementById('tabs-logement-entier');
   const tabsChambres = document.getElementById('tabs-chambres-hotes');
   
-  if (isRoomEdit) {
-    // Modification d'une chambre : afficher tabs chambres, cacher tabs logement
+  if (this.isRoomEdit) {
     if (tabsLogement) tabsLogement.style.display = 'none';
     if (tabsChambres) tabsChambres.style.display = 'flex';
-    
-    // Charger les données de la chambre
-    this.loadRoomData();
   } else {
-    // Modification du logement : afficher tabs logement, cacher tabs chambres
     if (tabsLogement) tabsLogement.style.display = 'flex';
     if (tabsChambres) tabsChambres.style.display = 'none';
-  }
-  
-  // Titre : afficher le nom de la chambre ou du logement
-  const titleElement = document.getElementById('logement-name-edit');
-  if (titleElement && isRoomEdit && this.roomData) {
-    titleElement.textContent = this.roomData.name;
   }
 }
 
@@ -153,7 +181,6 @@ async loadRoomData() {
     const data = await response.json();
     const rooms = data.rooms || [];
     
-    // Trouver la chambre correspondante
     this.roomData = rooms.find(r => r.id === this.roomId);
     
     if (!this.roomData) {
@@ -163,14 +190,18 @@ async loadRoomData() {
     
     console.log('✅ Données chambre chargées:', this.roomData.name);
     
-    // Mettre à jour le titre
+    // Titre
     const titleElement = document.getElementById('logement-name-edit');
-    if (titleElement) {
-      titleElement.textContent = this.roomData.name;
-    }
+    if (titleElement) titleElement.textContent = this.roomData.name;
     
-    // Pré-remplir les champs de la chambre
+    // Pré-remplir les champs
     this.prefillRoomFields();
+    
+    // Afficher les photos
+    this.initRoomImageManagement();
+    
+    // Configurer la sauvegarde
+    this.setupRoomSaveButton();
     
   } catch (error) {
     console.error('❌ Erreur chargement chambre:', error);
@@ -180,27 +211,500 @@ async loadRoomData() {
 prefillRoomFields() {
   if (!this.roomData) return;
   
-  // Nom de la chambre
+  // Nom
   const nameInput = document.getElementById('name-input-chambre');
-  if (nameInput) nameInput.value = this.roomData.name || '';
+  if (nameInput) {
+    nameInput.value = this.roomData.name || '';
+    this.initialValues.room_name = this.roomData.name || '';
+  }
   
-  // Parser taille_chambre : "2 voyageurs - 1 lit - 25 m²"
-  const taille = this.roomData.taille_chambre || '';
-  const voyageursMatch = taille.match(/^(\d+)/);
-  const litsMatch = taille.match(/(\d+)\s*lit/);
-  const tailleMatch = taille.match(/(\d+)\s*m²/);
+  // Parser taille via helper
+  const parsed = PropertyEditor.parseTailleChambre(this.roomData.taille_chambre);
   
   const voyageursInput = document.getElementById('voyageurs-input-chambre');
-  if (voyageursInput) voyageursInput.value = voyageursMatch ? voyageursMatch[1] : '';
+  if (voyageursInput) {
+    voyageursInput.value = parsed.voyageurs;
+    this.initialValues.room_voyageurs = parsed.voyageurs;
+  }
   
   const litsInput = document.getElementById('lits-input-chambre');
-  if (litsInput) litsInput.value = litsMatch ? litsMatch[1] : '';
+  if (litsInput) {
+    litsInput.value = parsed.lits;
+    this.initialValues.room_lits = parsed.lits;
+  }
   
   const tailleInput = document.getElementById('taille-chambre');
-  if (tailleInput) tailleInput.value = tailleMatch ? tailleMatch[1] : '';
+  if (tailleInput) {
+    tailleInput.value = parsed.tailleM2;
+    this.initialValues.room_taille_m2 = parsed.tailleM2;
+  }
   
-  // Description (champ CMS : texte description chambre -> pas encore dans la route serveur)
-  // À ajouter quand le champ sera mappé côté serveur
+  // Description
+  const descInput = document.getElementById('texte-chambre');
+  if (descInput) {
+    descInput.value = this.roomData.description || '';
+    this.initialValues.room_description = this.roomData.description || '';
+  }
+  
+  // Équipements
+  this.prefillRoomEquipements();
+  
+  // Sauvegarder taille initiale
+  this.initialValues.room_taille_chambre = this.roomData.taille_chambre || '';
+  
+  // Listeners
+  this.setupRoomFieldListeners();
+}
+
+prefillRoomEquipements() {
+  const equipementsStr = this.roomData?.equipements || '';
+  const equipementsArray = equipementsStr ? equipementsStr.split(',').map(e => e.trim()) : [];
+  
+  Object.entries(PropertyEditor.ROOM_EQUIPEMENTS_MAPPING).forEach(([value, id]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = equipementsArray.includes(value);
+      const checkboxDiv = checkbox.previousElementSibling;
+      if (checkboxDiv && checkboxDiv.classList.contains('w-checkbox-input')) {
+        if (checkbox.checked) {
+          checkboxDiv.classList.add('w--redirected-checked');
+        } else {
+          checkboxDiv.classList.remove('w--redirected-checked');
+        }
+      }
+    }
+  });
+  
+  this.initialValues.room_equipements = equipementsArray;
+}
+
+// ================================
+// 📷 GESTION DES PHOTOS CHAMBRE
+// ================================
+
+initRoomImageManagement() {
+  this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomData.photos || []));
+  this.roomCurrentPhotos = JSON.parse(JSON.stringify(this.roomData.photos || []));
+  this.initialValues.room_photos = JSON.parse(JSON.stringify(this.roomOriginalPhotos));
+  
+  this.displayRoomEditableGallery();
+  
+  // SortableJS sur desktop
+  if (window.innerWidth > 768) {
+    setTimeout(() => this.initRoomSortable(), 100);
+  }
+  
+  // Bouton ajout photos
+  const addPhotosButton = document.querySelector('.add-photos-chambre');
+  if (addPhotosButton) {
+    const newButton = addPhotosButton.cloneNode(true);
+    addPhotosButton.parentNode.replaceChild(newButton, addPhotosButton);
+    
+    newButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.roomCurrentPhotos.length >= 5) {
+        this.showNotification('error', 'Limite de 5 photos maximum atteinte');
+      } else {
+        const tallyUrl = newButton.dataset.tallyUrl;
+        if (tallyUrl) {
+          const params = new URLSearchParams({
+            property_id: this.roomId || '',
+            property_name: this.roomData.name || '',
+            email: this.propertyData.email || ''
+          });
+          window.open(`${tallyUrl}?${params.toString()}`, '_blank');
+        }
+      }
+    });
+  }
+  
+  this.updateRoomAddPhotosButtonState();
+  
+  // Bloc published
+  const blocPublished = document.getElementById('bloc-photos-chambre-published');
+  if (blocPublished) {
+    const status = this.propertyData.verification_status || 'pending-none';
+    blocPublished.style.display = status === 'published' ? 'flex' : 'none';
+  }
+}
+
+initRoomSortable() {
+  const container = document.querySelector('.images-grid-chambre');
+  if (!container || this.roomCurrentPhotos.length === 0) return;
+  
+  if (this.roomSortableInstance) {
+    this.roomSortableInstance.destroy();
+  }
+  
+  this.roomSortableInstance = new Sortable(container, {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    filter: '.button-delete-photo',
+    onEnd: (evt) => {
+      const movedItem = this.roomCurrentPhotos.splice(evt.oldIndex, 1)[0];
+      this.roomCurrentPhotos.splice(evt.newIndex, 0, movedItem);
+      this.enableButtons();
+    }
+  });
+}
+
+displayRoomEditableGallery() {
+  const blocPhotos = document.getElementById('bloc-photos-logement-chambre');
+  
+  if (!Array.isArray(this.roomCurrentPhotos) || this.roomCurrentPhotos.length === 0) {
+    if (blocPhotos) blocPhotos.style.display = 'none';
+    return;
+  } else {
+    if (blocPhotos) blocPhotos.style.display = 'block';
+  }
+  
+  // Masquer tous les blocs
+  for (let i = 1; i <= 5; i++) {
+    const imageBlock = document.getElementById(`image-block-${i}-chambre`);
+    if (imageBlock) {
+      imageBlock.style.display = 'none';
+      const oldBtn = imageBlock.querySelector('.button-delete-photo');
+      if (oldBtn) oldBtn.remove();
+    }
+  }
+  
+  const maxImages = Math.min(this.roomCurrentPhotos.length, 5);
+  
+  for (let i = 0; i < maxImages; i++) {
+    const imageData = this.roomCurrentPhotos[i];
+    const imageBlock = document.getElementById(`image-block-${i + 1}-chambre`);
+    
+    if (imageBlock && imageData) {
+      let imageUrl = null;
+      if (typeof imageData === 'object' && imageData.url) {
+        imageUrl = imageData.url;
+      } else if (typeof imageData === 'string') {
+        imageUrl = imageData;
+      }
+      
+      if (imageUrl) {
+        const imgElement = imageBlock.querySelector('img');
+        if (imgElement) {
+          imgElement.src = imageUrl;
+          imgElement.alt = `Image chambre ${i + 1}`;
+        }
+        
+        this.addRoomDeleteButton(imageBlock, i);
+        imageBlock.style.cursor = 'move';
+        imageBlock.classList.add('sortable-item');
+        imageBlock.style.display = 'block';
+      }
+    }
+  }
+}
+
+addRoomDeleteButton(imageBlock, index) {
+  let deleteBtn = imageBlock.querySelector('.button-delete-photo');
+  
+  if (!deleteBtn) {
+    const template = document.getElementById('template-delete-button');
+    if (template) {
+      deleteBtn = template.cloneNode(true);
+      deleteBtn.style.display = 'block';
+      deleteBtn.id = '';
+      deleteBtn.style.position = 'absolute';
+      deleteBtn.style.top = '8px';
+      deleteBtn.style.right = '8px';
+      deleteBtn.style.zIndex = '20';
+      imageBlock.style.position = 'relative';
+      imageBlock.appendChild(deleteBtn);
+    } else {
+      return;
+    }
+  }
+  
+  deleteBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    this.removeRoomImage(index);
+  };
+}
+
+removeRoomImage(index) {
+  const imageBlock = document.getElementById(`image-block-${index + 1}-chambre`);
+  if (!imageBlock) return;
+  
+  const imgElement = imageBlock.querySelector('img');
+  if (!imgElement) return;
+  
+  const imageUrl = imgElement.src;
+  
+  const realIndex = this.roomCurrentPhotos.findIndex(img => {
+    if (typeof img === 'string') return img === imageUrl;
+    if (img && img.url) return img.url === imageUrl;
+    return false;
+  });
+  
+  if (realIndex === -1) {
+    console.error('❌ Image non trouvée dans le tableau');
+    return;
+  }
+  
+  // Pas de minimum pour les chambres (on peut avoir 0 photos)
+  this.roomCurrentPhotos.splice(realIndex, 1);
+  
+  this.displayRoomEditableGallery();
+  this.initRoomSortable();
+  this.updateRoomAddPhotosButtonState();
+  this.enableButtons();
+}
+
+updateRoomAddPhotosButtonState() {
+  const addPhotosButton = document.querySelector('.add-photos-chambre');
+  if (!addPhotosButton) return;
+  
+  if (this.roomCurrentPhotos.length >= 5) {
+    addPhotosButton.style.opacity = '0.5';
+    addPhotosButton.style.cursor = 'not-allowed';
+  } else {
+    addPhotosButton.style.opacity = '1';
+    addPhotosButton.style.cursor = 'pointer';
+  }
+}
+
+// ================================
+// 🛏️ LISTENERS, SAVE, CANCEL CHAMBRE
+// ================================
+
+setupRoomFieldListeners() {
+  // Champs texte
+  const roomFields = [
+    'name-input-chambre',
+    'voyageurs-input-chambre',
+    'lits-input-chambre',
+    'taille-chambre',
+    'texte-chambre'
+  ];
+  
+  roomFields.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => this.enableButtons());
+    }
+  });
+  
+  // Champs numériques
+  ['voyageurs-input-chambre', 'lits-input-chambre', 'taille-chambre'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+      });
+    }
+  });
+  
+  // Équipements
+  Object.values(PropertyEditor.ROOM_EQUIPEMENTS_MAPPING).forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => this.enableButtons());
+    }
+  });
+}
+
+setupRoomSaveButton() {
+  const saveButton = document.getElementById('button-save-modifications');
+  const cancelButton = document.getElementById('annulation');
+  
+  this.disableButtons();
+  
+  if (saveButton) {
+    const newSaveBtn = saveButton.cloneNode(true);
+    saveButton.parentNode.replaceChild(newSaveBtn, saveButton);
+    newSaveBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await this.saveRoomModifications();
+    });
+  }
+  
+  if (cancelButton) {
+    const newCancelBtn = cancelButton.cloneNode(true);
+    cancelButton.parentNode.replaceChild(newCancelBtn, cancelButton);
+    newCancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.cancelRoomModifications();
+    });
+  }
+}
+
+async saveRoomModifications() {
+  // Validation
+  if (this.validationManager && !this.validationManager.validateRoomFields()) {
+    this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+    return;
+  }
+  
+  const updates = {};
+  
+  // Nom
+  const nameInput = document.getElementById('name-input-chambre');
+  const currentName = nameInput?.value?.trim() || '';
+  if (currentName !== this.initialValues.room_name) {
+    updates.name = currentName;
+  }
+  
+  // Description
+  const descInput = document.getElementById('texte-chambre');
+  const currentDesc = descInput?.value?.trim() || '';
+  if (currentDesc !== this.initialValues.room_description) {
+    updates.description = currentDesc;
+  }
+  
+  // Taille chambre via helper
+  const voyageurs = document.getElementById('voyageurs-input-chambre')?.value || '0';
+  const lits = document.getElementById('lits-input-chambre')?.value || '0';
+  const tailleM2 = document.getElementById('taille-chambre')?.value || '0';
+  
+  const nouvelleTaille = PropertyEditor.buildTailleChambre(voyageurs, lits, tailleM2);
+  if (nouvelleTaille !== this.initialValues.room_taille_chambre) {
+    updates.taille_chambre = nouvelleTaille;
+  }
+  
+  // Équipements via mapping unique
+  const selectedEquipements = [];
+  Object.entries(PropertyEditor.ROOM_EQUIPEMENTS_MAPPING).forEach(([value, id]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox && checkbox.checked) {
+      selectedEquipements.push(value);
+    }
+  });
+  
+  const currentEquipStr = selectedEquipements.join(', ');
+  const initialEquipStr = (this.initialValues.room_equipements || []).join(', ');
+  if (currentEquipStr !== initialEquipStr) {
+    updates.equipements = currentEquipStr;
+  }
+  
+  // Photos
+  const originalPhotosJson = JSON.stringify(this.roomOriginalPhotos);
+  const currentPhotosJson = JSON.stringify(this.roomCurrentPhotos);
+  if (originalPhotosJson !== currentPhotosJson) {
+    updates['photos-de-la-chambre'] = this.roomCurrentPhotos;
+  }
+  
+  if (Object.keys(updates).length === 0) {
+    this.showNotification('error', 'Aucune modification détectée');
+    return;
+  }
+  
+  const saveButton = document.querySelector('#button-save-modifications');
+  const originalText = saveButton?.textContent;
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.textContent = 'Enregistrement...';
+  }
+  
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/update-room/${this.roomId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      if (updates.name !== undefined) {
+        this.initialValues.room_name = updates.name;
+        this.roomData.name = updates.name;
+        const titleElement = document.getElementById('logement-name-edit');
+        if (titleElement) titleElement.textContent = updates.name;
+      }
+      if (updates.description !== undefined) {
+        this.initialValues.room_description = updates.description;
+        this.roomData.description = updates.description;
+      }
+      if (updates.taille_chambre !== undefined) {
+        this.initialValues.room_taille_chambre = updates.taille_chambre;
+        this.roomData.taille_chambre = updates.taille_chambre;
+      }
+      if (updates.equipements !== undefined) {
+        this.initialValues.room_equipements = selectedEquipements;
+        this.roomData.equipements = updates.equipements;
+      }
+      if (updates['photos-de-la-chambre'] !== undefined) {
+        this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
+        this.roomData.photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
+        this.initialValues.room_photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
+      }
+      
+      this.disableButtons();
+      this.showNotification('success', 'Modifications enregistrées avec succès !');
+    } else {
+      throw new Error(result.error || 'Erreur lors de la sauvegarde');
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde chambre:', error);
+    this.showNotification('error', 'Erreur lors de la sauvegarde : ' + error.message);
+  } finally {
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = originalText;
+    }
+  }
+}
+
+cancelRoomModifications() {
+  if (this.validationManager) {
+    this.validationManager.clearAllErrors();
+  }
+  
+  // Restaurer nom et description
+  const nameInput = document.getElementById('name-input-chambre');
+  if (nameInput) nameInput.value = this.initialValues.room_name || '';
+  
+  const descInput = document.getElementById('texte-chambre');
+  if (descInput) descInput.value = this.initialValues.room_description || '';
+  
+  // Restaurer taille via helper
+  const parsed = PropertyEditor.parseTailleChambre(this.initialValues.room_taille_chambre || '');
+  
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  if (voyageursInput) voyageursInput.value = parsed.voyageurs;
+  
+  const litsInput = document.getElementById('lits-input-chambre');
+  if (litsInput) litsInput.value = parsed.lits;
+  
+  const tailleInput = document.getElementById('taille-chambre');
+  if (tailleInput) tailleInput.value = parsed.tailleM2;
+  
+  // Restaurer équipements
+  this.prefillRoomEquipements();
+  
+  // Restaurer photos
+  this.roomCurrentPhotos = JSON.parse(JSON.stringify(this.initialValues.room_photos || []));
+  
+  if (this.roomSortableInstance) {
+    this.roomSortableInstance.destroy();
+    this.roomSortableInstance = null;
+  }
+  
+  const container = document.querySelector('.images-grid-chambre');
+  if (container) {
+    const blocks = [];
+    for (let i = 1; i <= 5; i++) {
+      const block = document.getElementById(`image-block-${i}-chambre`);
+      if (block) blocks.push(block);
+    }
+    blocks.forEach(block => container.appendChild(block));
+  }
+  
+  this.displayRoomEditableGallery();
+  setTimeout(() => this.initRoomSortable(), 100);
+  this.updateRoomAddPhotosButtonState();
+  
+  // Restaurer titre
+  const titleElement = document.getElementById('logement-name-edit');
+  if (titleElement) titleElement.textContent = this.initialValues.room_name || '';
+  
+  this.disableButtons();
 }
   
   async loadPropertyData() {
