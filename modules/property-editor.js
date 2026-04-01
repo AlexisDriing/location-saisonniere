@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.03
+// LOG production V1.5 - chambres d'hôtes v1.031
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -295,7 +295,7 @@ initRoomImageManagement() {
   }
   
   // Bouton ajout photos
-  const addPhotosButton = document.querySelector('.add-photos-chambre');
+  const addPhotosButton = document.querySelector('.add-photos.chambre');
   if (addPhotosButton) {
     const newButton = addPhotosButton.cloneNode(true);
     addPhotosButton.parentNode.replaceChild(newButton, addPhotosButton);
@@ -330,7 +330,7 @@ initRoomImageManagement() {
 }
 
 initRoomSortable() {
-  const container = document.querySelector('.images-grid-chambre');
+  const container = document.querySelector('.images-grid.chambre');
   if (!container || this.roomCurrentPhotos.length === 0) return;
   
   if (this.roomSortableInstance) {
@@ -456,7 +456,7 @@ removeRoomImage(index) {
 }
 
 updateRoomAddPhotosButtonState() {
-  const addPhotosButton = document.querySelector('.add-photos-chambre');
+  const addPhotosButton = document.querySelector('.add-photos.chambre');
   if (!addPhotosButton) return;
   
   if (this.roomCurrentPhotos.length >= 5) {
@@ -686,7 +686,7 @@ cancelRoomModifications() {
     this.roomSortableInstance = null;
   }
   
-  const container = document.querySelector('.images-grid-chambre');
+  const container = document.querySelector('.images-grid.chambre');
   if (container) {
     const blocks = [];
     for (let i = 1; i <= 5; i++) {
