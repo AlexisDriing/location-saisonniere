@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.034
+// LOG production V1.5 - chambres d'hôtes v1.035
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -707,7 +707,7 @@ prefillRoomPricing() {
     if (labelVoyageur) labelVoyageur.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
     
     if (blocFixe) blocFixe.style.display = 'none';
-    if (blocVoyageur) blocVoyageur.style.display = 'block';
+    if (blocVoyageur) blocVoyageur.style.display = 'flex';
     
     // Afficher les blocs prix voyageur et remplir les valeurs
     this.displayPricesPerGuest(pricing.pricesPerGuest || []);
@@ -724,8 +724,13 @@ prefillRoomPricing() {
     // Remplir le prix fixe
     const priceInput = document.getElementById('default-price-input-chambre');
     if (priceInput) {
-      priceInput.value = pricing.price || 0;
-      priceInput.setAttribute('data-raw-value', pricing.price || 0);
+      if (pricing.price && pricing.price > 0) {
+        priceInput.value = pricing.price;
+        priceInput.setAttribute('data-raw-value', pricing.price);
+      } else {
+        priceInput.value = '';
+        priceInput.removeAttribute('data-raw-value');
+      }
     }
   }
   
@@ -759,8 +764,13 @@ displayPricesPerGuest(pricesArray) {
       const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
       if (priceInput) {
         const price = (pricesArray && pricesArray[i]) ? pricesArray[i] : 0;
-        priceInput.value = price;
-        priceInput.setAttribute('data-raw-value', price);
+        if (price > 0) {
+          priceInput.value = price;
+          priceInput.setAttribute('data-raw-value', price);
+        } else {
+          priceInput.value = '';
+          priceInput.removeAttribute('data-raw-value');
+        }
         
         // Ajouter listener si pas déjà fait
         if (!priceInput.dataset.listenerAdded) {
@@ -861,7 +871,7 @@ setupRoomPricingListeners() {
       if (radioVoyageur.checked) {
         if (labelVoyageur) labelVoyageur.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
         if (labelFixe) labelFixe.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
-        if (blocVoyageur) blocVoyageur.style.display = 'block';
+        if (blocVoyageur) blocVoyageur.style.display = 'flex';
         if (blocFixe) blocFixe.style.display = 'none';
         // Afficher les blocs prix voyageur selon le nombre actuel
         this.displayPricesPerGuest(this.roomPricingData?.defaultPricing?.pricesPerGuest || []);
