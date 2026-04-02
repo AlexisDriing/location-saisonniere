@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.033
+// LOG production V1.5 - chambres d'hôtes v1.034
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -196,6 +196,9 @@ async loadRoomData() {
     
     // Configurer la sauvegarde
     this.setupRoomSaveButton();
+    
+    // Initialiser la tarification
+    this.initRoomPricing();
     
   } catch (error) {
     console.error('❌ Erreur chargement chambre:', error);
@@ -642,6 +645,314 @@ collectLitsDetails() {
     .map(([type, nb]) => `${nb} ${type}`)
     .join(', ');
 }
+
+// ================================
+// 💰 TARIFICATION CHAMBRE
+// ================================
+
+initRoomPricing() {
+  // Charger les données pricing de la chambre
+  this.loadRoomPricingData();
+  
+  // Pré-remplir les champs
+  this.prefillRoomPricing();
+  
+  // Configurer les listeners
+  this.setupRoomPricingListeners();
+  
+  // Formater les champs avec suffixes
+  setTimeout(() => this.formatRoomPricingFields(), 200);
+}
+
+loadRoomPricingData() {
+  if (this.roomData.pricing_data) {
+    this.roomPricingData = JSON.parse(JSON.stringify(this.roomData.pricing_data));
+  } else {
+    this.roomPricingData = {
+      defaultPricing: {
+        mode: 'fixed',
+        price: 0,
+        minNights: 1,
+        pricesPerGuest: []
+      },
+      seasons: [],
+      discounts: [],
+      cleaning: { included: true }
+    };
+  }
+}
+
+prefillRoomPricing() {
+  const pricing = this.roomPricingData.defaultPricing || {};
+  const mode = pricing.mode || 'fixed';
+  
+  // Radio buttons
+  const radioFixe = document.getElementById('radio-prix-fixe-chambre');
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const labelFixe = document.getElementById('label-prix-fixe-chambre');
+  const labelVoyageur = document.getElementById('label-prix-voyageur-chambre');
+  
+  // Reset visuel des radios
+  if (labelFixe) labelFixe.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+  if (labelVoyageur) labelVoyageur.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+  
+  // Blocs
+  const blocFixe = document.getElementById('bloc-prix-fixe-chambre');
+  const blocVoyageur = document.getElementById('bloc-prix-voyageur-chambre');
+  
+  if (mode === 'per_guest') {
+    // Mode prix par voyageur
+    if (radioVoyageur) radioVoyageur.checked = true;
+    if (radioFixe) radioFixe.checked = false;
+    if (labelVoyageur) labelVoyageur.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    if (blocFixe) blocFixe.style.display = 'none';
+    if (blocVoyageur) blocVoyageur.style.display = 'block';
+    
+    // Afficher les blocs prix voyageur et remplir les valeurs
+    this.displayPricesPerGuest(pricing.pricesPerGuest || []);
+    
+  } else {
+    // Mode prix fixe (par défaut)
+    if (radioFixe) radioFixe.checked = true;
+    if (radioVoyageur) radioVoyageur.checked = false;
+    if (labelFixe) labelFixe.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    if (blocFixe) blocFixe.style.display = 'block';
+    if (blocVoyageur) blocVoyageur.style.display = 'none';
+    
+    // Remplir le prix fixe
+    const priceInput = document.getElementById('default-price-input-chambre');
+    if (priceInput) {
+      priceInput.value = pricing.price || 0;
+      priceInput.setAttribute('data-raw-value', pricing.price || 0);
+    }
+  }
+  
+  // Nuits minimum (commun aux deux modes)
+  const minNightsInput = document.getElementById('default-min-nights-input-chambre');
+  if (minNightsInput) {
+    minNightsInput.value = pricing.minNights || 1;
+  }
+  
+  // Sauvegarder les valeurs initiales
+  this.initialValues.room_pricing_mode = mode;
+  this.initialValues.room_pricing_price = pricing.price || 0;
+  this.initialValues.room_pricing_min_nights = pricing.minNights || 1;
+  this.initialValues.room_pricing_prices_per_guest = JSON.stringify(pricing.pricesPerGuest || []);
+}
+
+displayPricesPerGuest(pricesArray) {
+  // Récupérer le nombre de voyageurs depuis l'input
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  const maxGuests = parseInt(voyageursInput?.value) || 1;
+  
+  // Afficher/masquer les blocs
+  for (let i = 0; i < 10; i++) {
+    const bloc = this.getPrixVoyageurBloc(i);
+    if (!bloc) continue;
+    
+    if (i < maxGuests) {
+      bloc.style.display = 'flex';
+      
+      // Remplir le prix si disponible
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        const price = (pricesArray && pricesArray[i]) ? pricesArray[i] : 0;
+        priceInput.value = price;
+        priceInput.setAttribute('data-raw-value', price);
+        
+        // Ajouter listener si pas déjà fait
+        if (!priceInput.dataset.listenerAdded) {
+          priceInput.addEventListener('input', () => {
+            const cleanValue = priceInput.value.replace(/[^\d]/g, '');
+            priceInput.setAttribute('data-raw-value', cleanValue || '0');
+            this.enableButtons();
+          });
+          
+          priceInput.addEventListener('blur', () => {
+            const value = priceInput.value.replace(/[^\d]/g, '');
+            if (value) {
+              priceInput.setAttribute('data-raw-value', value);
+              priceInput.value = value + ' € / nuit';
+            } else {
+              priceInput.removeAttribute('data-raw-value');
+              priceInput.value = '';
+            }
+          });
+          
+          priceInput.addEventListener('focus', () => {
+            const rawValue = priceInput.getAttribute('data-raw-value');
+            if (rawValue) {
+              priceInput.value = rawValue;
+            } else {
+              priceInput.value = priceInput.value.replace(/[^\d]/g, '');
+            }
+          });
+          
+          priceInput.dataset.listenerAdded = 'true';
+        }
+      }
+    } else {
+      bloc.style.display = 'none';
+      // Réinitialiser le prix des blocs masqués
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        priceInput.value = '';
+        priceInput.removeAttribute('data-raw-value');
+      }
+    }
+  }
+}
+
+getPrixVoyageurBloc(index) {
+  if (index === 0) {
+    return document.querySelector('.bloc-flex-input.tarifs.voyageurs:not(.next)');
+  } else {
+    const nextBlocs = document.querySelectorAll('.bloc-flex-input.tarifs.voyageurs.next');
+    return nextBlocs[index - 1] || null;
+  }
+}
+
+collectPricesPerGuest() {
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  const maxGuests = parseInt(voyageursInput?.value) || 1;
+  const prices = [];
+  
+  for (let i = 0; i < maxGuests; i++) {
+    const bloc = this.getPrixVoyageurBloc(i);
+    if (bloc && bloc.style.display !== 'none') {
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        const rawValue = priceInput.getAttribute('data-raw-value');
+        prices.push(parseInt(rawValue) || 0);
+      } else {
+        prices.push(0);
+      }
+    }
+  }
+  
+  return prices;
+}
+
+setupRoomPricingListeners() {
+  // Radio buttons
+  const radioFixe = document.getElementById('radio-prix-fixe-chambre');
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const labelFixe = document.getElementById('label-prix-fixe-chambre');
+  const labelVoyageur = document.getElementById('label-prix-voyageur-chambre');
+  const blocFixe = document.getElementById('bloc-prix-fixe-chambre');
+  const blocVoyageur = document.getElementById('bloc-prix-voyageur-chambre');
+  
+  if (radioFixe) {
+    radioFixe.addEventListener('change', () => {
+      if (radioFixe.checked) {
+        if (labelFixe) labelFixe.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+        if (labelVoyageur) labelVoyageur.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+        if (blocFixe) blocFixe.style.display = 'block';
+        if (blocVoyageur) blocVoyageur.style.display = 'none';
+        this.enableButtons();
+      }
+    });
+  }
+  
+  if (radioVoyageur) {
+    radioVoyageur.addEventListener('change', () => {
+      if (radioVoyageur.checked) {
+        if (labelVoyageur) labelVoyageur.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+        if (labelFixe) labelFixe.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+        if (blocVoyageur) blocVoyageur.style.display = 'block';
+        if (blocFixe) blocFixe.style.display = 'none';
+        // Afficher les blocs prix voyageur selon le nombre actuel
+        this.displayPricesPerGuest(this.roomPricingData?.defaultPricing?.pricesPerGuest || []);
+        this.enableButtons();
+      }
+    });
+  }
+  
+  // Prix fixe
+  const priceInput = document.getElementById('default-price-input-chambre');
+  if (priceInput) {
+    priceInput.addEventListener('input', () => {
+      const cleanValue = priceInput.value.replace(/[^\d]/g, '');
+      priceInput.setAttribute('data-raw-value', cleanValue || '0');
+      this.enableButtons();
+    });
+  }
+  
+  // Nuits minimum
+  const minNightsInput = document.getElementById('default-min-nights-input-chambre');
+  if (minNightsInput) {
+    minNightsInput.addEventListener('input', () => {
+      this.enableButtons();
+    });
+  }
+  
+  // Écouter les changements du nombre de voyageurs pour mettre à jour les blocs prix
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  if (voyageursInput) {
+    // Ajouter un listener SUPPLÉMENTAIRE (celui de base gère déjà enableButtons)
+    voyageursInput.addEventListener('input', () => {
+      const radioVoyageurEl = document.getElementById('radio-prix-voyageur-chambre');
+      if (radioVoyageurEl && radioVoyageurEl.checked) {
+        // Recalculer l'affichage des blocs prix voyageur
+        this.displayPricesPerGuest(this.collectPricesPerGuest());
+      }
+    });
+  }
+}
+
+formatRoomPricingFields() {
+  // Formater le prix fixe
+  const priceInput = document.getElementById('default-price-input-chambre');
+  if (priceInput) {
+    const value = priceInput.value.replace(/[^\d]/g, '');
+    if (value && value !== '0') {
+      priceInput.setAttribute('data-raw-value', value);
+      priceInput.value = value + ' € / nuit';
+    }
+  }
+  
+  // Formater les prix par voyageur
+  document.querySelectorAll('[data-prix-voyageur="price"]').forEach(input => {
+    const value = input.value.replace(/[^\d]/g, '');
+    if (value && value !== '0') {
+      input.setAttribute('data-raw-value', value);
+      input.value = value + ' € / nuit';
+    }
+  });
+}
+
+collectRoomPricingData() {
+  // Construire l'objet pricing complet
+  const pricingData = JSON.parse(JSON.stringify(this.roomPricingData || {}));
+  
+  // Déterminer le mode
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const mode = (radioVoyageur && radioVoyageur.checked) ? 'per_guest' : 'fixed';
+  
+  if (!pricingData.defaultPricing) {
+    pricingData.defaultPricing = {};
+  }
+  
+  pricingData.defaultPricing.mode = mode;
+  
+  if (mode === 'per_guest') {
+    pricingData.defaultPricing.pricesPerGuest = this.collectPricesPerGuest();
+    // En mode per_guest, le prix "principal" est celui pour 1 voyageur (pour l'affichage liste)
+    const prices = pricingData.defaultPricing.pricesPerGuest;
+    pricingData.defaultPricing.price = prices.length > 0 ? prices[0] : 0;
+  } else {
+    const priceInput = document.getElementById('default-price-input-chambre');
+    pricingData.defaultPricing.price = parseInt(this.getRawValue(priceInput)) || 0;
+  }
+  
+  // Nuits minimum
+  const minNightsInput = document.getElementById('default-min-nights-input-chambre');
+  pricingData.defaultPricing.minNights = parseInt(minNightsInput?.value) || 1;
+  
+  return pricingData;
+}
   
 setupRoomSaveButton() {
   const saveButton = document.getElementById('button-save-modifications');
@@ -722,6 +1033,15 @@ async saveRoomModifications() {
     updates.details_lits = currentDetailsLits;
   }
   
+  // Tarification
+  const currentPricingData = this.collectRoomPricingData();
+  const originalPricingJson = JSON.stringify(this.roomData.pricing_data || {});
+  const currentPricingJson = JSON.stringify(currentPricingData);
+  
+  if (originalPricingJson !== currentPricingJson) {
+    updates.pricing_data = currentPricingData;
+  }
+  
   // Photos
   const originalPhotosJson = JSON.stringify(this.roomOriginalPhotos);
   const currentPhotosJson = JSON.stringify(this.roomCurrentPhotos);
@@ -772,6 +1092,14 @@ async saveRoomModifications() {
       if (updates.details_lits !== undefined) {
         this.initialValues.room_details_lits = updates.details_lits;
         this.roomData.details_lits = updates.details_lits;
+      }
+      if (updates.pricing_data !== undefined) {
+        this.roomData.pricing_data = JSON.parse(JSON.stringify(updates.pricing_data));
+        this.roomPricingData = JSON.parse(JSON.stringify(updates.pricing_data));
+        this.initialValues.room_pricing_mode = updates.pricing_data.defaultPricing?.mode || 'fixed';
+        this.initialValues.room_pricing_price = updates.pricing_data.defaultPricing?.price || 0;
+        this.initialValues.room_pricing_min_nights = updates.pricing_data.defaultPricing?.minNights || 1;
+        this.initialValues.room_pricing_prices_per_guest = JSON.stringify(updates.pricing_data.defaultPricing?.pricesPerGuest || []);
       }
       if (updates['photos-de-la-chambre'] !== undefined) {
         this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
@@ -826,6 +1154,20 @@ cancelRoomModifications() {
   // Restaurer détails lits
   this.roomData.details_lits = this.initialValues.room_details_lits || '';
   this.prefillLitsDetails();
+  
+  // Restaurer tarification
+  if (this.roomData.pricing_data) {
+    this.roomPricingData = JSON.parse(JSON.stringify(this.roomData.pricing_data));
+  } else {
+    this.roomPricingData = {
+      defaultPricing: { mode: 'fixed', price: 0, minNights: 1, pricesPerGuest: [] },
+      seasons: [],
+      discounts: [],
+      cleaning: { included: true }
+    };
+  }
+  this.prefillRoomPricing();
+  this.formatRoomPricingFields();
   
   // Restaurer photos
   this.roomCurrentPhotos = JSON.parse(JSON.stringify(this.initialValues.room_photos || []));
