@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.035
+// LOG production V1.5 - chambres d'hôtes v1.036
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -651,16 +651,13 @@ collectLitsDetails() {
 // ================================
 
 initRoomPricing() {
-  // Charger les données pricing de la chambre
   this.loadRoomPricingData();
-  
-  // Pré-remplir les champs
   this.prefillRoomPricing();
-  
-  // Configurer les listeners
+  this.prefillRoomWeekend();
+  this.initRoomDiscounts();
+  this.setupSuffixFormatters();
   this.setupRoomPricingListeners();
-  
-  // Formater les champs avec suffixes
+  this.setupRoomWeekendListeners();
   setTimeout(() => this.formatRoomPricingFields(), 200);
 }
 
@@ -933,6 +930,272 @@ formatRoomPricingFields() {
   });
 }
 
+// ================================
+// 🗓️ WEEK-END CHAMBRE
+// ================================
+
+prefillRoomWeekend() {
+  const yesRadio = document.getElementById('weekend-oui-chambre');
+  const noRadio = document.getElementById('weekend-non-chambre');
+  const priceInput = document.getElementById('weekend-price-input-chambre');
+  const yesLabel = document.getElementById('label-weekend-oui-chambre');
+  const noLabel = document.getElementById('label-weekend-non-chambre');
+  
+  if (!yesRadio || !noRadio || !priceInput) return;
+  
+  const weekend = this.roomPricingData.defaultPricing?.weekend;
+  
+  if (weekend && weekend.enabled) {
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (weekend.price && weekend.price > 0) {
+      priceInput.value = weekend.price;
+      priceInput.setAttribute('data-raw-value', weekend.price);
+    } else {
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+    }
+  } else {
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+  }
+  
+  this.initialValues.room_weekend_enabled = weekend?.enabled ?? false;
+  this.initialValues.room_weekend_price = weekend?.price || 0;
+}
+
+setupRoomWeekendListeners() {
+  const yesRadio = document.getElementById('weekend-oui-chambre');
+  const noRadio = document.getElementById('weekend-non-chambre');
+  const yesLabel = document.getElementById('label-weekend-oui-chambre');
+  const noLabel = document.getElementById('label-weekend-non-chambre');
+  const priceInput = document.getElementById('weekend-price-input-chambre');
+  
+  if (!yesRadio || !noRadio || !priceInput) return;
+  
+  yesRadio.addEventListener('change', () => {
+    if (yesRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      priceInput.style.display = 'block';
+      setTimeout(() => priceInput.focus(), 100);
+      
+      if (!this.roomPricingData.defaultPricing.weekend) {
+        this.roomPricingData.defaultPricing.weekend = {};
+      }
+      this.roomPricingData.defaultPricing.weekend.enabled = true;
+      this.enableButtons();
+    }
+  });
+  
+  noRadio.addEventListener('change', () => {
+    if (noRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      priceInput.style.display = 'none';
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+      
+      if (!this.roomPricingData.defaultPricing.weekend) {
+        this.roomPricingData.defaultPricing.weekend = {};
+      }
+      this.roomPricingData.defaultPricing.weekend.enabled = false;
+      this.roomPricingData.defaultPricing.weekend.price = 0;
+      this.enableButtons();
+    }
+  });
+  
+  priceInput.addEventListener('blur', () => {
+    const price = parseInt(this.getRawValue(priceInput)) || 0;
+    if (!this.roomPricingData.defaultPricing.weekend) {
+      this.roomPricingData.defaultPricing.weekend = {};
+    }
+    this.roomPricingData.defaultPricing.weekend.price = price;
+    this.enableButtons();
+  });
+}
+
+// ================================
+// 🎯 RÉDUCTIONS CHAMBRE
+// ================================
+
+initRoomDiscounts() {
+  // Masquer tous les blocs réduction chambre au départ
+  document.querySelectorAll('.bloc-reduction.chambre').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  // Bouton ajouter
+  const addButton = document.getElementById('button-add-reduction-chambre');
+  if (addButton) {
+    addButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addRoomDiscount();
+    });
+  }
+  
+  // Initialiser le tableau si absent
+  if (!this.roomPricingData.discounts) {
+    this.roomPricingData.discounts = [];
+  }
+  
+  // Afficher les réductions existantes
+  this.displayRoomDiscounts();
+}
+
+displayRoomDiscounts() {
+  // Masquer tous les blocs chambre
+  document.querySelectorAll('.bloc-reduction.chambre').forEach(bloc => {
+    bloc.style.display = 'none';
+  });
+  
+  if (!this.roomPricingData.discounts || this.roomPricingData.discounts.length === 0) {
+    return;
+  }
+  
+  this.roomPricingData.discounts.forEach((discount, index) => {
+    const blocElement = this.getRoomDiscountBloc(index);
+    
+    if (blocElement) {
+      blocElement.style.display = 'flex';
+      
+      const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+      const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+      
+      if (nightsInput) nightsInput.value = discount.nights || '';
+      if (percentageInput) percentageInput.value = discount.percentage || '';
+      
+      this.setupRoomDiscountListeners(blocElement, index);
+      
+      const deleteButton = blocElement.querySelector('.button-delete-reduction');
+      if (deleteButton) {
+        deleteButton.onclick = (e) => {
+          e.preventDefault();
+          this.removeRoomDiscount(index);
+        };
+      }
+    }
+  });
+  
+  this.updateRoomAddDiscountButtonState();
+}
+
+getRoomDiscountBloc(index) {
+  if (index === 0) {
+    return document.querySelector('.bloc-reduction.chambre:not(.next)');
+  } else {
+    const nextBlocs = document.querySelectorAll('.bloc-reduction.chambre.next');
+    return nextBlocs[index - 1] || null;
+  }
+}
+
+addRoomDiscount() {
+  if (this.roomPricingData.discounts.length >= 5) {
+    this.showNotification('error', 'Maximum 5 réductions autorisées');
+    return;
+  }
+  
+  const newIndex = this.roomPricingData.discounts.length;
+  this.roomPricingData.discounts.push({ nights: 0, percentage: 0 });
+  
+  const blocElement = this.getRoomDiscountBloc(newIndex);
+  
+  if (blocElement) {
+    blocElement.style.display = 'flex';
+    
+    const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+    const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+    
+    if (nightsInput) {
+      nightsInput.value = '';
+      nightsInput.removeAttribute('data-raw-value');
+    }
+    if (percentageInput) {
+      percentageInput.value = '';
+      percentageInput.removeAttribute('data-raw-value');
+    }
+    
+    this.setupRoomDiscountListeners(blocElement, newIndex);
+    
+    const deleteButton = blocElement.querySelector('.button-delete-reduction');
+    if (deleteButton) {
+      deleteButton.onclick = (e) => {
+        e.preventDefault();
+        this.removeRoomDiscount(newIndex);
+      };
+    }
+  }
+  
+  this.updateRoomAddDiscountButtonState();
+  this.enableButtons();
+}
+
+removeRoomDiscount(index) {
+  this.roomPricingData.discounts.splice(index, 1);
+  this.displayRoomDiscounts();
+  this.enableButtons();
+}
+
+setupRoomDiscountListeners(blocElement, index) {
+  const nightsInput = blocElement.querySelector('[data-discount="nights"]');
+  const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
+  
+  if (nightsInput) {
+    nightsInput.oninput = (e) => {
+      const value = parseInt(e.target.value) || 0;
+      this.roomPricingData.discounts[index].nights = value;
+      this.enableButtons();
+    };
+  }
+  
+  if (percentageInput) {
+    percentageInput.oninput = (e) => {
+      let value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
+      if (value > 100) {
+        value = 100;
+        e.target.value = '100';
+      }
+      this.roomPricingData.discounts[index].percentage = value;
+      this.enableButtons();
+    };
+    
+    percentageInput.onblur = function() {
+      const value = this.value.replace(/[^\d]/g, '');
+      if (value) {
+        this.value = value + ' %';
+      }
+    };
+    
+    percentageInput.onfocus = function() {
+      this.value = this.value.replace(/[^\d]/g, '');
+    };
+  }
+}
+
+updateRoomAddDiscountButtonState() {
+  const addButton = document.getElementById('button-add-reduction-chambre');
+  if (addButton) {
+    if (this.roomPricingData.discounts.length >= 5) {
+      addButton.disabled = true;
+      addButton.style.opacity = '0.5';
+      addButton.style.cursor = 'not-allowed';
+    } else {
+      addButton.disabled = false;
+      addButton.style.opacity = '1';
+      addButton.style.cursor = 'pointer';
+    }
+  }
+}
+  
 collectRoomPricingData() {
   // Construire l'objet pricing complet
   const pricingData = JSON.parse(JSON.stringify(this.roomPricingData || {}));
@@ -951,7 +1214,7 @@ collectRoomPricingData() {
     pricingData.defaultPricing.pricesPerGuest = this.collectPricesPerGuest();
     // En mode per_guest, le prix "principal" est celui pour 1 voyageur (pour l'affichage liste)
     const prices = pricingData.defaultPricing.pricesPerGuest;
-    pricingData.defaultPricing.price = prices.length > 0 ? prices[0] : 0;
+    pricingData.defaultPricing.price = prices.length > 0 ? prices[prices.length - 1] : 0;
   } else {
     const priceInput = document.getElementById('default-price-input-chambre');
     pricingData.defaultPricing.price = parseInt(this.getRawValue(priceInput)) || 0;
@@ -960,6 +1223,25 @@ collectRoomPricingData() {
   // Nuits minimum
   const minNightsInput = document.getElementById('default-min-nights-input-chambre');
   pricingData.defaultPricing.minNights = parseInt(minNightsInput?.value) || 1;
+  
+  // Week-end
+  const weekendOui = document.getElementById('weekend-oui-chambre');
+  if (weekendOui && weekendOui.checked) {
+    const weekendPriceInput = document.getElementById('weekend-price-input-chambre');
+    if (!pricingData.defaultPricing.weekend) {
+      pricingData.defaultPricing.weekend = {};
+    }
+    pricingData.defaultPricing.weekend.enabled = true;
+    pricingData.defaultPricing.weekend.price = parseInt(this.getRawValue(weekendPriceInput)) || 0;
+  } else {
+    if (pricingData.defaultPricing.weekend) {
+      pricingData.defaultPricing.weekend.enabled = false;
+      pricingData.defaultPricing.weekend.price = 0;
+    }
+  }
+  
+  // Réductions
+  pricingData.discounts = JSON.parse(JSON.stringify(this.roomPricingData.discounts || []));
   
   return pricingData;
 }
@@ -1177,6 +1459,8 @@ cancelRoomModifications() {
     };
   }
   this.prefillRoomPricing();
+  this.prefillRoomWeekend();
+  this.displayRoomDiscounts();
   this.formatRoomPricingFields();
   
   // Restaurer photos
