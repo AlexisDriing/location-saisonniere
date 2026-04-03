@@ -1,4 +1,4 @@
-// LOG production V1.43
+// LOG production V1.44
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -669,6 +669,66 @@ validateRoomFields() {
       } else {
         this.hideTabError(tabConfig.tabIndicatorId);
       }
+    }
+    
+    // Validation des tarifs chambre
+    const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+    const mode = (radioVoyageur && radioVoyageur.checked) ? 'per_guest' : 'fixed';
+    
+    if (mode === 'fixed') {
+      // Mode prix fixe : le prix est obligatoire et minimum 10€
+      const priceInput = document.getElementById('default-price-input-chambre');
+      const price = priceInput ? parseInt(this.editor.getRawValue(priceInput)) || 0 : 0;
+      
+      if (price < 10) {
+        this.showFieldError('default-price-input-chambre', "Le prix minimum est de 10€");
+        isValid = false;
+        this.showTabError('error-indicator-tab3-chambre');
+      } else {
+        this.hideFieldError('default-price-input-chambre');
+      }
+    } else {
+      // Mode prix par voyageur : chaque voyageur doit avoir un prix minimum 10€
+      const voyageursInput = document.getElementById('voyageurs-input-chambre');
+      const maxGuests = parseInt(voyageursInput?.value) || 1;
+      let hasPerGuestError = false;
+      
+      for (let i = 0; i < maxGuests; i++) {
+        const bloc = this.editor.getPrixVoyageurBloc(i);
+        if (!bloc || bloc.style.display === 'none') continue;
+        
+        const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+        if (priceInput) {
+          const rawValue = priceInput.getAttribute('data-raw-value');
+          const price = parseInt(rawValue) || 0;
+          
+          if (price < 10) {
+            this.showDiscountError(priceInput, "Le prix minimum est de 10€ par voyageur");
+            hasPerGuestError = true;
+          } else {
+            this.hideDiscountError(priceInput);
+          }
+        }
+      }
+      
+      // Masquer l'erreur du prix fixe si on est en mode voyageur
+      this.hideFieldError('default-price-input-chambre');
+      
+      if (hasPerGuestError) {
+        isValid = false;
+        this.showTabError('error-indicator-tab3-chambre');
+      }
+    }
+    
+    // Nuits minimum obligatoire
+    const minNightsInput = document.getElementById('default-min-nights-input-chambre');
+    const minNights = minNightsInput ? parseInt(minNightsInput.value) || 0 : 0;
+    if (minNights < 1) {
+      this.showFieldError('default-min-nights-input-chambre', "Minimum 1 nuit");
+      isValid = false;
+      this.showTabError('error-indicator-tab3-chambre');
+    } else {
+      this.hideFieldError('default-min-nights-input-chambre');
     }
     
     console.log(isValid ? '✅ Validation chambre réussie' : '❌ Validation chambre échouée');
