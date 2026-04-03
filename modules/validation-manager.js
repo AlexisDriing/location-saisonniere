@@ -1,4 +1,4 @@
-// LOG production V1.42
+// LOG production V1.43
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -277,77 +277,85 @@ class ValidationManager {
 
   // Config de validation pour les chambres
     this.roomValidationConfig = {
-      fields: {
-        'name-input-chambre': {
-          required: true,
-          minLength: 2,
-          maxLength: 80,
-          messages: {
-            empty: "Le nom de la chambre est obligatoire",
-            minLength: "Le nom doit contenir au moins 2 caractères",
-            maxLength: "Le nom ne peut pas dépasser 80 caractères"
+      tab1: {
+        fields: {
+          'name-input-chambre': {
+            required: true,
+            minLength: 2,
+            maxLength: 80,
+            messages: {
+              empty: "Le nom de la chambre est obligatoire",
+              minLength: "Le nom doit contenir au moins 2 caractères",
+              maxLength: "Le nom ne peut pas dépasser 80 caractères"
+            }
+          },
+          'voyageurs-input-chambre': {
+            required: true,
+            min: 1,
+            messages: {
+              empty: "Le nombre de voyageurs est obligatoire",
+              min: "Minimum 1 voyageur"
+            }
+          },
+          'lits-input-chambre': {
+            required: true,
+            min: 1,
+            messages: {
+              empty: "Le nombre de lits est obligatoire",
+              min: "Minimum 1 lit"
+            }
+          },
+          'taille-chambre': {
+            required: true,
+            min: 1,
+            messages: {
+              empty: "La taille en m² est obligatoire",
+              min: "La taille doit être supérieure à 0"
+            }
+          },
+          'texte-chambre': {
+            required: true,
+            maxLength: 1000,
+            messages: {
+              empty: "La description de la chambre est obligatoire",
+              maxLength: "Maximum 1000 caractères (actuellement: {count})"
+            }
           }
         },
-        'voyageurs-input-chambre': {
-          required: true,
-          min: 1,
-          messages: {
-            empty: "Le nombre de voyageurs est obligatoire",
-            min: "Minimum 1 voyageur"
+        tabIndicatorId: 'error-indicator-tab1-chambre'
+      },
+      tab3: {
+        fields: {
+          'ical-url-1-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          },
+          'ical-url-2-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          },
+          'ical-url-3-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          },
+          'ical-url-4-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
           }
         },
-        'lits-input-chambre': {
-          required: true,
-          min: 1,
-          messages: {
-            empty: "Le nombre de lits est obligatoire",
-            min: "Minimum 1 lit"
-          }
-        },
-        'taille-chambre': {
-          required: true,
-          min: 1,
-          messages: {
-            empty: "La taille en m² est obligatoire",
-            min: "La taille doit être supérieure à 0"
-          }
-        },
-        'texte-chambre': {
-          required: true,
-          maxLength: 1000,
-          messages: {
-            empty: "La description de la chambre est obligatoire",
-            maxLength: "Maximum 1000 caractères (actuellement: {count})"
-          }
-        },
-        'ical-url-1-chambre': {
-          required: false,
-          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
-          messages: {
-            invalid: "Le lien doit être une URL de calendrier valide"
-          }
-        },
-        'ical-url-2-chambre': {
-          required: false,
-          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
-          messages: {
-            invalid: "Le lien doit être une URL de calendrier valide"
-          }
-        },
-        'ical-url-3-chambre': {
-          required: false,
-          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
-          messages: {
-            invalid: "Le lien doit être une URL de calendrier valide"
-          }
-        },
-        'ical-url-4-chambre': {
-          required: false,
-          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
-          messages: {
-            invalid: "Le lien doit être une URL de calendrier valide"
-          }
-        }
+        tabIndicatorId: 'error-indicator-tab3-chambre'
       }
     };
   }
@@ -359,7 +367,8 @@ class ValidationManager {
       { id: 'description-alentours-input', limit: 1000 },
       { id: 'conditions-annulation-input', limit: 1000 },
       { id: 'inclus-reservation-input', limit: 500 },
-      { id: 'cadeaux-input', limit: 250 }
+      { id: 'cadeaux-input', limit: 250 },
+      { id: 'texte-chambre', limit: 1000 }
     ];
 
     textareasWithLimit.forEach(({ id, limit }) => {
@@ -398,11 +407,23 @@ class ValidationManager {
     let fieldConfig = null;
     let tabKey = null;
     
+    // Chercher dans la config logement
     for (const [tab, config] of Object.entries(this.validationConfig)) {
       if (config.fields[fieldId]) {
         fieldConfig = config.fields[fieldId];
         tabKey = tab;
         break;
+      }
+    }
+    
+    // Si pas trouvé, chercher dans la config chambre
+    if (!fieldConfig) {
+      for (const [tab, config] of Object.entries(this.roomValidationConfig)) {
+        if (config.fields[fieldId]) {
+          fieldConfig = config.fields[fieldId];
+          tabKey = tab;
+          break;
+        }
       }
     }
     
@@ -627,15 +648,26 @@ validateRoomFields() {
     this.errors.clear();
     let isValid = true;
     
-    for (const [fieldId, fieldConfig] of Object.entries(this.roomValidationConfig.fields)) {
-      const error = this.validateField(fieldId, fieldConfig);
+    for (const [tabKey, tabConfig] of Object.entries(this.roomValidationConfig)) {
+      let tabHasErrors = false;
       
-      if (error) {
-        this.errors.set(fieldId, error);
-        this.showFieldError(fieldId, error);
-        isValid = false;
+      for (const [fieldId, fieldConfig] of Object.entries(tabConfig.fields)) {
+        const error = this.validateField(fieldId, fieldConfig);
+        
+        if (error) {
+          this.errors.set(fieldId, error);
+          this.showFieldError(fieldId, error);
+          tabHasErrors = true;
+          isValid = false;
+        } else {
+          this.hideFieldError(fieldId);
+        }
+      }
+      
+      if (tabHasErrors) {
+        this.showTabError(tabConfig.tabIndicatorId);
       } else {
-        this.hideFieldError(fieldId);
+        this.hideTabError(tabConfig.tabIndicatorId);
       }
     }
     
@@ -1315,7 +1347,8 @@ validateRoomFields() {
     });
     
     // Masquer les indicateurs de tabs
-    ['error-indicator-tab1', 'error-indicator-tab3', 'error-indicator-tab4', 'error-indicator-tab5'].forEach(id => {
+    ['error-indicator-tab1', 'error-indicator-tab3', 'error-indicator-tab4', 'error-indicator-tab5',
+     'error-indicator-tab1-chambre', 'error-indicator-tab3-chambre'].forEach(id => {
       this.hideTabError(id);
     });
     
