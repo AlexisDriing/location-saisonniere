@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.037
+// LOG production V1.5 - chambres d'hôtes v1.038
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -1283,6 +1283,7 @@ checkDefaultRoomIcalWarning() {
   if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
     if (this.validationManager) {
       this.validationManager.showFieldWarning('ical-url-1-chambre', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
+      this.validationManager.showTabWarning('error-indicator-tab3-chambre');
     }
   }
 }
@@ -1358,6 +1359,7 @@ setupRoomIcalListeners() {
         // Masquer l'avertissement si c'est ical-url-1-chambre
         if (newInput.id === 'ical-url-1-chambre' && this.validationManager) {
           this.validationManager.hideFieldWarning('ical-url-1-chambre');
+          this.validationManager.hideTabWarning('error-indicator-tab3-chambre');
         }
         this.enableButtons();
       });
