@@ -1,4 +1,4 @@
-// LOG production V1.41
+// LOG production V1.42
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -318,6 +318,34 @@ class ValidationManager {
           messages: {
             empty: "La description de la chambre est obligatoire",
             maxLength: "Maximum 1000 caractères (actuellement: {count})"
+          }
+        },
+        'ical-url-1-chambre': {
+          required: false,
+          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+          messages: {
+            invalid: "Le lien doit être une URL de calendrier valide"
+          }
+        },
+        'ical-url-2-chambre': {
+          required: false,
+          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+          messages: {
+            invalid: "Le lien doit être une URL de calendrier valide"
+          }
+        },
+        'ical-url-3-chambre': {
+          required: false,
+          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+          messages: {
+            invalid: "Le lien doit être une URL de calendrier valide"
+          }
+        },
+        'ical-url-4-chambre': {
+          required: false,
+          pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+          messages: {
+            invalid: "Le lien doit être une URL de calendrier valide"
           }
         }
       }
