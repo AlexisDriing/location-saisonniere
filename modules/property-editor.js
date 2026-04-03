@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.039
+// LOG production V1.5 - chambres d'hôtes v1.040
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -1496,6 +1496,9 @@ async saveRoomModifications() {
   // Validation
   if (this.validationManager && !this.validationManager.validateRoomFields()) {
     this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+    setTimeout(() => {
+      this.validationManager.navigateToFirstError();
+    }, 100);
     return;
   }
   
