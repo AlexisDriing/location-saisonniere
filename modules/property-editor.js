@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.038
+// LOG production V1.5 - chambres d'hôtes v1.039
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -129,7 +129,11 @@ class PropertyEditor {
   this.validationManager = new ValidationManager(this);
   
   // Vérifier l'iCal par défaut (après init du validationManager)
-  this.checkDefaultIcalWarning();
+  if (this.isRoomEdit) {
+    this.checkDefaultRoomIcalWarning();
+  } else {
+    this.checkDefaultIcalWarning();
+  }
     
   window.propertyEditor = this;
 }
