@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.036
+// LOG production V1.5 - chambres d'hôtes v1.037
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -55,6 +55,8 @@ class PropertyEditor {
     'ical-autres',       // Position 2 → Troisième iCal
     'ical-abritel'       // Position 3 → Quatrième iCal
   ];
+    // Mapping iCal chambre (noms des champs CMS)
+    this.roomIcalFieldMapping = ['ical-1', 'ical-2', 'ical-3', 'ical-4'];
     this.extras = [];
     this.init();
   }
@@ -199,6 +201,9 @@ async loadRoomData() {
     
     // Initialiser la tarification
     this.initRoomPricing();
+    
+    // Initialiser les iCal
+    this.initRoomIcalManagement();
     
   } catch (error) {
     console.error('❌ Erreur chargement chambre:', error);
@@ -1195,6 +1200,216 @@ updateRoomAddDiscountButtonState() {
     }
   }
 }
+
+// ================================
+// 📅 GESTION DES ICAL CHAMBRE
+// ================================
+
+initRoomIcalManagement() {
+  // Masquer tous les blocs sauf le premier
+  for (let i = 2; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}-chambre`);
+    if (bloc) bloc.style.display = 'none';
+  }
+  
+  // Le premier bloc est toujours visible
+  const firstBloc = document.getElementById('ical-1-chambre');
+  if (firstBloc) firstBloc.style.display = 'flex';
+  
+  // Bouton ajouter
+  const addButton = document.getElementById('button-add-ical-chambre');
+  if (addButton) {
+    addButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addRoomIcal();
+    });
+  }
+  
+  // Afficher les iCals existants
+  this.displayRoomIcals();
+  
+  // Vérifier l'iCal par défaut
+  this.checkDefaultRoomIcalWarning();
+}
+
+displayRoomIcals() {
+  // Le premier bloc est TOUJOURS visible
+  const firstBloc = document.getElementById('ical-1-chambre');
+  if (firstBloc) firstBloc.style.display = 'flex';
+  
+  // Masquer les blocs 2 à 4
+  for (let i = 2; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}-chambre`);
+    if (bloc) bloc.style.display = 'none';
+  }
+  
+  // Collecter les URLs non vides depuis les données de la chambre
+  const icalUrls = this.roomData?.ical_urls || [];
+  const allUrls = [];
+  
+  icalUrls.forEach(url => {
+    if (url && url.trim() !== '') {
+      allUrls.push(url);
+    }
+  });
+  
+  // Réafficher les URLs dans l'ordre (compactées)
+  allUrls.forEach((url, index) => {
+    const input = document.getElementById(`ical-url-${index + 1}-chambre`);
+    const bloc = document.getElementById(`ical-${index + 1}-chambre`);
+    
+    if (input && bloc) {
+      input.value = url;
+      bloc.style.display = 'flex';
+    }
+  });
+  
+  // Sauvegarder l'état initial pour chaque position
+  this.roomIcalFieldMapping.forEach((fieldName, index) => {
+    this.initialValues[`room_${fieldName}`] = allUrls[index] || '';
+  });
+  
+  // Configurer les listeners
+  this.setupRoomIcalListeners();
+  
+  // Mettre à jour l'état du bouton d'ajout
+  this.updateRoomAddIcalButton();
+}
+
+checkDefaultRoomIcalWarning() {
+  const icalInput = document.getElementById('ical-url-1-chambre');
+  if (!icalInput) return;
+  
+  if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
+    if (this.validationManager) {
+      this.validationManager.showFieldWarning('ical-url-1-chambre', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
+    }
+  }
+}
+
+addRoomIcal() {
+  // Trouver le premier bloc caché
+  for (let i = 2; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}-chambre`);
+    if (bloc && bloc.style.display === 'none') {
+      bloc.style.display = 'flex';
+      
+      const input = document.getElementById(`ical-url-${i}-chambre`);
+      if (input) {
+        setTimeout(() => input.focus(), 100);
+      }
+      
+      break;
+    }
+  }
+  
+  this.updateRoomAddIcalButton();
+  this.enableButtons();
+}
+
+removeRoomIcal(index) {
+  // On ne peut pas supprimer le premier
+  if (index === 1) return;
+  
+  // Récupérer toutes les valeurs actuelles
+  const currentValues = [];
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}-chambre`);
+    if (input) {
+      currentValues.push(input.value.trim());
+    }
+  }
+  
+  // Supprimer la valeur à l'index donné
+  currentValues.splice(index - 1, 1);
+  
+  // Ajouter une valeur vide à la fin pour maintenir 4 éléments
+  currentValues.push('');
+  
+  // Réaffecter toutes les valeurs
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}-chambre`);
+    const bloc = document.getElementById(`ical-${i}-chambre`);
+    
+    if (input && bloc) {
+      input.value = currentValues[i - 1] || '';
+      
+      if (i === 1 || (currentValues[i - 1] && currentValues[i - 1].length > 0)) {
+        bloc.style.display = 'flex';
+      } else {
+        bloc.style.display = 'none';
+      }
+    }
+  }
+  
+  this.updateRoomAddIcalButton();
+  this.enableButtons();
+}
+
+setupRoomIcalListeners() {
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}-chambre`);
+    if (input) {
+      // Cloner pour retirer les anciens listeners
+      const newInput = input.cloneNode(true);
+      input.parentNode.replaceChild(newInput, input);
+      
+      newInput.addEventListener('input', () => {
+        // Masquer l'avertissement si c'est ical-url-1-chambre
+        if (newInput.id === 'ical-url-1-chambre' && this.validationManager) {
+          this.validationManager.hideFieldWarning('ical-url-1-chambre');
+        }
+        this.enableButtons();
+      });
+    }
+    
+    // Boutons de suppression (sauf pour le premier)
+    if (i > 1) {
+      const deleteBtn = document.querySelector(`#ical-${i}-chambre .button-delete-ical`);
+      if (deleteBtn) {
+        const newBtn = deleteBtn.cloneNode(true);
+        deleteBtn.parentNode.replaceChild(newBtn, deleteBtn);
+        
+        newBtn.onclick = (e) => {
+          e.preventDefault();
+          this.removeRoomIcal(i);
+        };
+      }
+    }
+  }
+}
+
+updateRoomAddIcalButton() {
+  const addButton = document.getElementById('button-add-ical-chambre');
+  if (!addButton) return;
+  
+  let visibleCount = 0;
+  for (let i = 1; i <= 4; i++) {
+    const bloc = document.getElementById(`ical-${i}-chambre`);
+    if (bloc && bloc.style.display !== 'none') {
+      visibleCount++;
+    }
+  }
+  
+  if (visibleCount >= 4) {
+    addButton.disabled = true;
+    addButton.style.opacity = '0.5';
+    addButton.style.cursor = 'not-allowed';
+  } else {
+    addButton.disabled = false;
+    addButton.style.opacity = '1';
+    addButton.style.cursor = 'pointer';
+  }
+}
+
+collectRoomIcalValues() {
+  const currentIcalValues = [];
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}-chambre`);
+    currentIcalValues.push(input ? input.value.trim() : '');
+  }
+  return currentIcalValues;
+}
   
 collectRoomPricingData() {
   // Construire l'objet pricing complet
@@ -1334,6 +1549,35 @@ async saveRoomModifications() {
     updates.pricing_data = currentPricingData;
   }
   
+  // iCal - Injecter l'URL par défaut si aucun iCal n'est rempli
+  let hasAnyRoomIcal = false;
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}-chambre`);
+    if (input && input.value.trim() !== '') {
+      hasAnyRoomIcal = true;
+      break;
+    }
+  }
+  
+  if (!hasAnyRoomIcal) {
+    const firstIcalInput = document.getElementById('ical-url-1-chambre');
+    if (firstIcalInput) {
+      firstIcalInput.value = this.DEFAULT_ICAL_URL;
+    }
+  }
+  
+  // Collecter les iCals modifiés
+  const currentIcalValues = this.collectRoomIcalValues();
+  
+  this.roomIcalFieldMapping.forEach((fieldName, index) => {
+    const currentValue = currentIcalValues[index] || '';
+    const initialValue = this.initialValues[`room_${fieldName}`] || '';
+    
+    if (currentValue !== initialValue) {
+      updates[fieldName] = currentValue;
+    }
+  });
+  
   // Photos
   const originalPhotosJson = JSON.stringify(this.roomOriginalPhotos);
   const currentPhotosJson = JSON.stringify(this.roomCurrentPhotos);
@@ -1399,6 +1643,24 @@ async saveRoomModifications() {
         this.initialValues.room_photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
       }
       
+      // Mettre à jour les valeurs iCal initiales
+      this.roomIcalFieldMapping.forEach((fieldName, index) => {
+        const input = document.getElementById(`ical-url-${index + 1}-chambre`);
+        if (input) {
+          const currentValue = input.value.trim();
+          this.initialValues[`room_${fieldName}`] = currentValue;
+        }
+      });
+      // Mettre à jour les ical_urls dans roomData
+      const updatedIcalUrls = [];
+      for (let i = 1; i <= 4; i++) {
+        const input = document.getElementById(`ical-url-${i}-chambre`);
+        if (input && input.value.trim()) {
+          updatedIcalUrls.push(input.value.trim());
+        }
+      }
+      this.roomData.ical_urls = updatedIcalUrls;
+      
       this.disableButtons();
       this.showNotification('success', 'Modifications enregistrées avec succès !');
     } else {
@@ -1446,6 +1708,16 @@ cancelRoomModifications() {
   // Restaurer détails lits
   this.roomData.details_lits = this.initialValues.room_details_lits || '';
   this.prefillLitsDetails();
+  
+  // Restaurer iCal
+  const icalUrls = this.roomData.ical_urls || [];
+  // Vider tous les inputs
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`ical-url-${i}-chambre`);
+    if (input) input.value = '';
+  }
+  // Réafficher depuis les données sauvegardées
+  this.displayRoomIcals();
   
   // Restaurer tarification
   if (this.roomData.pricing_data) {
