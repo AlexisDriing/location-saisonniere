@@ -1,4 +1,4 @@
-// LOG production V1.44
+// LOG production V1.45
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1382,6 +1382,7 @@ validateRoomFields() {
     const indicator = document.getElementById(indicatorId);
     if (indicator) {
       indicator.style.display = 'block';
+      indicator.style.backgroundColor = '';
     }
   }
 
