@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.051
+// LOG production V1.5 - chambres d'hôtes v1.052
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -1691,7 +1691,15 @@ openAddRoomSeasonModal() {
   this.setupRoomSeasonValidationListeners(false);
   
   const modal = document.getElementById('modal-add-season-chambre');
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    const popup = modal.querySelector('.bloc-popup');
+    if (popup) {
+      popup.style.opacity = '1';
+      popup.style.transform = 'none';
+    }
+  }
 }
 
 resetRoomSeasonModal() {
@@ -2093,7 +2101,15 @@ openEditRoomSeasonModal(seasonIndex) {
   this.setupRoomSeasonValidationListeners(true);
   
   const modal = document.getElementById('modal-edit-season-chambre');
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    const popup = modal.querySelector('.bloc-popup');
+    if (popup) {
+      popup.style.opacity = '1';
+      popup.style.transform = 'none';
+    }
+  }
 }
 
 resetEditRoomSeasonModal() {
