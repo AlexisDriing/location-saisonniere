@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.050
+// LOG production V1.5 - chambres d'hôtes v1.051
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -827,9 +827,9 @@ displayPricesPerGuest(pricesArray) {
 
 getPrixVoyageurBloc(index) {
   if (index === 0) {
-    return document.querySelector('.bloc-flex-input.tarifs.voyageurs:not(.next)');
+    return document.querySelector('.bloc-flex-input.tarifs.voyageurs:not(.next):not(.saison)');
   } else {
-    const nextBlocs = document.querySelectorAll('.bloc-flex-input.tarifs.voyageurs.next');
+    const nextBlocs = document.querySelectorAll('.bloc-flex-input.tarifs.voyageurs.next:not(.saison)');
     return nextBlocs[index - 1] || null;
   }
 }
@@ -1965,7 +1965,15 @@ getRoomSeasonFormData() {
 
 closeRoomSeasonModal() {
   const modal = document.getElementById('modal-add-season-chambre');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.style.display = 'none';
+    modal.style.opacity = '1';
+    const popup = modal.querySelector('.bloc-popup');
+    if (popup) {
+      popup.style.opacity = '1';
+      popup.style.transform = 'none';
+    }
+  }
   this.resetRoomSeasonModal();
   
   if (this.validationManager) {
@@ -2227,7 +2235,15 @@ getEditRoomSeasonFormData() {
 
 closeEditRoomSeasonModal() {
   const modal = document.getElementById('modal-edit-season-chambre');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.style.display = 'none';
+    modal.style.opacity = '1';
+    const popup = modal.querySelector('.bloc-popup');
+    if (popup) {
+      popup.style.opacity = '1';
+      popup.style.transform = 'none';
+    }
+  }
   
   if (this.validationManager) {
     const editFields = [
