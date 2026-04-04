@@ -1,4 +1,4 @@
-// LOG production V1.46
+// LOG production V1.47
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -735,6 +735,204 @@ validateRoomFields() {
     return isValid;
   }
 
+  // Validation d'une saison chambre (ajout ou modification)
+  validateRoomSeason(isEdit = false) {
+    const suffix = isEdit ? '-edit-chambre' : '-chambre';
+    let hasError = false;
+    
+    // Nom
+    const nameInput = document.getElementById(`season-name-input${suffix}`);
+    if (!nameInput || !nameInput.value.trim()) {
+      this.showFieldError(`season-name-input${suffix}`, "Le nom de la saison est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-name-input${suffix}`);
+    }
+    
+    // Prix — dépend du mode fixe/voyageur
+    const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+    const isPerGuest = radioVoyageur && radioVoyageur.checked;
+    
+    if (isPerGuest) {
+      // Valider chaque prix voyageur
+      const voyageursInput = document.getElementById('voyageurs-input-chambre');
+      const maxGuests = parseInt(voyageursInput?.value) || 1;
+      
+      for (let i = 0; i < maxGuests; i++) {
+        const bloc = this.editor.getRoomSeasonPrixVoyageurBloc(i, isEdit);
+        if (!bloc || bloc.style.display === 'none') continue;
+        
+        const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+        if (priceInput) {
+          const rawValue = priceInput.getAttribute('data-raw-value');
+          const price = parseInt(rawValue) || 0;
+          
+          if (price < 10) {
+            this.showDiscountError(priceInput, "Le prix minimum est de 10€ par voyageur");
+            hasError = true;
+          } else {
+            this.hideDiscountError(priceInput);
+          }
+        }
+      }
+    } else {
+      // Prix fixe
+      const priceInput = document.getElementById(`season-price-input${suffix}`);
+      const price = priceInput ? parseInt(this.editor.getRawValue(priceInput)) || 0 : 0;
+      if (price < 10) {
+        this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
+        hasError = true;
+      } else {
+        this.hideFieldError(`season-price-input${suffix}`);
+      }
+    }
+    
+    // Nuits minimum
+    const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
+    const minNights = minNightsInput ? parseInt(this.editor.getRawValue(minNightsInput)) || 0 : 0;
+    if (minNights < 1) {
+      this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-min-nights-input${suffix}`);
+    }
+    
+    // Plages de dates
+    const allPeriods = [];
+    let hasAtLeastOnePeriod = false;
+    
+    for (let i = 1; i <= 5; i++) {
+      const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+      if (!block || block.style.display === 'none') continue;
+      
+      const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+      const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
+      
+      const startDate = startInput ? this.editor.getDateValue(startInput) : null;
+      const endDate = endInput ? this.editor.getDateValue(endInput) : null;
+      
+      if (!startDate) {
+        this.showFieldError(`season-date-start-input-${i}${suffix}`, "La date de début est obligatoire");
+        hasError = true;
+      } else {
+        this.hideFieldError(`season-date-start-input-${i}${suffix}`);
+      }
+      
+      if (!endDate) {
+        this.showFieldError(`season-date-end-input-${i}${suffix}`, "La date de fin est obligatoire");
+        hasError = true;
+      } else {
+        this.hideFieldError(`season-date-end-input-${i}${suffix}`);
+      }
+      
+      if (startDate && endDate) {
+        allPeriods.push({ start: startDate, end: endDate, index: i });
+        hasAtLeastOnePeriod = true;
+      }
+    }
+    
+    if (!hasAtLeastOnePeriod) {
+      this.showFieldError(`season-date-start-input-1${suffix}`, "Au moins une période de dates est obligatoire");
+      hasError = true;
+    }
+    
+    // Chevauchements intra-saison
+    if (!hasError && allPeriods.length > 1) {
+      for (let a = 0; a < allPeriods.length; a++) {
+        for (let b = a + 1; b < allPeriods.length; b++) {
+          const [dayA1, monthA1] = allPeriods[a].start.split('-').map(Number);
+          const [dayA2, monthA2] = allPeriods[a].end.split('-').map(Number);
+          const [dayB1, monthB1] = allPeriods[b].start.split('-').map(Number);
+          const [dayB2, monthB2] = allPeriods[b].end.split('-').map(Number);
+          
+          if (this.datesOverlap(dayA1, monthA1, dayA2, monthA2, dayB1, monthB1, dayB2, monthB2)) {
+            this.showFieldError(`season-date-start-input-${allPeriods[b].index}${suffix}`, `Cette période chevauche la période n°${allPeriods[a].index}`);
+            hasError = true;
+          }
+        }
+      }
+    }
+    
+    // Chevauchements inter-saisons (avec les autres saisons de la chambre)
+    if (!hasError) {
+      for (const period of allPeriods) {
+        const overlap = this.checkRoomSeasonDateOverlap(period.start, period.end, isEdit);
+        if (overlap) {
+          this.showFieldError(`season-date-start-input-${period.index}${suffix}`, overlap);
+          hasError = true;
+        }
+      }
+    }
+    
+    // Validation prix plateformes
+    if (!hasError) {
+      const directPrice = isPerGuest 
+        ? (this.editor.collectRoomSeasonPricesPerGuest(isEdit).pop() || 0)
+        : (parseInt(this.editor.getRawValue(document.getElementById(`season-price-input${suffix}`))) || 0);
+      
+      if (directPrice > 0) {
+        hasError = !this.validateRoomSeasonPlatformPrices(directPrice, suffix);
+      }
+    }
+    
+    return !hasError;
+  }
+  
+  // Chevauchements entre saisons chambre
+  checkRoomSeasonDateOverlap(newStart, newEnd, isEdit) {
+    const seasons = this.editor.roomPricingData?.seasons || [];
+    const editingIndex = isEdit ? this.editor.editingRoomSeasonIndex : -1;
+    
+    const [newStartDay, newStartMonth] = newStart.split('-').map(n => parseInt(n));
+    const [newEndDay, newEndMonth] = newEnd.split('-').map(n => parseInt(n));
+    
+    for (let i = 0; i < seasons.length; i++) {
+      if (i === editingIndex) continue;
+      
+      const season = seasons[i];
+      if (!season.periods || season.periods.length === 0) continue;
+      
+      for (const period of season.periods) {
+        const [startDay, startMonth] = period.start.split('-').map(n => parseInt(n));
+        const [endDay, endMonth] = period.end.split('-').map(n => parseInt(n));
+        
+        if (this.datesOverlap(
+          newStartDay, newStartMonth, newEndDay, newEndMonth,
+          startDay, startMonth, endDay, endMonth
+        )) {
+          return `Ces dates chevauchent avec la saison "${season.name}"`;
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  // Validation prix plateformes saison chambre
+  validateRoomSeasonPlatformPrices(directPrice, suffix) {
+    const minPlatformPrice = directPrice * 1.10;
+    let hasError = false;
+    
+    ['airbnb', 'booking', 'other'].forEach(platform => {
+      const input = document.getElementById(`season-${platform}-price-input${suffix}`);
+      if (input) {
+        const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
+        
+        if (platformPrice > 0 && platformPrice < minPlatformPrice) {
+          this.showFieldError(
+            `season-${platform}-price-input${suffix}`,
+            `Le prix doit être au moins ${Math.ceil(minPlatformPrice)}€ (10% de plus que le prix direct)`
+          );
+          hasError = true;
+        } else {
+          this.hideFieldError(`season-${platform}-price-input${suffix}`);
+        }
+      }
+    });
+    
+    return !hasError;
+  }
+  
   // Valider un champ spécifique
   validateField(fieldId, fieldConfig) {
     const value = this.getFieldValue(fieldId, fieldConfig.type);
