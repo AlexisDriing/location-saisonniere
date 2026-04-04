@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.052
+// LOG production V1.5 - chambres d'hôtes v1.053
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -1430,8 +1430,57 @@ initRoomSeasonManagement() {
   this.setupRoomSeasonPeriodButtons();
   this.hideAllRoomSeasonBlocks();
   this.displayRoomExistingSeasons();
+  
+  // Initialiser Cleave sur les inputs date de la modale saison chambre
+  this.initRoomSeasonDateFormatters();
 }
 
+initRoomSeasonDateFormatters() {
+  if (typeof Cleave === 'undefined') {
+    setTimeout(() => this.initRoomSeasonDateFormatters(), 100);
+    return;
+  }
+  
+  // Initialiser les inputs date des modales saison chambre
+  const dateInputs = document.querySelectorAll('#modal-add-season-chambre [data-format="date-jour-mois"], #modal-edit-season-chambre [data-format="date-jour-mois"]');
+  
+  dateInputs.forEach(input => {
+    // Vérifier que Cleave n'est pas déjà initialisé
+    if (input.dataset.cleaveInit) return;
+    
+    new Cleave(input, {
+      date: true,
+      delimiter: '/',
+      datePattern: ['d', 'm'],
+      blocks: [2, 2],
+      numericOnly: true
+    });
+    
+    input.addEventListener('blur', function() {
+      const value = this.value;
+      if (value && value.includes('/')) {
+        const [jour, mois] = value.split('/');
+        const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        const moisNum = parseInt(mois);
+        if (moisNum >= 1 && moisNum <= 12) {
+          this.setAttribute('data-date-value', value);
+          this.value = `${parseInt(jour)} ${moisNoms[moisNum]}`;
+        }
+      }
+    });
+    
+    input.addEventListener('focus', function() {
+      const originalValue = this.getAttribute('data-date-value');
+      if (originalValue) {
+        this.value = originalValue;
+      }
+    });
+    
+    input.dataset.cleaveInit = 'true';
+  });
+}
+  
 setupRoomSeasonButtons() {
   // Bouton ajouter saison
   const addSeasonBtn = document.getElementById('button-add-season-chambre');
