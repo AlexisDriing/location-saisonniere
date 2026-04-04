@@ -1,4 +1,4 @@
-// LOG production V1.45
+// LOG production V1.46
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
