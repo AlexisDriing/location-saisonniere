@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.040
+// LOG production V1.5 - chambres d'hôtes v1.050
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -46,6 +46,7 @@ class PropertyEditor {
     this.roomOriginalPhotos = [];
     this.roomCurrentPhotos = [];
     this.roomSortableInstance = null;
+    this.editingRoomSeasonIndex = null;
 
     this.icalUrls = []; // Stockage des URLs iCal
     this.DEFAULT_ICAL_URL = 'https://calendar.google.com/calendar/ical/c_20c899760ed3ef0d0fb0db69c71909b19c0584bbbdf32e9714b224fc005ae2c0%40group.calendar.google.com/public/basic.ics';
@@ -208,6 +209,9 @@ async loadRoomData() {
     
     // Initialiser les iCal
     this.initRoomIcalManagement();
+    
+    // Initialiser les saisons
+    this.initRoomSeasonManagement();
     
   } catch (error) {
     console.error('❌ Erreur chargement chambre:', error);
@@ -1416,6 +1420,878 @@ collectRoomIcalValues() {
   }
   return currentIcalValues;
 }
+
+// ================================
+// 📅 GESTION DES SAISONS CHAMBRE
+// ================================
+
+initRoomSeasonManagement() {
+  this.setupRoomSeasonButtons();
+  this.setupRoomSeasonPeriodButtons();
+  this.hideAllRoomSeasonBlocks();
+  this.displayRoomExistingSeasons();
+}
+
+setupRoomSeasonButtons() {
+  // Bouton ajouter saison
+  const addSeasonBtn = document.getElementById('button-add-season-chambre');
+  if (addSeasonBtn) {
+    addSeasonBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openAddRoomSeasonModal();
+    });
+  }
+  
+  // Bouton valider ajout
+  const validateAddBtn = document.getElementById('button-validate-add-season-chambre');
+  if (validateAddBtn) {
+    validateAddBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.validateAndAddRoomSeason();
+    });
+  }
+  
+  // Boutons modifier/supprimer pour chaque saison (1 à 4)
+  for (let i = 1; i <= 4; i++) {
+    const editBtn = document.getElementById(`edit-${i}-chambre`);
+    if (editBtn) {
+      editBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.openEditRoomSeasonModal(i - 1);
+      });
+    }
+    
+    const deleteBtn = document.getElementById(`delete-${i}-chambre`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removeRoomSeason(i - 1);
+      });
+    }
+  }
+  
+  // Bouton valider modification
+  const validateEditBtn = document.getElementById('button-validate-edit-season-chambre');
+  if (validateEditBtn) {
+    validateEditBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.validateAndEditRoomSeason();
+    });
+  }
+}
+
+setupRoomSeasonPeriodButtons() {
+  // Modal AJOUT — bouton ajouter plage
+  const addPlageBtn = document.getElementById('btn-add-plage-dates-chambre');
+  if (addPlageBtn) {
+    addPlageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addRoomPlageDates(false);
+    });
+  }
+  
+  // Boutons supprimer plages 2 à 5 (modal ajout)
+  for (let i = 2; i <= 5; i++) {
+    const deleteBtn = document.getElementById(`btn-delete-plage-${i}-chambre`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removeRoomPlageDates(i, false);
+      });
+    }
+  }
+  
+  // Modal EDIT — bouton ajouter plage
+  const addPlageBtnEdit = document.getElementById('btn-add-plage-dates-edit-chambre');
+  if (addPlageBtnEdit) {
+    addPlageBtnEdit.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.addRoomPlageDates(true);
+    });
+  }
+  
+  // Boutons supprimer plages 2 à 5 (modal edit)
+  for (let i = 2; i <= 5; i++) {
+    const deleteBtn = document.getElementById(`btn-delete-plage-${i}-edit-chambre`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.removeRoomPlageDates(i, true);
+      });
+    }
+  }
+}
+
+addRoomPlageDates(isEdit = false) {
+  const suffix = isEdit ? '-edit-chambre' : '-chambre';
+  
+  for (let i = 2; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (block && block.style.display === 'none') {
+      block.style.display = 'flex';
+      
+      // Initialiser Cleave sur les nouveaux inputs
+      const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+      const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
+      
+      [startInput, endInput].forEach(input => {
+        if (input && typeof Cleave !== 'undefined') {
+          new Cleave(input, {
+            date: true,
+            delimiter: '/',
+            datePattern: ['d', 'm'],
+            blocks: [2, 2],
+            numericOnly: true
+          });
+          
+          input.addEventListener('blur', function() {
+            const value = this.value;
+            if (value && value.includes('/')) {
+              const [jour, mois] = value.split('/');
+              const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+              const moisNum = parseInt(mois);
+              if (moisNum >= 1 && moisNum <= 12) {
+                this.setAttribute('data-date-value', value);
+                this.value = `${parseInt(jour)} ${moisNoms[moisNum]}`;
+              }
+            }
+          });
+          
+          input.addEventListener('focus', function() {
+            const originalValue = this.getAttribute('data-date-value');
+            if (originalValue) {
+              this.value = originalValue;
+            }
+          });
+        }
+      });
+      
+      break;
+    }
+  }
+  
+  // Masquer le bouton si 5 plages
+  const visibleCount = this.countRoomVisiblePlages(isEdit);
+  if (visibleCount >= 5) {
+    const addBtn = document.getElementById(isEdit ? 'btn-add-plage-dates-edit-chambre' : 'btn-add-plage-dates-chambre');
+    if (addBtn) addBtn.style.display = 'none';
+  }
+}
+
+removeRoomPlageDates(index, isEdit = false) {
+  const suffix = isEdit ? '-edit-chambre' : '-chambre';
+  const block = document.getElementById(`bloc-plage-dates-${index}${suffix}`);
+  
+  if (block) {
+    const startInput = document.getElementById(`season-date-start-input-${index}${suffix}`);
+    const endInput = document.getElementById(`season-date-end-input-${index}${suffix}`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+    
+    block.style.display = 'none';
+    
+    if (this.validationManager) {
+      this.validationManager.hideFieldError(`season-date-start-input-${index}${suffix}`);
+      this.validationManager.hideFieldError(`season-date-end-input-${index}${suffix}`);
+    }
+  }
+  
+  // Réafficher le bouton ajouter
+  const addBtn = document.getElementById(isEdit ? 'btn-add-plage-dates-edit-chambre' : 'btn-add-plage-dates-chambre');
+  if (addBtn) addBtn.style.display = '';
+}
+
+countRoomVisiblePlages(isEdit = false) {
+  const suffix = isEdit ? '-edit-chambre' : '-chambre';
+  let count = 0;
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+    if (block && block.style.display !== 'none') {
+      count++;
+    }
+  }
+  return count;
+}
+
+hideAllRoomSeasonBlocks() {
+  for (let i = 1; i <= 4; i++) {
+    const block = document.getElementById(`season-${i}-chambre`);
+    if (block) block.style.display = 'none';
+  }
+}
+
+displayRoomExistingSeasons() {
+  if (this.roomPricingData && this.roomPricingData.seasons && this.roomPricingData.seasons.length > 0) {
+    this.roomPricingData.seasons.forEach((season, index) => {
+      this.displayRoomSeasonBlock(season, index);
+    });
+  }
+}
+
+displayRoomSeasonBlock(season, index) {
+  const seasonNum = index + 1;
+  const seasonBlock = document.getElementById(`season-${seasonNum}-chambre`);
+  
+  if (!seasonBlock) return;
+  
+  seasonBlock.style.display = 'flex';
+  
+  // Nom
+  const nameElement = document.getElementById(`name-season-${seasonNum}-chambre`);
+  if (nameElement) nameElement.textContent = season.name;
+  
+  // Prix par nuit
+  const priceElement = document.getElementById(`prix-nuit-season-${seasonNum}-chambre`);
+  if (priceElement) priceElement.textContent = season.price;
+  
+  // Prix par semaine
+  const weekPriceElement = document.getElementById(`prix-semaine-season-${seasonNum}-chambre`);
+  if (weekPriceElement) {
+    const weekPrice = this.calculateWeekPrice(season.price, this.roomPricingData.discounts);
+    weekPriceElement.textContent = weekPrice;
+  }
+  
+  // Dates — trier chronologiquement puis afficher
+  const datesElement = document.getElementById(`dates-season-${seasonNum}-chambre`);
+  if (datesElement && season.periods && season.periods.length > 0) {
+    const sortedPeriods = [...season.periods].sort((a, b) => {
+      const [dayA, monthA] = a.start.split('-').map(Number);
+      const [dayB, monthB] = b.start.split('-').map(Number);
+      return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+    });
+    
+    const dateRanges = sortedPeriods.map(period => 
+      this.formatDateRange(period.start, period.end)
+    );
+    datesElement.textContent = dateRanges.join(" - ");
+  }
+  
+  // Nuits minimum
+  const minNightsElement = document.getElementById(`nuit-minimum-${seasonNum}-chambre`);
+  if (minNightsElement) minNightsElement.textContent = season.minNights || 1;
+}
+
+// --- MODALE AJOUT ---
+
+openAddRoomSeasonModal() {
+  if (this.roomPricingData.seasons.length >= 4) {
+    this.showNotification('error', 'Maximum 4 saisons autorisées');
+    return;
+  }
+  
+  this.resetRoomSeasonModal();
+  this.setupRoomSeasonModalPricing(false);
+  this.setupRoomSeasonValidationListeners(false);
+  
+  const modal = document.getElementById('modal-add-season-chambre');
+  if (modal) modal.style.display = 'flex';
+}
+
+resetRoomSeasonModal() {
+  const fields = [
+    'season-name-input-chambre',
+    'season-price-input-chambre',
+    'season-min-nights-input-chambre'
+  ];
+  
+  fields.forEach(fieldId => {
+    const input = document.getElementById(fieldId);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+      input.removeAttribute('data-date-value');
+    }
+  });
+  
+  // Réinitialiser toutes les plages de dates
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}-chambre`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-chambre`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+    
+    if (i > 1) {
+      const block = document.getElementById(`bloc-plage-dates-${i}-chambre`);
+      if (block) block.style.display = 'none';
+    }
+  }
+  
+  // Réafficher le bouton ajouter plage
+  const addBtn = document.getElementById('btn-add-plage-dates-chambre');
+  if (addBtn) addBtn.style.display = '';
+  
+  // Réinitialiser les prix plateformes
+  ['season-airbnb-price-input-chambre', 'season-booking-price-input-chambre', 'season-other-price-input-chambre'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+    }
+  });
+  
+  // Réinitialiser les prix par voyageur
+  this.resetRoomSeasonPricesPerGuest(false);
+}
+
+setupRoomSeasonModalPricing(isEdit) {
+  const suffix = isEdit ? '-edit-chambre' : '-chambre';
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const isPerGuest = radioVoyageur && radioVoyageur.checked;
+  
+  const blocFixe = document.getElementById(`bloc-prix-fixe-saison${suffix}`);
+  const blocVoyageur = document.getElementById(`bloc-prix-voyageur-saison${suffix}`);
+  
+  if (isPerGuest) {
+    if (blocFixe) blocFixe.style.display = 'none';
+    if (blocVoyageur) blocVoyageur.style.display = 'flex';
+    this.displayRoomSeasonPricesPerGuest([], isEdit);
+  } else {
+    if (blocFixe) blocFixe.style.display = 'block';
+    if (blocVoyageur) blocVoyageur.style.display = 'none';
+  }
+}
+
+displayRoomSeasonPricesPerGuest(pricesArray, isEdit) {
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  const maxGuests = parseInt(voyageursInput?.value) || 1;
+  
+  for (let i = 0; i < 10; i++) {
+    const bloc = this.getRoomSeasonPrixVoyageurBloc(i, isEdit);
+    if (!bloc) continue;
+    
+    if (i < maxGuests) {
+      bloc.style.display = 'flex';
+      
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        const price = (pricesArray && pricesArray[i]) ? pricesArray[i] : 0;
+        if (price > 0) {
+          priceInput.value = price;
+          priceInput.setAttribute('data-raw-value', price);
+        } else {
+          priceInput.value = '';
+          priceInput.removeAttribute('data-raw-value');
+        }
+        
+        // Listeners (si pas déjà ajoutés)
+        if (!priceInput.dataset.listenerAdded) {
+          priceInput.addEventListener('input', () => {
+            const cleanValue = priceInput.value.replace(/[^\d]/g, '');
+            priceInput.setAttribute('data-raw-value', cleanValue || '0');
+          });
+          
+          priceInput.addEventListener('blur', () => {
+            const value = priceInput.value.replace(/[^\d]/g, '');
+            if (value) {
+              priceInput.setAttribute('data-raw-value', value);
+              priceInput.value = value + ' € / nuit';
+            } else {
+              priceInput.removeAttribute('data-raw-value');
+              priceInput.value = '';
+            }
+          });
+          
+          priceInput.addEventListener('focus', () => {
+            const rawValue = priceInput.getAttribute('data-raw-value');
+            if (rawValue) {
+              priceInput.value = rawValue;
+            } else {
+              priceInput.value = priceInput.value.replace(/[^\d]/g, '');
+            }
+          });
+          
+          priceInput.dataset.listenerAdded = 'true';
+        }
+      }
+    } else {
+      bloc.style.display = 'none';
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        priceInput.value = '';
+        priceInput.removeAttribute('data-raw-value');
+      }
+    }
+  }
+}
+
+getRoomSeasonPrixVoyageurBloc(index, isEdit) {
+  if (isEdit) {
+    if (index === 0) {
+      return document.querySelector('.bloc-flex-input.tarifs.voyageurs.saison.edit:not(.next)');
+    } else {
+      const nextBlocs = document.querySelectorAll('.bloc-flex-input.tarifs.voyageurs.saison.edit.next');
+      return nextBlocs[index - 1] || null;
+    }
+  } else {
+    if (index === 0) {
+      return document.querySelector('.bloc-flex-input.tarifs.voyageurs.saison:not(.edit):not(.next)');
+    } else {
+      const nextBlocs = document.querySelectorAll('.bloc-flex-input.tarifs.voyageurs.saison:not(.edit).next');
+      return nextBlocs[index - 1] || null;
+    }
+  }
+}
+
+resetRoomSeasonPricesPerGuest(isEdit) {
+  for (let i = 0; i < 10; i++) {
+    const bloc = this.getRoomSeasonPrixVoyageurBloc(i, isEdit);
+    if (bloc) {
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        priceInput.value = '';
+        priceInput.removeAttribute('data-raw-value');
+      }
+    }
+  }
+}
+
+collectRoomSeasonPricesPerGuest(isEdit) {
+  const voyageursInput = document.getElementById('voyageurs-input-chambre');
+  const maxGuests = parseInt(voyageursInput?.value) || 1;
+  const prices = [];
+  
+  for (let i = 0; i < maxGuests; i++) {
+    const bloc = this.getRoomSeasonPrixVoyageurBloc(i, isEdit);
+    if (bloc && bloc.style.display !== 'none') {
+      const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+      if (priceInput) {
+        const rawValue = priceInput.getAttribute('data-raw-value');
+        prices.push(parseInt(rawValue) || 0);
+      } else {
+        prices.push(0);
+      }
+    }
+  }
+  
+  return prices;
+}
+
+validateAndAddRoomSeason() {
+  if (this.validationManager && !this.validationManager.validateRoomSeason(false)) {
+    return;
+  }
+  
+  const seasonData = this.getRoomSeasonFormData();
+  
+  const sortedPeriods = [...seasonData.periods].sort((a, b) => {
+    const [dayA, monthA] = a.start.split('-').map(Number);
+    const [dayB, monthB] = b.start.split('-').map(Number);
+    return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+  });
+  
+  const newSeason = {
+    name: seasonData.name,
+    price: parseInt(seasonData.price),
+    minNights: parseInt(seasonData.minNights) || 1,
+    periods: sortedPeriods
+  };
+  
+  // Prix par voyageur si mode per_guest
+  if (seasonData.pricesPerGuest && seasonData.pricesPerGuest.length > 0) {
+    newSeason.pricesPerGuest = seasonData.pricesPerGuest;
+    newSeason.price = seasonData.pricesPerGuest[seasonData.pricesPerGuest.length - 1];
+  }
+  
+  // Prix plateformes
+  const airbnb = parseInt(seasonData.airbnbPrice) || 0;
+  const booking = parseInt(seasonData.bookingPrice) || 0;
+  const other = parseInt(seasonData.otherPrice) || 0;
+  
+  if (airbnb > 0 || booking > 0 || other > 0) {
+    newSeason.platformPrices = { airbnb, booking, other };
+  }
+  
+  this.roomPricingData.seasons.push(newSeason);
+  
+  const seasonIndex = this.roomPricingData.seasons.length - 1;
+  this.displayRoomSeasonBlock(newSeason, seasonIndex);
+  
+  this.closeRoomSeasonModal();
+  this.enableButtons();
+}
+
+getRoomSeasonFormData() {
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const isPerGuest = radioVoyageur && radioVoyageur.checked;
+  
+  // Plages de dates
+  const periods = [];
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}-chambre`);
+    if (!block || block.style.display === 'none') continue;
+    
+    const startInput = document.getElementById(`season-date-start-input-${i}-chambre`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-chambre`);
+    
+    const start = this.getDateValue(startInput);
+    const end = this.getDateValue(endInput);
+    
+    if (start && end) {
+      periods.push({ start, end });
+    }
+  }
+  
+  const data = {
+    name: document.getElementById('season-name-input-chambre')?.value.trim(),
+    periods: periods,
+    minNights: this.getRawValue(document.getElementById('season-min-nights-input-chambre')) || '1',
+    airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-chambre')) || '0',
+    bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-chambre')) || '0',
+    otherPrice: this.getRawValue(document.getElementById('season-other-price-input-chambre')) || '0'
+  };
+  
+  if (isPerGuest) {
+    data.pricesPerGuest = this.collectRoomSeasonPricesPerGuest(false);
+    data.price = data.pricesPerGuest.length > 0 ? data.pricesPerGuest[data.pricesPerGuest.length - 1] : 0;
+  } else {
+    data.price = this.getRawValue(document.getElementById('season-price-input-chambre'));
+  }
+  
+  return data;
+}
+
+closeRoomSeasonModal() {
+  const modal = document.getElementById('modal-add-season-chambre');
+  if (modal) modal.style.display = 'none';
+  this.resetRoomSeasonModal();
+  
+  if (this.validationManager) {
+    const fieldsToClean = [
+      'season-name-input-chambre', 'season-price-input-chambre', 'season-min-nights-input-chambre',
+      'season-airbnb-price-input-chambre', 'season-booking-price-input-chambre', 'season-other-price-input-chambre'
+    ];
+    for (let i = 1; i <= 5; i++) {
+      fieldsToClean.push(`season-date-start-input-${i}-chambre`);
+      fieldsToClean.push(`season-date-end-input-${i}-chambre`);
+    }
+    fieldsToClean.forEach(id => this.validationManager.hideFieldError(id));
+  }
+}
+
+// --- MODALE EDIT ---
+
+openEditRoomSeasonModal(seasonIndex) {
+  this.resetEditRoomSeasonModal();
+  
+  if (!this.roomPricingData.seasons[seasonIndex]) {
+    console.error('❌ Saison chambre non trouvée à l\'index', seasonIndex);
+    return;
+  }
+  
+  if (this.validationManager) {
+    const editFields = [
+      'season-name-input-edit-chambre', 'season-price-input-edit-chambre', 'season-min-nights-input-edit-chambre',
+      'season-airbnb-price-input-edit-chambre', 'season-booking-price-input-edit-chambre', 'season-other-price-input-edit-chambre'
+    ];
+    for (let i = 1; i <= 5; i++) {
+      editFields.push(`season-date-start-input-${i}-edit-chambre`);
+      editFields.push(`season-date-end-input-${i}-edit-chambre`);
+    }
+    editFields.forEach(id => this.validationManager.hideFieldError(id));
+  }
+  
+  this.editingRoomSeasonIndex = seasonIndex;
+  const season = this.roomPricingData.seasons[seasonIndex];
+  
+  // Nom
+  const nameInput = document.getElementById('season-name-input-edit-chambre');
+  if (nameInput) nameInput.value = season.name;
+  
+  // Plages de dates
+  if (season.periods && season.periods.length > 0) {
+    season.periods.forEach((period, i) => {
+      const index = i + 1;
+      
+      if (index > 1) {
+        const block = document.getElementById(`bloc-plage-dates-${index}-edit-chambre`);
+        if (block) block.style.display = 'flex';
+      }
+      
+      const startInput = document.getElementById(`season-date-start-input-${index}-edit-chambre`);
+      const endInput = document.getElementById(`season-date-end-input-${index}-edit-chambre`);
+      
+      if (startInput) {
+        const [day, month] = period.start.split('-');
+        startInput.value = `${day}/${month}`;
+        startInput.setAttribute('data-date-value', `${day}/${month}`);
+      }
+      
+      if (endInput) {
+        const [day, month] = period.end.split('-');
+        endInput.value = `${day}/${month}`;
+        endInput.setAttribute('data-date-value', `${day}/${month}`);
+      }
+    });
+    
+    if (season.periods.length >= 5) {
+      const addBtn = document.getElementById('btn-add-plage-dates-edit-chambre');
+      if (addBtn) addBtn.style.display = 'none';
+    }
+  }
+  
+  // Prix et mode
+  this.setupRoomSeasonModalPricing(true);
+  
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const isPerGuest = radioVoyageur && radioVoyageur.checked;
+  
+  if (isPerGuest && season.pricesPerGuest) {
+    this.displayRoomSeasonPricesPerGuest(season.pricesPerGuest, true);
+  } else {
+    const priceInput = document.getElementById('season-price-input-edit-chambre');
+    if (priceInput) {
+      priceInput.value = season.price;
+      priceInput.setAttribute('data-raw-value', season.price);
+    }
+  }
+  
+  // Nuits minimum
+  const minNightsInput = document.getElementById('season-min-nights-input-edit-chambre');
+  if (minNightsInput) {
+    minNightsInput.value = season.minNights || 1;
+    minNightsInput.setAttribute('data-raw-value', season.minNights || 1);
+  }
+  
+  // Prix plateformes
+  if (season.platformPrices) {
+    const platformInputs = {
+      'season-airbnb-price-input-edit-chambre': season.platformPrices.airbnb || 0,
+      'season-booking-price-input-edit-chambre': season.platformPrices.booking || 0,
+      'season-other-price-input-edit-chambre': season.platformPrices.other || 0
+    };
+    
+    Object.entries(platformInputs).forEach(([inputId, value]) => {
+      const input = document.getElementById(inputId);
+      if (input) {
+        input.value = value;
+        input.setAttribute('data-raw-value', value);
+      }
+    });
+  }
+  
+  this.setupRoomSeasonValidationListeners(true);
+  
+  const modal = document.getElementById('modal-edit-season-chambre');
+  if (modal) modal.style.display = 'flex';
+}
+
+resetEditRoomSeasonModal() {
+  const fields = [
+    'season-name-input-edit-chambre',
+    'season-price-input-edit-chambre',
+    'season-min-nights-input-edit-chambre'
+  ];
+  
+  fields.forEach(fieldId => {
+    const input = document.getElementById(fieldId);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+      input.removeAttribute('data-date-value');
+    }
+  });
+  
+  // Plages de dates
+  for (let i = 1; i <= 5; i++) {
+    const startInput = document.getElementById(`season-date-start-input-${i}-edit-chambre`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-edit-chambre`);
+    
+    [startInput, endInput].forEach(input => {
+      if (input) {
+        input.value = '';
+        input.removeAttribute('data-raw-value');
+        input.removeAttribute('data-date-value');
+      }
+    });
+    
+    if (i > 1) {
+      const block = document.getElementById(`bloc-plage-dates-${i}-edit-chambre`);
+      if (block) block.style.display = 'none';
+    }
+  }
+  
+  const addBtn = document.getElementById('btn-add-plage-dates-edit-chambre');
+  if (addBtn) addBtn.style.display = '';
+  
+  // Prix plateformes
+  ['season-airbnb-price-input-edit-chambre', 'season-booking-price-input-edit-chambre', 'season-other-price-input-edit-chambre'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+    }
+  });
+  
+  // Prix par voyageur
+  this.resetRoomSeasonPricesPerGuest(true);
+}
+
+validateAndEditRoomSeason() {
+  if (this.editingRoomSeasonIndex === undefined || this.editingRoomSeasonIndex === null) {
+    console.error('❌ Aucune saison chambre en cours de modification');
+    return;
+  }
+  
+  if (this.validationManager && !this.validationManager.validateRoomSeason(true)) {
+    return;
+  }
+  
+  const seasonData = this.getEditRoomSeasonFormData();
+  
+  const sortedPeriods = [...seasonData.periods].sort((a, b) => {
+    const [dayA, monthA] = a.start.split('-').map(Number);
+    const [dayB, monthB] = b.start.split('-').map(Number);
+    return (monthA * 100 + dayA) - (monthB * 100 + dayB);
+  });
+  
+  const updatedSeason = {
+    name: seasonData.name,
+    price: parseInt(seasonData.price),
+    minNights: parseInt(seasonData.minNights) || 1,
+    periods: sortedPeriods
+  };
+  
+  // Prix par voyageur si mode per_guest
+  if (seasonData.pricesPerGuest && seasonData.pricesPerGuest.length > 0) {
+    updatedSeason.pricesPerGuest = seasonData.pricesPerGuest;
+    updatedSeason.price = seasonData.pricesPerGuest[seasonData.pricesPerGuest.length - 1];
+  }
+  
+  // Prix plateformes
+  const airbnb = parseInt(seasonData.airbnbPrice) || 0;
+  const booking = parseInt(seasonData.bookingPrice) || 0;
+  const other = parseInt(seasonData.otherPrice) || 0;
+  
+  if (airbnb > 0 || booking > 0 || other > 0) {
+    updatedSeason.platformPrices = { airbnb, booking, other };
+  }
+  
+  this.roomPricingData.seasons[this.editingRoomSeasonIndex] = updatedSeason;
+  this.displayRoomSeasonBlock(updatedSeason, this.editingRoomSeasonIndex);
+  
+  this.closeEditRoomSeasonModal();
+  this.enableButtons();
+}
+
+getEditRoomSeasonFormData() {
+  const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+  const isPerGuest = radioVoyageur && radioVoyageur.checked;
+  
+  const periods = [];
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`bloc-plage-dates-${i}-edit-chambre`);
+    if (!block || block.style.display === 'none') continue;
+    
+    const startInput = document.getElementById(`season-date-start-input-${i}-edit-chambre`);
+    const endInput = document.getElementById(`season-date-end-input-${i}-edit-chambre`);
+    
+    const start = this.getDateValue(startInput);
+    const end = this.getDateValue(endInput);
+    
+    if (start && end) {
+      periods.push({ start, end });
+    }
+  }
+  
+  const data = {
+    name: document.getElementById('season-name-input-edit-chambre')?.value.trim(),
+    periods: periods,
+    minNights: this.getRawValue(document.getElementById('season-min-nights-input-edit-chambre')) || '1',
+    airbnbPrice: this.getRawValue(document.getElementById('season-airbnb-price-input-edit-chambre')) || '0',
+    bookingPrice: this.getRawValue(document.getElementById('season-booking-price-input-edit-chambre')) || '0',
+    otherPrice: this.getRawValue(document.getElementById('season-other-price-input-edit-chambre')) || '0'
+  };
+  
+  if (isPerGuest) {
+    data.pricesPerGuest = this.collectRoomSeasonPricesPerGuest(true);
+    data.price = data.pricesPerGuest.length > 0 ? data.pricesPerGuest[data.pricesPerGuest.length - 1] : 0;
+  } else {
+    data.price = this.getRawValue(document.getElementById('season-price-input-edit-chambre'));
+  }
+  
+  return data;
+}
+
+closeEditRoomSeasonModal() {
+  const modal = document.getElementById('modal-edit-season-chambre');
+  if (modal) modal.style.display = 'none';
+  
+  if (this.validationManager) {
+    const editFields = [
+      'season-name-input-edit-chambre', 'season-price-input-edit-chambre', 'season-min-nights-input-edit-chambre',
+      'season-airbnb-price-input-edit-chambre', 'season-booking-price-input-edit-chambre', 'season-other-price-input-edit-chambre'
+    ];
+    for (let i = 1; i <= 5; i++) {
+      editFields.push(`season-date-start-input-${i}-edit-chambre`);
+      editFields.push(`season-date-end-input-${i}-edit-chambre`);
+    }
+    editFields.forEach(id => this.validationManager.hideFieldError(id));
+  }
+  
+  this.resetEditRoomSeasonModal();
+  this.editingRoomSeasonIndex = null;
+}
+
+removeRoomSeason(index) {
+  this.roomPricingData.seasons.splice(index, 1);
+  this.hideAllRoomSeasonBlocks();
+  this.displayRoomExistingSeasons();
+  this.enableButtons();
+}
+
+setupRoomSeasonValidationListeners(isEdit) {
+  const suffix = isEdit ? '-edit-chambre' : '-chambre';
+  
+  // Prix direct — validation au blur
+  const priceInput = document.getElementById(`season-price-input${suffix}`);
+  if (priceInput) {
+    priceInput.addEventListener('blur', () => {
+      if (this.validationManager) {
+        const price = parseInt(this.getRawValue(priceInput)) || 0;
+        if (price > 0) {
+          this.validationManager.validateRoomSeasonPlatformPrices(price, suffix);
+        }
+      }
+    });
+  }
+  
+  // Nuits minimum
+  const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
+  if (minNightsInput) {
+    minNightsInput.addEventListener('input', (e) => {
+      const value = e.target.value.replace(/[^\d]/g, '');
+      e.target.setAttribute('data-raw-value', value || '1');
+    });
+  }
+  
+  // Prix plateformes — validation au blur
+  ['airbnb', 'booking', 'other'].forEach(platform => {
+    const input = document.getElementById(`season-${platform}-price-input${suffix}`);
+    if (input) {
+      input.addEventListener('blur', () => {
+        if (this.validationManager) {
+          const directPrice = parseInt(this.getRawValue(priceInput)) || 0;
+          if (directPrice > 0) {
+            this.validationManager.validateRoomSeasonPlatformPrices(directPrice, suffix);
+          }
+        }
+      });
+    }
+  });
+}
   
 collectRoomPricingData() {
   // Construire l'objet pricing complet
@@ -1743,6 +2619,10 @@ cancelRoomModifications() {
   this.prefillRoomWeekend();
   this.displayRoomDiscounts();
   this.formatRoomPricingFields();
+  
+  // Restaurer saisons
+  this.hideAllRoomSeasonBlocks();
+  this.displayRoomExistingSeasons();
   
   // Restaurer photos
   this.roomCurrentPhotos = JSON.parse(JSON.stringify(this.initialValues.room_photos || []));
