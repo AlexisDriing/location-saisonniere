@@ -1,4 +1,4 @@
-// LOG production V1.48
+// LOG production V1.49
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -525,8 +525,14 @@ class ValidationManager {
     this.tabErrors.clear();
     let isValid = true;
     
+    // Si logement parent chambre d'hôtes, skip la tab 3
+    const isChambreHote = (this.editor.propertyData?.mode_location || '') === "Chambre d'hôtes";
+    
     // Parcourir toutes les tabs
     for (const [tabKey, tabConfig] of Object.entries(this.validationConfig)) {
+      // Ignorer la tab 3 pour les logements parent chambre d'hôtes
+      if (isChambreHote && tabKey === 'tab3') continue;
+      
       let tabHasErrors = false;
       
       // Parcourir tous les champs de la tab
@@ -564,24 +570,25 @@ class ValidationManager {
       isValid = false;
     }
     
-    // Validation spéciale prix plateformes
-    if (!this.validatePlatformPrices()) {
+    // Validation spéciale prix plateformes (seulement logement entier)
+    if (!isChambreHote && !this.validatePlatformPrices()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
 
-    if (!this.validateCoherencePrixLien()) {
+    if (!isChambreHote && !this.validateCoherencePrixLien()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
     
-    // Validation des réductions
-    if (!this.validateDiscounts()) {
+    // Validation des réductions (seulement logement entier)
+    if (!isChambreHote && !this.validateDiscounts()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
 
-    // NOUVEAU : Validation du prix week-end
+    // Validation du prix week-end (seulement logement entier)
+    if (!isChambreHote) {
     const weekendOui = document.getElementById('weekend-oui');
     const weekendPriceInput = document.getElementById('weekend-price-input');
     
@@ -596,7 +603,7 @@ class ValidationManager {
     } else {
       this.hideFieldError('weekend-price-input');
     }
-
+    }
     // Validation créneau arrivée : début < fin
     const creneauRadio = document.getElementById('arrivee-creneau');
     if (creneauRadio && creneauRadio.checked) {
@@ -610,16 +617,15 @@ class ValidationManager {
       }
     }
     
-    // 🆕 NOUVEAU : Validation du supplément voyageurs
+    // Validation du supplément voyageurs (seulement logement entier)
+    if (!isChambreHote) {
     const extraGuestsOui = document.getElementById('extra-guests-oui');
     const extraGuestsThresholdInput = document.getElementById('extra-guests-threshold-input');
     const extraGuestsPriceInput = document.getElementById('extra-guests-price-input');
-
     if (extraGuestsOui && extraGuestsOui.checked) {
       const threshold = parseInt(extraGuestsThresholdInput?.value) || 0;
       const price = parseInt(this.editor.getRawValue(extraGuestsPriceInput)) || 0;
       const maxCapacity = (this.editor.pricingData?.capacity || 8) - 1;
-
       if (threshold < 1 || threshold > maxCapacity) {
         this.showFieldError('extra-guests-threshold-input', `Le seuil doit être entre 1 et ${maxCapacity}`);
         isValid = false;
@@ -627,7 +633,6 @@ class ValidationManager {
       } else {
         this.hideFieldError('extra-guests-threshold-input');
       }
-
       if (price < 1) {
         this.showFieldError('extra-guests-price-input', "Le prix par personne doit être d'au moins 1€");
         isValid = false;
@@ -638,6 +643,33 @@ class ValidationManager {
     } else {
       this.hideFieldError('extra-guests-threshold-input');
       this.hideFieldError('extra-guests-price-input');
+    }
+    } // ← fermeture du if (!isChambreHote)
+    
+    // Validation des liens plateformes pour logement parent chambre d'hôtes
+    if (isChambreHote) {
+      ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && input.value.trim()) {
+          if (!this.validateLienPlateforme(id)) {
+            isValid = false;
+            this.showTabError('error-indicator-tab1');
+          }
+        }
+      });
+    }
+
+    // Validation des liens plateformes pour logement parent chambre d'hôtes
+    if (isChambreHote) {
+      ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && input.value.trim()) {
+          if (!this.validateLienPlateforme(id)) {
+            isValid = false;
+            this.showTabError('error-indicator-tab1');
+          }
+        }
+      });
     }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
@@ -975,6 +1007,39 @@ validateRoomFields() {
     });
     
     return !hasError;
+  }
+
+  validateLienPlateforme(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return true;
+    
+    const value = input.value.trim();
+    
+    if (!value) {
+      this.hideFieldError(fieldId);
+      return true;
+    }
+    
+    const urlPattern = /^https?:\/\/.+/i;
+    if (!urlPattern.test(value)) {
+      this.showFieldError(fieldId, "Le lien doit être une URL valide (commençant par https://)");
+      return false;
+    }
+    
+    if (fieldId === 'lien-airbnb-input') {
+      if (!/airbnb/i.test(value)) {
+        this.showFieldError(fieldId, "L'URL doit être un lien Airbnb");
+        return false;
+      }
+    } else if (fieldId === 'lien-booking-input') {
+      if (!/booking/i.test(value)) {
+        this.showFieldError(fieldId, "L'URL doit être un lien Booking");
+        return false;
+      }
+    }
+    
+    this.hideFieldError(fieldId);
+    return true;
   }
   
   // Valider un champ spécifique
