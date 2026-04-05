@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.054
+// LOG production V1.5 - chambres d'hôtes v1.055
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -191,7 +191,7 @@ setupParentChambreHoteDisplay() {
   
   // 3. Afficher le bloc liens plateformes
   const blocLiens = document.getElementById('bloc-liens-plateformes');
-  if (blocLiens) blocLiens.style.display = 'flex';
+  if (blocLiens) blocLiens.style.display = 'block';
   
   // 4. Pré-remplir les liens plateformes
   this.prefillLiensPlateformes();
