@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.055
+// LOG production V1.5 - chambres d'hôtes v1.056
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -2506,47 +2506,46 @@ setupRoomSeasonValidationListeners(isEdit) {
 updateRoomPlatformBlocksVisibility() {
   const links = this.parentPlatformLinks || {};
   
-  // Blocs tarif par défaut
-  const platforms = [
-    { link: links.airbnb, blocId: 'bloc-airbnb-chambre' },
-    { link: links.booking, blocId: 'bloc-booking-chambre' },
-    { link: links.other, blocId: 'bloc-other-chambre' }
-  ];
+  const hasAirbnb = links.airbnb && links.airbnb.trim() !== '';
+  const hasBooking = links.booking && links.booking.trim() !== '';
+  const hasOther = links.other && links.other.trim() !== '';
+  const hasAnyLink = hasAirbnb || hasBooking || hasOther;
   
-  platforms.forEach(({ link, blocId }) => {
-    const bloc = document.getElementById(blocId);
-    if (bloc) {
-      bloc.style.display = (link && link.trim() !== '') ? 'flex' : 'none';
-    }
-  });
+  // Bloc global tarif par défaut
+  const blocGlobal = document.getElementById('bloc-tarifs-plateformes-chambre');
+  if (blocGlobal) blocGlobal.style.display = hasAnyLink ? 'block' : 'none';
   
-  // Blocs modale ajout saison
-  const platformsAdd = [
-    { link: links.airbnb, blocId: 'bloc-airbnb-chambre-add' },
-    { link: links.booking, blocId: 'bloc-booking-chambre-add' },
-    { link: links.other, blocId: 'bloc-other-chambre-add' }
-  ];
+  // Blocs individuels tarif par défaut
+  const blocAirbnb = document.getElementById('bloc-airbnb-chambre');
+  const blocBooking = document.getElementById('bloc-booking-chambre');
+  const blocOther = document.getElementById('bloc-other-chambre');
+  if (blocAirbnb) blocAirbnb.style.display = hasAirbnb ? 'flex' : 'none';
+  if (blocBooking) blocBooking.style.display = hasBooking ? 'flex' : 'none';
+  if (blocOther) blocOther.style.display = hasOther ? 'flex' : 'none';
   
-  platformsAdd.forEach(({ link, blocId }) => {
-    const bloc = document.getElementById(blocId);
-    if (bloc) {
-      bloc.style.display = (link && link.trim() !== '') ? 'flex' : 'none';
-    }
-  });
+  // Bloc global modale ajout
+  const blocGlobalAdd = document.getElementById('bloc-plateforme-add-chambre');
+  if (blocGlobalAdd) blocGlobalAdd.style.display = hasAnyLink ? 'block' : 'none';
   
-  // Blocs modale edit saison
-  const platformsEdit = [
-    { link: links.airbnb, blocId: 'bloc-airbnb-chambre-edit' },
-    { link: links.booking, blocId: 'bloc-booking-chambre-edit' },
-    { link: links.other, blocId: 'bloc-other-chambre-edit' }
-  ];
+  // Blocs individuels modale ajout
+  const blocAirbnbAdd = document.getElementById('bloc-airbnb-chambre-add');
+  const blocBookingAdd = document.getElementById('bloc-booking-chambre-add');
+  const blocOtherAdd = document.getElementById('bloc-other-chambre-add');
+  if (blocAirbnbAdd) blocAirbnbAdd.style.display = hasAirbnb ? 'flex' : 'none';
+  if (blocBookingAdd) blocBookingAdd.style.display = hasBooking ? 'flex' : 'none';
+  if (blocOtherAdd) blocOtherAdd.style.display = hasOther ? 'flex' : 'none';
   
-  platformsEdit.forEach(({ link, blocId }) => {
-    const bloc = document.getElementById(blocId);
-    if (bloc) {
-      bloc.style.display = (link && link.trim() !== '') ? 'flex' : 'none';
-    }
-  });
+  // Bloc global modale edit
+  const blocGlobalEdit = document.getElementById('bloc-plateforme-edit-chambre');
+  if (blocGlobalEdit) blocGlobalEdit.style.display = hasAnyLink ? 'block' : 'none';
+  
+  // Blocs individuels modale edit
+  const blocAirbnbEdit = document.getElementById('bloc-airbnb-chambre-edit');
+  const blocBookingEdit = document.getElementById('bloc-booking-chambre-edit');
+  const blocOtherEdit = document.getElementById('bloc-other-chambre-edit');
+  if (blocAirbnbEdit) blocAirbnbEdit.style.display = hasAirbnb ? 'flex' : 'none';
+  if (blocBookingEdit) blocBookingEdit.style.display = hasBooking ? 'flex' : 'none';
+  if (blocOtherEdit) blocOtherEdit.style.display = hasOther ? 'flex' : 'none';
 }
   
 collectRoomPricingData() {
