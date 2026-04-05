@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.053
+// LOG production V1.5 - chambres d'hôtes v1.054
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -119,12 +119,20 @@ class PropertyEditor {
       this.prefillForm();
       this.setupSaveButton();
       this.setupTallyButton();
-      this.initSeasonManagement();
-      this.initDiscountManagement();
-      this.initIcalManagement();
-      this.initExtrasManagement();
-      this.initImageManagement();
-      this.updatePlatformBlocksVisibility();
+      
+      // Adapter l'affichage si logement parent chambre d'hôtes
+      const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+      
+      if (isChambreHote) {
+        this.setupParentChambreHoteDisplay();
+      } else {
+        this.initSeasonManagement();
+        this.initDiscountManagement();
+        this.initIcalManagement();
+        this.initExtrasManagement();
+        this.initImageManagement();
+        this.updatePlatformBlocksVisibility();
+      }
     }
   }
   this.validationManager = new ValidationManager(this);
@@ -172,6 +180,57 @@ class PropertyEditor {
   }
 }
 
+setupParentChambreHoteDisplay() {
+  // 1. Masquer la tab 3 (tarification)
+  const tabTarification = document.getElementById('tab-tarification');
+  if (tabTarification) tabTarification.style.display = 'none';
+  
+  // 2. Masquer le bloc taille maison
+  const blocTailleMaison = document.getElementById('bloc-taille-maison');
+  if (blocTailleMaison) blocTailleMaison.style.display = 'none';
+  
+  // 3. Afficher le bloc liens plateformes
+  const blocLiens = document.getElementById('bloc-liens-plateformes');
+  if (blocLiens) blocLiens.style.display = 'flex';
+  
+  // 4. Pré-remplir les liens plateformes
+  this.prefillLiensPlateformes();
+  
+  // 5. Configurer les listeners des liens
+  this.setupLiensPlateformesListeners();
+  
+  // 6. Initialiser les éléments communs (images, extras, etc.)
+  this.initImageManagement();
+  this.initExtrasManagement();
+}
+
+prefillLiensPlateformes() {
+  const liens = {
+    'lien-airbnb-input': this.propertyData.annonce_airbnb || '',
+    'lien-booking-input': this.propertyData.annonce_booking || '',
+    'lien-autre-input': this.propertyData.annonce_gites || ''
+  };
+  
+  Object.entries(liens).forEach(([id, value]) => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.value = value;
+      this.initialValues[`lien_${id}`] = value;
+    }
+  });
+}
+
+setupLiensPlateformesListeners() {
+  ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => {
+        this.enableButtons();
+      });
+    }
+  });
+}
+  
 async loadRoomData() {
   if (!this.roomId) return;
   
@@ -181,6 +240,9 @@ async loadRoomData() {
     
     const data = await response.json();
     const rooms = data.rooms || [];
+    
+    // Stocker les liens plateformes du parent
+    this.parentPlatformLinks = data.parentPlatformLinks || {};
     
     this.roomData = rooms.find(r => r.id === this.roomId);
     
@@ -212,6 +274,9 @@ async loadRoomData() {
     
     // Initialiser les saisons
     this.initRoomSeasonManagement();
+    
+    // Afficher les blocs plateformes selon les liens du parent
+    this.updateRoomPlatformBlocksVisibility();
     
   } catch (error) {
     console.error('❌ Erreur chargement chambre:', error);
@@ -755,6 +820,23 @@ prefillRoomPricing() {
   this.initialValues.room_pricing_price = pricing.price || 0;
   this.initialValues.room_pricing_min_nights = pricing.minNights || 1;
   this.initialValues.room_pricing_prices_per_guest = JSON.stringify(pricing.pricesPerGuest || []);
+  
+  // Prix plateformes
+  if (pricing.platformPrices) {
+    ['airbnb', 'booking', 'other'].forEach(platform => {
+      const input = document.getElementById(`default-${platform}-price-input-chambre`);
+      if (input) {
+        const value = pricing.platformPrices[platform] || 0;
+        if (value > 0) {
+          input.value = value;
+          input.setAttribute('data-raw-value', value);
+        } else {
+          input.value = '';
+          input.removeAttribute('data-raw-value');
+        }
+      }
+    });
+  }
 }
 
 displayPricesPerGuest(pricesArray) {
@@ -920,6 +1002,37 @@ setupRoomPricingListeners() {
       }
     });
   }
+  // Prix plateformes chambre
+  ['airbnb', 'booking', 'other'].forEach(platform => {
+    const input = document.getElementById(`default-${platform}-price-input-chambre`);
+    if (input) {
+      input.addEventListener('input', () => {
+        const cleanValue = input.value.replace(/[^\d]/g, '');
+        input.setAttribute('data-raw-value', cleanValue || '0');
+        this.enableButtons();
+      });
+      
+      input.addEventListener('blur', () => {
+        if (this.validationManager) {
+          const directPriceInput = document.getElementById('default-price-input-chambre');
+          const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+          let directPrice = 0;
+          
+          if (radioVoyageur && radioVoyageur.checked) {
+            // En mode per_guest, le prix de référence est le dernier prix voyageur
+            const prices = this.collectPricesPerGuest();
+            directPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
+          } else {
+            directPrice = parseInt(this.getRawValue(directPriceInput)) || 0;
+          }
+          
+          if (directPrice > 0) {
+            this.validationManager.validateRoomDefaultPlatformPrices(directPrice);
+          }
+        }
+      });
+    }
+  });
 }
 
 formatRoomPricingFields() {
@@ -939,6 +1052,18 @@ formatRoomPricingFields() {
     if (value && value !== '0') {
       input.setAttribute('data-raw-value', value);
       input.value = value + ' € / nuit';
+    }
+  });
+  
+  // Formater les prix plateformes chambre
+  ['airbnb', 'booking', 'other'].forEach(platform => {
+    const input = document.getElementById(`default-${platform}-price-input-chambre`);
+    if (input) {
+      const value = input.value.replace(/[^\d]/g, '');
+      if (value && value !== '0') {
+        input.setAttribute('data-raw-value', value);
+        input.value = value + ' € / nuit';
+      }
     }
   });
 }
@@ -2373,6 +2498,56 @@ setupRoomSeasonValidationListeners(isEdit) {
     }
   });
 }
+
+// ================================
+// 💰 PLATEFORMES CHAMBRE
+// ================================
+
+updateRoomPlatformBlocksVisibility() {
+  const links = this.parentPlatformLinks || {};
+  
+  // Blocs tarif par défaut
+  const platforms = [
+    { link: links.airbnb, blocId: 'bloc-airbnb-chambre' },
+    { link: links.booking, blocId: 'bloc-booking-chambre' },
+    { link: links.other, blocId: 'bloc-other-chambre' }
+  ];
+  
+  platforms.forEach(({ link, blocId }) => {
+    const bloc = document.getElementById(blocId);
+    if (bloc) {
+      bloc.style.display = (link && link.trim() !== '') ? 'flex' : 'none';
+    }
+  });
+  
+  // Blocs modale ajout saison
+  const platformsAdd = [
+    { link: links.airbnb, blocId: 'bloc-airbnb-chambre-add' },
+    { link: links.booking, blocId: 'bloc-booking-chambre-add' },
+    { link: links.other, blocId: 'bloc-other-chambre-add' }
+  ];
+  
+  platformsAdd.forEach(({ link, blocId }) => {
+    const bloc = document.getElementById(blocId);
+    if (bloc) {
+      bloc.style.display = (link && link.trim() !== '') ? 'flex' : 'none';
+    }
+  });
+  
+  // Blocs modale edit saison
+  const platformsEdit = [
+    { link: links.airbnb, blocId: 'bloc-airbnb-chambre-edit' },
+    { link: links.booking, blocId: 'bloc-booking-chambre-edit' },
+    { link: links.other, blocId: 'bloc-other-chambre-edit' }
+  ];
+  
+  platformsEdit.forEach(({ link, blocId }) => {
+    const bloc = document.getElementById(blocId);
+    if (bloc) {
+      bloc.style.display = (link && link.trim() !== '') ? 'flex' : 'none';
+    }
+  });
+}
   
 collectRoomPricingData() {
   // Construire l'objet pricing complet
@@ -2420,6 +2595,25 @@ collectRoomPricingData() {
   
   // Réductions
   pricingData.discounts = JSON.parse(JSON.stringify(this.roomPricingData.discounts || []));
+  
+  // Prix plateformes par défaut
+  const platformPrices = {};
+  let hasPlatformPrices = false;
+  
+  ['airbnb', 'booking', 'other'].forEach(platform => {
+    const input = document.getElementById(`default-${platform}-price-input-chambre`);
+    if (input) {
+      const value = parseInt(this.getRawValue(input)) || 0;
+      if (value > 0) {
+        platformPrices[platform] = value;
+        hasPlatformPrices = true;
+      }
+    }
+  });
+  
+  if (hasPlatformPrices) {
+    pricingData.defaultPricing.platformPrices = platformPrices;
+  }
   
   return pricingData;
 }
@@ -2700,6 +2894,9 @@ cancelRoomModifications() {
   this.prefillRoomWeekend();
   this.displayRoomDiscounts();
   this.formatRoomPricingFields();
+  
+  // Restaurer la visibilité des blocs plateformes
+  this.updateRoomPlatformBlocksVisibility();
   
   // Restaurer saisons
   this.hideAllRoomSeasonBlocks();
@@ -6686,6 +6883,17 @@ setBlockState(element, isActive) {
     // Pour réafficher les blocs correctement
     this.displayIcals();
     this.prefillAddress();
+    
+    // Restaurer les liens plateformes si chambre d'hôtes
+    const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+    if (isChambreHote) {
+      ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+          input.value = this.initialValues[`lien_${id}`] || '';
+        }
+      });
+    }
 
     this.propertyData.extras = this.initialValues.extras || '';
     this.parseAndDisplayExtras();
@@ -6917,6 +7125,25 @@ setBlockState(element, isActive) {
   }
   
   currentValues.address = adresseComplete;
+
+  // Liens plateformes pour logement parent chambre d'hôtes
+  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+  
+  if (isChambreHote) {
+    const lienAirbnb = document.getElementById('lien-airbnb-input')?.value.trim() || '';
+    const lienBooking = document.getElementById('lien-booking-input')?.value.trim() || '';
+    const lienAutre = document.getElementById('lien-autre-input')?.value.trim() || '';
+    
+    if (lienAirbnb !== (this.initialValues['lien_lien-airbnb-input'] || '')) {
+      updates.annonce_airbnb = lienAirbnb;
+    }
+    if (lienBooking !== (this.initialValues['lien_lien-booking-input'] || '')) {
+      updates.annonce_booking = lienBooking;
+    }
+    if (lienAutre !== (this.initialValues['lien_lien-autre-input'] || '')) {
+      updates.annonce_gites = lienAutre;
+    }
+  }
     
   // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
   const cautionInput = document.getElementById('caution-input');
@@ -7130,6 +7357,20 @@ setBlockState(element, isActive) {
           this.initialValues[fieldName] = currentValue;
         }
       });
+
+      // Mettre à jour les liens plateformes chambre d'hôtes
+      if (isChambreHote) {
+        ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+          const input = document.getElementById(id);
+          if (input) {
+            this.initialValues[`lien_${id}`] = input.value.trim();
+          }
+        });
+        // Mettre à jour propertyData
+        if (updates.annonce_airbnb !== undefined) this.propertyData.annonce_airbnb = updates.annonce_airbnb;
+        if (updates.annonce_booking !== undefined) this.propertyData.annonce_booking = updates.annonce_booking;
+        if (updates.annonce_gites !== undefined) this.propertyData.annonce_gites = updates.annonce_gites;
+      }
       
       // 🆕 AJOUTER : Mettre à jour les données pricing d'origine
       if (updates.pricing_data) {
