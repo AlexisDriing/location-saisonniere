@@ -1,4 +1,4 @@
-// LOG production V1.49
+// LOG production V1.50
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -537,6 +537,9 @@ class ValidationManager {
       
       // Parcourir tous les champs de la tab
       for (const [fieldId, fieldConfig] of Object.entries(tabConfig.fields)) {
+        // Ignorer le champ voyageurs pour les logements parent chambre d'hôtes
+        if (isChambreHote && fieldId === 'voyageurs-input') continue;
+        
         const error = this.validateField(fieldId, fieldConfig);
         
         if (error) {
