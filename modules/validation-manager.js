@@ -1,4 +1,4 @@
-// LOG production V1.47
+// LOG production V1.48
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -670,7 +670,26 @@ validateRoomFields() {
         this.hideTabError(tabConfig.tabIndicatorId);
       }
     }
+
+    // Validation prix plateformes par défaut
+    const radioVoyageurCheck = document.getElementById('radio-prix-voyageur-chambre');
+    let roomDirectPrice = 0;
     
+    if (radioVoyageurCheck && radioVoyageurCheck.checked) {
+      const guestPrices = this.editor.collectPricesPerGuest();
+      roomDirectPrice = guestPrices.length > 0 ? guestPrices[guestPrices.length - 1] : 0;
+    } else {
+      const fixePriceInput = document.getElementById('default-price-input-chambre');
+      roomDirectPrice = fixePriceInput ? parseInt(this.editor.getRawValue(fixePriceInput)) || 0 : 0;
+    }
+    
+    if (roomDirectPrice > 0) {
+      if (!this.validateRoomDefaultPlatformPrices(roomDirectPrice)) {
+        isValid = false;
+        this.showTabError('error-indicator-tab3-chambre');
+      }
+    }
+  
     // Validation des tarifs chambre
     const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
     const mode = (radioVoyageur && radioVoyageur.checked) ? 'per_guest' : 'fixed';
@@ -926,6 +945,31 @@ validateRoomFields() {
           hasError = true;
         } else {
           this.hideFieldError(`season-${platform}-price-input${suffix}`);
+        }
+      }
+    });
+    
+    return !hasError;
+  }
+
+  // Validation prix plateformes par défaut chambre
+  validateRoomDefaultPlatformPrices(directPrice) {
+    const minPlatformPrice = directPrice * 1.10;
+    let hasError = false;
+    
+    ['airbnb', 'booking', 'other'].forEach(platform => {
+      const input = document.getElementById(`default-${platform}-price-input-chambre`);
+      if (input) {
+        const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
+        
+        if (platformPrice > 0 && platformPrice < minPlatformPrice) {
+          this.showFieldError(
+            `default-${platform}-price-input-chambre`,
+            `Le prix doit être au moins ${Math.ceil(minPlatformPrice)}€ (10% de plus que le prix direct)`
+          );
+          hasError = true;
+        } else {
+          this.hideFieldError(`default-${platform}-price-input-chambre`);
         }
       }
     });
