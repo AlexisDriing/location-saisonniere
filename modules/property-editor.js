@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.056
+// LOG production V1.5 - chambres d'hôtes v1.057
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -7124,25 +7124,6 @@ setBlockState(element, isActive) {
   }
   
   currentValues.address = adresseComplete;
-
-  // Liens plateformes pour logement parent chambre d'hôtes
-  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
-  
-  if (isChambreHote) {
-    const lienAirbnb = document.getElementById('lien-airbnb-input')?.value.trim() || '';
-    const lienBooking = document.getElementById('lien-booking-input')?.value.trim() || '';
-    const lienAutre = document.getElementById('lien-autre-input')?.value.trim() || '';
-    
-    if (lienAirbnb !== (this.initialValues['lien_lien-airbnb-input'] || '')) {
-      updates.annonce_airbnb = lienAirbnb;
-    }
-    if (lienBooking !== (this.initialValues['lien_lien-booking-input'] || '')) {
-      updates.annonce_booking = lienBooking;
-    }
-    if (lienAutre !== (this.initialValues['lien_lien-autre-input'] || '')) {
-      updates.annonce_gites = lienAutre;
-    }
-  }
     
   // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
   const cautionInput = document.getElementById('caution-input');
@@ -7189,6 +7170,25 @@ setBlockState(element, isActive) {
   }
     
   const updates = {};
+
+  // Liens plateformes pour logement parent chambre d'hôtes
+  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+  
+  if (isChambreHote) {
+    const lienAirbnb = document.getElementById('lien-airbnb-input')?.value.trim() || '';
+    const lienBooking = document.getElementById('lien-booking-input')?.value.trim() || '';
+    const lienAutre = document.getElementById('lien-autre-input')?.value.trim() || '';
+    
+    if (lienAirbnb !== (this.initialValues['lien_lien-airbnb-input'] || '')) {
+      updates.annonce_airbnb = lienAirbnb;
+    }
+    if (lienBooking !== (this.initialValues['lien_lien-booking-input'] || '')) {
+      updates.annonce_booking = lienBooking;
+    }
+    if (lienAutre !== (this.initialValues['lien_lien-autre-input'] || '')) {
+      updates.annonce_gites = lienAutre;
+    }
+  }
   // Comparer avec les valeurs initiales
   Object.keys(currentValues).forEach(key => {
     if (key === 'equipements_principaux' || key === 'options_accueil' || key === 'mode_paiement') {
