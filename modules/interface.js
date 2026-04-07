@@ -1,4 +1,4 @@
-// LOG production V1.2
+// LOG production V1.21
 // Page google
 class InterfaceManager {
   constructor() {
@@ -445,23 +445,204 @@ setupConditionsAnnulation() {
 
   // Gestion de l'affichage conditionnel pour Chambre d'hôtes
   setupChambreHoteDisplay() {
-    // Récupérer le type de logement
     const typeElement = document.querySelector('[data-mode-location]');
     
     if (typeElement) {
       const typeLogement = typeElement.getAttribute('data-mode-location');
       
-      // Afficher/masquer l'élément chambre d'hôtes
+      // Afficher/masquer le tag chambre d'hôtes
       const chambreHoteElement = document.querySelector('.chambres-hote');
       if (chambreHoteElement) {
         if (typeLogement === "Chambre d'hôtes") {
-          chambreHoteElement.style.display = 'inline-flex'; // ou 'flex' selon votre CSS
+          chambreHoteElement.style.display = 'inline-flex';
         } else {
           chambreHoteElement.style.display = 'none';
         }
       }
+
+      // Si chambre d'hôtes, charger et afficher les chambres
+      if (typeLogement === "Chambre d'hôtes") {
+        this.loadAndDisplayRooms();
+      }
     }
   }
+
+  async loadAndDisplayRooms() {
+    // Récupérer le slug depuis l'URL (même méthode que reservation-data.js)
+    const slug = window.location.pathname.split("/").pop();
+    if (!slug) return;
+
+    try {
+      const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${slug}`);
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      const rooms = data.rooms || [];
+      
+      if (rooms.length === 0) return;
+
+      this.displayRoomsOnDetail(rooms);
+    } catch (error) {
+      console.error('❌ Erreur chargement chambres:', error);
+    }
+  }
+
+
+  displayRoomsOnDetail(rooms) {
+    const bloc = document.getElementById('bloc-chambres-hotes');
+    if (!bloc) return;
+
+    // Masquer tous les blocs de chambres par défaut (1 à 5)
+    for (let i = 1; i <= 5; i++) {
+      const chambreBloc = document.getElementById(`chambre-hote-${i}`);
+      if (chambreBloc) chambreBloc.style.display = 'none';
+    }
+
+    // Remplir et afficher les blocs correspondant aux chambres existantes
+    rooms.forEach((room, index) => {
+      const chambreBloc = document.getElementById(`chambre-hote-${index + 1}`);
+      if (!chambreBloc) return;
+
+      chambreBloc.style.display = 'flex';
+
+      // 1. Image (première photo)
+      const imageEl = document.getElementById(`image-chambre-${index + 1}`);
+      if (imageEl) {
+        const photos = room.photos || [];
+        if (photos.length > 0) {
+          const photoUrl = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+          if (photoUrl) {
+            if (imageEl.tagName === 'IMG') {
+              imageEl.src = photoUrl;
+            } else {
+              imageEl.style.backgroundImage = `url(${photoUrl})`;
+              imageEl.style.backgroundSize = 'cover';
+              imageEl.style.backgroundPosition = 'center';
+            }
+          }
+        }
+      }
+
+      // 2. Voyageurs
+      const voyageursEl = document.getElementById(`voyageurs-chambre-${index + 1}`);
+      if (voyageursEl) {
+        const match = (room.taille_chambre || '').match(/^(\d+)/);
+        const voyageurs = match ? parseInt(match[1]) : 0;
+        voyageursEl.textContent = `${voyageurs} voyageur${voyageurs > 1 ? 's' : ''}`;
+      }
+
+      // 3. Nom
+      const nomEl = document.getElementById(`nom-chambre-${index + 1}`);
+      if (nomEl) {
+        nomEl.textContent = room.name || 'Chambre';
+      }
+
+      // 4. Taille m²
+      const tailleEl = document.getElementById(`taille-chambre-${index + 1}`);
+      if (tailleEl) {
+        const tailleMatch = (room.taille_chambre || '').match(/(\d+)\s*m²/);
+        const m2 = tailleMatch ? tailleMatch[1] : '0';
+        tailleEl.textContent = `${m2} m²`;
+      }
+
+      // 5. Types de lits
+      const litsEl = document.getElementById(`lits-chambre-${index + 1}`);
+      if (litsEl) {
+        const detailsLits = room.details_lits || '';
+        if (detailsLits) {
+          const groups = detailsLits.split(',').map(part => part.trim()).filter(Boolean);
+          const expandedTypes = [];
+          groups.forEach(group => {
+            const groupMatch = group.match(/^(\d+)\s+(.+)$/);
+            if (groupMatch) {
+              const count = parseInt(groupMatch[1]);
+              const type = groupMatch[2].trim();
+              for (let i = 0; i < count; i++) {
+                expandedTypes.push(type);
+              }
+            } else {
+              expandedTypes.push(group);
+            }
+          });
+          litsEl.textContent = expandedTypes.join(', ');
+        } else {
+          litsEl.textContent = '';
+        }
+      }
+
+      // 6. Prix avec pourcentage et prix barré
+      const prixEl = document.getElementById(`prix-chambre-${index + 1}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${index + 1}`);
+      
+      if (prixEl && room.pricing_data) {
+        const pricingData = room.pricing_data;
+        const defaultPricing = pricingData.defaultPricing;
+        
+        if (defaultPricing) {
+          let displayPrice = 0;
+
+          if (defaultPricing.mode === 'per_guest') {
+            const prices = defaultPricing.pricesPerGuest || [];
+            displayPrice = prices.length > 0 ? prices[prices.length - 1] : (defaultPricing.price || 0);
+          } else {
+            displayPrice = defaultPricing.price || 0;
+          }
+
+          // Calculer le prix plateforme (même logique que gestion-proprietes.js)
+          let platformPrice = displayPrice;
+          let hasDiscount = false;
+
+          if (defaultPricing.platformPrices) {
+            const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
+            if (prices.length > 0) {
+              platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+              hasDiscount = true;
+            }
+          }
+
+          if (!hasDiscount) {
+            const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
+              ? pricingData.platformPricing.defaultDiscount 
+              : 17;
+            platformPrice = Math.round(displayPrice * (100 / (100 - defaultDiscount)));
+            hasDiscount = true;
+          }
+
+          // Affichage prix barré
+          prixEl.textContent = '';
+          
+          if (hasDiscount && platformPrice > displayPrice) {
+            const del = document.createElement('del');
+            del.textContent = `${Math.round(platformPrice)}€`;
+            prixEl.appendChild(del);
+            prixEl.appendChild(document.createTextNode(' '));
+
+            const strong = document.createElement('strong');
+            strong.textContent = `${Math.round(displayPrice)}€ / nuit`;
+            prixEl.appendChild(strong);
+
+            if (pourcentageEl) {
+              const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
+              pourcentageEl.textContent = `-${discount}%`;
+              pourcentageEl.style.display = 'block';
+            }
+          } else {
+            const strong = document.createElement('strong');
+            strong.textContent = `${Math.round(displayPrice)}€ / nuit`;
+            prixEl.appendChild(strong);
+
+            if (pourcentageEl) {
+              pourcentageEl.style.display = 'none';
+            }
+          }
+        }
+      }
+    });
+
+    // Afficher le bloc parent
+    bloc.style.display = 'block';
+  }
+
   
   // Gestion des horaires d'arrivée et de départ
   setupHoraires() {
