@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.058
+// LOG production V1.5 - chambres d'hôtes v1.059
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -182,7 +182,7 @@ class PropertyEditor {
   }
 }
 
-setupParentChambreHoteDisplay() {
+async setupParentChambreHoteDisplay() {
   // 1. Masquer la tab 3 (tarification)
   const tabTarification = document.getElementById('tab-tarification');
   if (tabTarification) tabTarification.style.display = 'none';
