@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.040 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.040 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
