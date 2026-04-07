@@ -1,4 +1,4 @@
-// LOG production V1.23
+// LOG production V1.24
 // Page google
 class InterfaceManager {
   constructor() {
@@ -608,30 +608,36 @@ setupConditionsAnnulation() {
             hasDiscount = true;
           }
 
-          // Affichage — même rendu que setPriceWithStrike sur la page liste
+          // Affichage
           prixEl.textContent = '';
+          prixEl.style.setProperty('display', 'flex', 'important');
+          prixEl.style.setProperty('flex-direction', 'row', 'important');
+          prixEl.style.setProperty('align-items', 'baseline', 'important');
+          prixEl.style.setProperty('gap', '4px', 'important');
 
           if (hasDiscount && platformPrice > displayPrice) {
-
             // Prix barré
             const del = document.createElement('del');
             del.textContent = `${Math.round(platformPrice)}€`;
             del.style.setProperty('text-decoration', 'line-through', 'important');
             del.style.setProperty('color', '#778183', 'important');
             del.style.setProperty('font-size', '14px', 'important');
-            del.style.setProperty('margin', '2px', 'important');
             del.style.setProperty('font-weight', 'normal', 'important');
             prixEl.appendChild(del);
 
-            prixEl.appendChild(document.createTextNode(' '));
-
-            // Prix chez nous
+            // Prix chez nous (bold)
             const strong = document.createElement('strong');
             strong.textContent = `${Math.round(displayPrice)}€`;
             strong.style.setProperty('font-weight', '600', 'important');
+            strong.style.setProperty('font-size', '16px', 'important');
             prixEl.appendChild(strong);
 
-            prixEl.appendChild(document.createTextNode(' / nuit'));
+            // / nuit (regular)
+            const suffix = document.createElement('span');
+            suffix.textContent = '/ nuit';
+            suffix.style.setProperty('font-weight', '400', 'important');
+            suffix.style.setProperty('font-size', '16px', 'important');
+            prixEl.appendChild(suffix);
 
             // Pourcentage
             if (pourcentageEl) {
@@ -640,11 +646,19 @@ setupConditionsAnnulation() {
               pourcentageEl.style.display = 'block';
             }
           } else {
+            // Prix (bold)
             const strong = document.createElement('strong');
             strong.textContent = `${Math.round(displayPrice)}€`;
             strong.style.setProperty('font-weight', '600', 'important');
+            strong.style.setProperty('font-size', '16px', 'important');
             prixEl.appendChild(strong);
-            prixEl.appendChild(document.createTextNode(' / nuit'));
+
+            // / nuit (regular)
+            const suffix = document.createElement('span');
+            suffix.textContent = '/ nuit';
+            suffix.style.setProperty('font-weight', '400', 'important');
+            suffix.style.setProperty('font-size', '16px', 'important');
+            prixEl.appendChild(suffix);
 
             if (pourcentageEl) {
               pourcentageEl.style.display = 'none';
