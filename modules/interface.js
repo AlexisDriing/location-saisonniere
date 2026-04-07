@@ -1,4 +1,4 @@
-// LOG production V1.30
+// LOG production V1.31
 // Page google
 class InterfaceManager {
   constructor() {
@@ -885,6 +885,12 @@ setupConditionsAnnulation() {
       window.priceCalculator.pricingData = room.pricing_data;
       window.priceCalculator.resetPrices();
     }
+
+    // Masquer les messages d'erreur
+    document.querySelectorAll('.bloc-error-days').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+
 
     // 3. Calendrier : switcher sur les dates de cette chambre
     const calendarManager = window.detailLogementPage?.managers?.calendar;
