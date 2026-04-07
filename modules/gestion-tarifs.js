@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison - LOG production V1.1
+// Gestion de l'affichage des tarifs par saison - LOG production V1.2
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -127,18 +127,27 @@ class TariffsDisplayManager {
     }
   }
 
-  displaySeasonsPricing() {
-    const dataElement = document.querySelector("[data-json-tarifs-line]") || 
-                       document.querySelector("[data-json-tarifs]");
+    displaySeasonsPricing(externalPricingData = null) {
+    let pricingData = externalPricingData;
     
-    if (!dataElement) return;
+    if (!pricingData) {
+      const dataElement = document.querySelector("[data-json-tarifs-line]") || 
+                         document.querySelector("[data-json-tarifs]");
+      
+      if (!dataElement) return;
+      
+      try {
+        const attribute = dataElement.hasAttribute("data-json-tarifs-line") ? 
+                         "data-json-tarifs-line" : "data-json-tarifs";
+        const jsonData = dataElement.getAttribute(attribute);
+        pricingData = JSON.parse(jsonData);
+      } catch (error) {
+        console.error("Erreur lors du traitement des données tarifaires :", error);
+        return;
+      }
+    }
     
     try {
-      const attribute = dataElement.hasAttribute("data-json-tarifs-line") ? 
-                       "data-json-tarifs-line" : "data-json-tarifs";
-      const jsonData = dataElement.getAttribute(attribute);
-      const pricingData = JSON.parse(jsonData);
-      
       if (pricingData.seasons && pricingData.seasons.length > 0) {
         // Afficher chaque saison
         pricingData.seasons.forEach((season, index) => {
