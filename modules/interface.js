@@ -1,4 +1,4 @@
-// LOG production V1.22
+// LOG production V1.23
 // Page google
 class InterfaceManager {
   constructor() {
@@ -588,7 +588,7 @@ setupConditionsAnnulation() {
             displayPrice = defaultPricing.price || 0;
           }
 
-          // Calculer le prix plateforme (même logique que gestion-proprietes.js)
+          // Calculer le prix plateforme
           let platformPrice = displayPrice;
           let hasDiscount = false;
 
@@ -608,33 +608,43 @@ setupConditionsAnnulation() {
             hasDiscount = true;
           }
 
-          // Affichage prix barré
+          // Affichage — même rendu que setPriceWithStrike sur la page liste
           prixEl.textContent = '';
-          
-           if (hasDiscount && platformPrice > displayPrice) {
+
+          if (hasDiscount && platformPrice > displayPrice) {
+
+            // Prix barré
             const del = document.createElement('del');
-            del.style.cssText = 'text-decoration:line-through;color:#778183;font-size:14px;margin:2px';
             del.textContent = `${Math.round(platformPrice)}€`;
+            del.style.setProperty('text-decoration', 'line-through', 'important');
+            del.style.setProperty('color', '#778183', 'important');
+            del.style.setProperty('font-size', '14px', 'important');
+            del.style.setProperty('margin', '2px', 'important');
+            del.style.setProperty('font-weight', 'normal', 'important');
             prixEl.appendChild(del);
+
             prixEl.appendChild(document.createTextNode(' '));
 
+            // Prix chez nous
             const strong = document.createElement('strong');
-            strong.style.fontWeight = '600';
-            strong.textContent = `${Math.round(displayPrice)}€ / nuit`;
+            strong.textContent = `${Math.round(displayPrice)}€`;
+            strong.style.setProperty('font-weight', '600', 'important');
             prixEl.appendChild(strong);
 
+            prixEl.appendChild(document.createTextNode(' / nuit'));
 
+            // Pourcentage
             if (pourcentageEl) {
               const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
               pourcentageEl.textContent = `-${discount}%`;
               pourcentageEl.style.display = 'block';
             }
-            } else {
+          } else {
             const strong = document.createElement('strong');
-            strong.style.fontWeight = '600';
-            strong.textContent = `${Math.round(displayPrice)}€ / nuit`;
+            strong.textContent = `${Math.round(displayPrice)}€`;
+            strong.style.setProperty('font-weight', '600', 'important');
             prixEl.appendChild(strong);
-
+            prixEl.appendChild(document.createTextNode(' / nuit'));
 
             if (pourcentageEl) {
               pourcentageEl.style.display = 'none';
@@ -642,6 +652,7 @@ setupConditionsAnnulation() {
           }
         }
       }
+
     });
 
     // Afficher le bloc parent
