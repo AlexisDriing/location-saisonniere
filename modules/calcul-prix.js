@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.112
+// Calculateur de prix principal - LOG production V1.113
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -168,20 +168,23 @@ class PriceCalculator {
       let platformPrice = 0;
       let bestSeason = null;
       
-      // Commencer par vérifier le prix par défaut
+            // Commencer par vérifier le prix par défaut
       if (this.pricingData && this.pricingData.defaultPricing) {
-        minPrice = this.pricingData.defaultPricing.price;
+        const perGuestPrice = this.getPerGuestPrice(this.pricingData.defaultPricing);
+        minPrice = perGuestPrice || this.pricingData.defaultPricing.price;
         bestSeason = this.pricingData.defaultPricing;
-        platformPrice = this.getPlatformPrice(bestSeason);
+        platformPrice = this.getPlatformPrice(bestSeason, perGuestPrice || null);
       }
       
       // Puis vérifier les saisons pour un prix potentiellement plus bas
       if (this.pricingData && this.pricingData.seasons) {
         for (const season of this.pricingData.seasons) {
-          if (season.price < minPrice) {
-            minPrice = season.price;
+          const seasonPerGuestPrice = this.getPerGuestPrice(season);
+          const seasonPrice = seasonPerGuestPrice || season.price;
+          if (seasonPrice < minPrice) {
+            minPrice = seasonPrice;
             bestSeason = season;
-            platformPrice = this.getPlatformPrice(season);
+            platformPrice = this.getPlatformPrice(season, seasonPerGuestPrice || null);
           }
         }
       }
@@ -278,16 +281,17 @@ class PriceCalculator {
       let currentDate = moment(this.startDate).startOf("day");
       const endDate = moment(this.endDate).startOf("day");
       
-      while (currentDate.isBefore(endDate)) {
+           while (currentDate.isBefore(endDate)) {
         const season = this.getSeason(currentDate);
         if (!season) {
           currentDate.add(1, "day");
           continue;
         }
         
-        // NOUVEAU : Déterminer le prix de la nuit (week-end ou normal)
-        let nightPrice = season.price;
-        const dayOfWeek = currentDate.day(); // 0=dimanche, 5=vendredi, 6=samedi
+        // Déterminer le prix de la nuit
+        const perGuestPrice = this.getPerGuestPrice(season);
+        let nightPrice = perGuestPrice || season.price;
+        const dayOfWeek = currentDate.day();
         
         if (season === this.pricingData.defaultPricing && 
             this.pricingData.defaultPricing.weekend?.enabled &&
@@ -296,16 +300,17 @@ class PriceCalculator {
           nightPrice = this.pricingData.defaultPricing.weekend.price;
         }
         
-        // Ne passer overridePrice QUE si c'est un prix week-end (différent du prix normal de la saison)
-        const isWeekendPrice = nightPrice !== season.price;
+        // Passer en override si le prix est différent du prix de base de la saison
+        const overridePrice = nightPrice !== season.price ? nightPrice : null;
         
         const nightInfo = {
           date: currentDate.format("YYYY-MM-DD"),
           formattedDate: currentDate.format("DD/MM/YYYY"),
           season: season.name,
           price: nightPrice,
-          platformPrice: this.getPlatformPrice(season, isWeekendPrice ? nightPrice : null)
+          platformPrice: this.getPlatformPrice(season, overridePrice)
         };
+
         
         details.nightsBreakdown.push(nightInfo);
         details.nightsPrice += nightPrice;
@@ -315,11 +320,13 @@ class PriceCalculator {
       
       details.originalNightsPrice = details.nightsPrice;
 
-      // 🆕 NOUVEAU : Supplément voyageurs
+      // Supplément voyageurs (pas en mode per_guest, le prix inclut déjà les voyageurs)
       details.extraGuestsFee = 0;
       details.extraGuestsCount = 0;
+      if (this.pricingData.defaultPricing?.mode !== 'per_guest') {
       const extraGuests = this.pricingData.extraGuests;
       if (extraGuests && extraGuests.enabled && extraGuests.threshold > 0 && extraGuests.pricePerPerson > 0) {
+
         const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
         const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
         const totalGuests = adultsCount + childrenCount;
@@ -335,6 +342,7 @@ class PriceCalculator {
           // Ajouter aussi au prix plateforme
           details.platformPrice += details.extraGuestsFee;
         }
+      }
       }
       
       // Appliquer les réductions de séjour
@@ -473,6 +481,24 @@ class PriceCalculator {
     return basePrice * (100 / (100 - defaultDiscount));
   }
 
+    getPerGuestPrice(season = null) {
+    if (this.pricingData?.defaultPricing?.mode !== 'per_guest') return null;
+    
+    const source = (season && season.pricesPerGuest?.length > 0) 
+      ? season 
+      : this.pricingData.defaultPricing;
+    const prices = source.pricesPerGuest;
+    
+    if (!prices || prices.length === 0) return null;
+    
+    const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
+    const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+    const totalGuests = Math.max(1, adultsCount + childrenCount);
+    const index = Math.min(totalGuests - 1, prices.length - 1);
+    return prices[Math.max(0, index)];
+  }
+
+  
   updateUI(details) {
     // Afficher les blocs de calcul
     const blocPrix = document.getElementById("bloc-calcul-prix");
