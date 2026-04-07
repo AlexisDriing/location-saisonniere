@@ -1,4 +1,4 @@
-// LOG production V1.21
+// LOG production V1.22
 // Page google
 class InterfaceManager {
   constructor() {
@@ -611,25 +611,30 @@ setupConditionsAnnulation() {
           // Affichage prix barré
           prixEl.textContent = '';
           
-          if (hasDiscount && platformPrice > displayPrice) {
+           if (hasDiscount && platformPrice > displayPrice) {
             const del = document.createElement('del');
+            del.style.cssText = 'text-decoration:line-through;color:#778183;font-size:14px;margin:2px';
             del.textContent = `${Math.round(platformPrice)}€`;
             prixEl.appendChild(del);
             prixEl.appendChild(document.createTextNode(' '));
 
             const strong = document.createElement('strong');
+            strong.style.fontWeight = '600';
             strong.textContent = `${Math.round(displayPrice)}€ / nuit`;
             prixEl.appendChild(strong);
+
 
             if (pourcentageEl) {
               const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
               pourcentageEl.textContent = `-${discount}%`;
               pourcentageEl.style.display = 'block';
             }
-          } else {
+            } else {
             const strong = document.createElement('strong');
+            strong.style.fontWeight = '600';
             strong.textContent = `${Math.round(displayPrice)}€ / nuit`;
             prixEl.appendChild(strong);
+
 
             if (pourcentageEl) {
               pourcentageEl.style.display = 'none';
