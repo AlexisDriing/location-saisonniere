@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.111
+// Calculateur de prix principal - LOG production V1.112
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -96,8 +96,9 @@ class PriceCalculator {
   }
 
   getReserverButtons() {
-    return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
+    return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
   }
+
 
   resetPrices() {
     this.startDate = null;
