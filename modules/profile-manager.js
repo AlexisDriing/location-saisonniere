@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.039 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.040 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -746,7 +746,7 @@ setupAddRoomSubmit() {
       
       const result = await response.json();
       
-            if (response.ok && result.success) {
+      if (response.ok && result.success) {
         // Basculer le statut si parent complet et statut pending-none
         if (property.parent_fields_complete === true && property.verification_status === 'pending-none') {
           try {
@@ -760,10 +760,10 @@ setupAddRoomSubmit() {
           }
         }
         
-        this.closeAddRoomModal();
-        
-        await this.reload();
+        // Rediriger vers la page modification de la chambre
+        window.location.href = `/mon-espace/modification-logement?id=${property.webflow_item_id}&room=${result.roomId}`;
       } else {
+
 
         alert(result.error || 'Erreur lors de la création');
       }
@@ -1002,8 +1002,10 @@ checkPopupTrigger() {
       });
       
       if (response.ok) {
-      window.location.href = window.location.pathname;
+        const data = await response.json();
+        window.location.href = `/mon-espace/modification-logement?id=${data.itemId}`;
       }
+
       
     } catch (error) {
       console.error('Erreur:', error);
