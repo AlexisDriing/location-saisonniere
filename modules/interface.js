@@ -1,4 +1,4 @@
-// LOG production V1.26
+// LOG production V1.27
 // Page google
 class InterfaceManager {
   constructor() {
@@ -589,6 +589,111 @@ setupConditionsAnnulation() {
     bloc.style.display = 'block';
   }
 
+    setupCarousel(photos) {
+    const container = document.getElementById('carousel-chambre');
+    const imageEl = document.getElementById('modal-chambre-image');
+    const prevBtn = document.getElementById('carousel-prev');
+    const nextBtn = document.getElementById('carousel-next');
+    const dotsContainer = document.getElementById('carousel-dots');
+
+    if (!container || !imageEl || !photos || photos.length === 0) return;
+
+    // Extraire les URLs
+    const urls = photos
+      .map(p => typeof p === 'object' ? p.url : p)
+      .filter(url => url && url.trim() !== '');
+
+    if (urls.length === 0) return;
+
+    let currentIndex = 0;
+
+    // Positionner le conteneur
+    container.style.position = 'relative';
+    container.style.overflow = 'hidden';
+
+    // Fonction pour afficher une image
+    const showImage = (index) => {
+      currentIndex = index;
+      if (imageEl.tagName === 'IMG') {
+        imageEl.src = urls[currentIndex];
+      } else {
+        imageEl.style.backgroundImage = `url(${urls[currentIndex]})`;
+        imageEl.style.backgroundSize = 'cover';
+        imageEl.style.backgroundPosition = 'center';
+      }
+      // Mettre à jour les dots
+      if (dotsContainer) {
+        Array.from(dotsContainer.children).forEach((dot, i) => {
+          dot.style.opacity = i === currentIndex ? '1' : '0.6';
+        });
+      }
+    };
+
+    // Positionner et configurer les flèches
+        const styleArrow = (btn, side) => {
+      if (!btn) return;
+      btn.style.setProperty('position', 'absolute', 'important');
+      btn.style.setProperty('top', '50%', 'important');
+      btn.style.setProperty(side, '8px', 'important');
+      btn.style.setProperty('transform', 'translateY(-50%)', 'important');
+      btn.style.setProperty('z-index', '2', 'important');
+      btn.style.setProperty('cursor', 'pointer', 'important');
+      btn.style.display = urls.length > 1 ? 'flex' : 'none';
+    };
+
+
+    styleArrow(prevBtn, 'left');
+    styleArrow(nextBtn, 'right');
+
+    if (prevBtn) {
+      const newPrev = prevBtn.cloneNode(true);
+      prevBtn.parentNode.replaceChild(newPrev, prevBtn);
+      styleArrow(newPrev, 'left');
+      newPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showImage(currentIndex === 0 ? urls.length - 1 : currentIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      const newNext = nextBtn.cloneNode(true);
+      nextBtn.parentNode.replaceChild(newNext, nextBtn);
+      styleArrow(newNext, 'right');
+      newNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showImage(currentIndex === urls.length - 1 ? 0 : currentIndex + 1);
+      });
+    }
+
+    // Générer les dots
+    dotsContainer.style.cssText = `
+        position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+        display:${urls.length > 1 ? 'flex' : 'none'};
+        gap:6px;z-index:2;
+      `;
+
+      urls.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+          width:10px;height:10px;border-radius:50%;
+          background:#fff;cursor:pointer;
+          opacity:${i === 0 ? '1' : '0.6'};
+          transition:opacity 0.2s;
+        `;
+
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showImage(i);
+        });
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    // Afficher la première image
+    showImage(0);
+  }
+
+  
     // Formater les détails de lits
   formatDetailsLits(detailsLits) {
     if (!detailsLits) return '';
@@ -687,21 +792,9 @@ setupConditionsAnnulation() {
     const modal = document.getElementById('modal-chambre-hote');
     if (!modal || !room) return;
 
-    // Image
-    const imageEl = document.getElementById('modal-chambre-image');
-    if (imageEl) {
-      const photos = room.photos || [];
-      if (photos.length > 0) {
-        const photoUrl = typeof photos[0] === 'object' ? photos[0].url : photos[0];
-        if (imageEl.tagName === 'IMG') {
-          imageEl.src = photoUrl;
-        } else {
-          imageEl.style.backgroundImage = `url(${photoUrl})`;
-          imageEl.style.backgroundSize = 'cover';
-          imageEl.style.backgroundPosition = 'center';
-        }
-      }
-    }
+        // Carrousel images
+    this.setupCarousel(room.photos || []);
+
 
     // Voyageurs
     const voyageursEl = document.getElementById('modal-chambre-voyageurs');
