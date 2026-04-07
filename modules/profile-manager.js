@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes v1.038 - LOG production
+// Gestionnaire de profil - chambres d'hôtes v1.039 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -453,16 +453,28 @@ displayChambreHoteElements(property, targetElement = document) {
     buttonEdit.style.display = hasRooms ? 'flex' : 'none';
   }
   
-  // 6. Bouton ajouter chambre
-  // Visible SEULEMENT sur pending-none ET si pas encore de chambres
+    // 6. Bouton ajouter chambre
+  // Visible sur pending-none si pas encore de chambres
   const buttonAdd = targetElement.querySelector('.bouton-image.add-chambres:not(.button-edit-chambres)');
   if (buttonAdd) {
     if (status === 'pending-none' && !hasRooms) {
       buttonAdd.style.display = 'flex';
+      
+      // Désactiver si les champs parent ne sont pas complets
+      if (property.parent_fields_complete !== true) {
+        buttonAdd.style.opacity = '0.5';
+        buttonAdd.style.cursor = 'not-allowed';
+        buttonAdd.style.pointerEvents = 'none';
+      } else {
+        buttonAdd.style.opacity = '';
+        buttonAdd.style.cursor = '';
+        buttonAdd.style.pointerEvents = '';
+      }
     } else {
       buttonAdd.style.display = 'none';
     }
   }
+
   
   // 7. Gérer les slots d'images des chambres
   if (hasRooms) {
@@ -518,9 +530,13 @@ setupRoomButtons(property, targetElement) {
   if (buttonAdd) {
     buttonAdd.addEventListener('click', (e) => {
       e.preventDefault();
+      if (property.parent_fields_complete !== true) {
+        return;
+      }
       this.openAddRoomModal(property);
     });
   }
+
   
   // Bouton gérer chambres
   const buttonEdit = targetElement.querySelector('.button-edit-chambres');
@@ -730,11 +746,25 @@ setupAddRoomSubmit() {
       
       const result = await response.json();
       
-      if (response.ok && result.success) {
+            if (response.ok && result.success) {
+        // Basculer le statut si parent complet et statut pending-none
+        if (property.parent_fields_complete === true && property.verification_status === 'pending-none') {
+          try {
+            await fetch(`${window.CONFIG.API_URL}/update-property/${property.webflow_item_id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verification_status: 'pending-verif' })
+            });
+          } catch (statusError) {
+            console.error('⚠️ Erreur basculement statut:', statusError);
+          }
+        }
+        
         this.closeAddRoomModal();
         
         await this.reload();
       } else {
+
         alert(result.error || 'Erreur lors de la création');
       }
     } catch (error) {
