@@ -1,4 +1,4 @@
-// LOG production V1.27
+// LOG production V1.28
 // Page google
 class InterfaceManager {
   constructor() {
@@ -665,8 +665,10 @@ setupConditionsAnnulation() {
       });
     }
 
-    // Générer les dots
-    dotsContainer.style.cssText = `
+        // Générer les dots
+    if (dotsContainer) {
+      dotsContainer.innerHTML = '';
+      dotsContainer.style.cssText = `
         position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
         display:${urls.length > 1 ? 'flex' : 'none'};
         gap:6px;z-index:2;
@@ -680,7 +682,6 @@ setupConditionsAnnulation() {
           opacity:${i === 0 ? '1' : '0.6'};
           transition:opacity 0.2s;
         `;
-
         dot.addEventListener('click', (e) => {
           e.stopPropagation();
           showImage(i);
@@ -692,6 +693,7 @@ setupConditionsAnnulation() {
     // Afficher la première image
     showImage(0);
   }
+
 
   
     // Formater les détails de lits
