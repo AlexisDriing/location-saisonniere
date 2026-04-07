@@ -1,4 +1,4 @@
-// LOG production V1.28
+// LOG production V1.29
 // Page google
 class InterfaceManager {
   constructor() {
@@ -467,8 +467,7 @@ setupConditionsAnnulation() {
     }
   }
 
-  async loadAndDisplayRooms() {
-    // Récupérer le slug depuis l'URL (même méthode que reservation-data.js)
+    async loadAndDisplayRooms() {
     const slug = window.location.pathname.split("/").pop();
     if (!slug) return;
 
@@ -482,10 +481,15 @@ setupConditionsAnnulation() {
       if (rooms.length === 0) return;
 
       this.displayRoomsOnDetail(rooms);
+
+      // Précharger les calendriers et initialiser l'état B&B
+      await this.preloadRoomsCalendarData(rooms);
+      this.initBnbDefaultState(rooms);
     } catch (error) {
       console.error('❌ Erreur chargement chambres:', error);
     }
   }
+
 
 
     displayRoomsOnDetail(rooms) {
@@ -574,13 +578,32 @@ setupConditionsAnnulation() {
         this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
       }
 
-      // 7. Clic → ouvrir la modale
+            // 7. Clic → ouvrir la modale
       chambreBloc.style.cursor = 'pointer';
       const currentSlot = slotIndex;
       chambreBloc.addEventListener('click', () => {
         this.openRoomModal(this._roomsData[currentSlot]);
       });
+
+      // 8. Boutons sélection
+      const selectBtn = document.getElementById(`button-select-${slotIndex}`);
+      const selectedBtn = document.getElementById(`button-selected-${slotIndex}`);
+
+      if (selectBtn) {
+        selectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectRoom(currentSlot);
+        });
+      }
+
+      if (selectedBtn) {
+        selectedBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deselectRoom();
+        });
+      }
     });
+
 
     // Configurer la fermeture de la modale
     this.setupRoomModalClose();
@@ -692,6 +715,256 @@ setupConditionsAnnulation() {
 
     // Afficher la première image
     showImage(0);
+  }
+
+    // Précharger les données iCal de toutes les chambres
+  async preloadRoomsCalendarData(rooms) {
+    // Attendre que le CalendarManager soit prêt (picker initialisé)
+    let calendarManager = null;
+    for (let i = 0; i < 30; i++) {
+      calendarManager = window.detailLogementPage?.managers?.calendar;
+      if (calendarManager?.picker) break;
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    if (!calendarManager?.icalManager) return;
+
+    const icalManager = calendarManager.icalManager;
+    const today = moment().startOf('day');
+    const twoYears = moment().add(2, 'year').endOf('month');
+
+    // Collecter toutes les URLs iCal de toutes les chambres
+    const allUrls = [];
+    rooms.forEach(room => {
+      (room.ical_urls || []).forEach(url => {
+        if (url && url.trim() !== '') allUrls.push(url);
+      });
+    });
+
+    if (allUrls.length === 0) {
+      this._combinedUnavailableDates = new Set();
+      this._roomsUnavailableDates = {};
+      return;
+    }
+
+    // Charger tout (chaque URL est mise en cache par ICalManager)
+    await icalManager.loadAllUnavailableDates(allUrls);
+    this._combinedUnavailableDates = new Set(icalManager.unavailableDates);
+
+    // Construire les Sets par chambre
+    this._roomsUnavailableDates = {};
+    const roomsWithPhotos = rooms.filter(room => {
+      const photos = room.photos || [];
+      if (photos.length === 0) return false;
+      const firstPhoto = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+      return firstPhoto && firstPhoto.trim() !== '';
+    });
+
+    for (let i = 0; i < roomsWithPhotos.length; i++) {
+      const roomUrls = (roomsWithPhotos[i].ical_urls || []).filter(u => u && u.trim() !== '');
+      if (roomUrls.length > 0) {
+        const events = await Promise.all(
+          roomUrls.map(url => icalManager.getICalData(url, today, twoYears))
+        );
+        this._roomsUnavailableDates[i + 1] = new Set(events.flat().map(e => e.date));
+      } else {
+        this._roomsUnavailableDates[i + 1] = new Set();
+      }
+    }
+
+    // Mettre à jour le picker avec les dates combinées
+    if (calendarManager.picker) {
+      calendarManager.picker.updateCalendars();
+    }
+  }
+
+  // Initialiser l'état par défaut pour un logement chambre d'hôtes
+  initBnbDefaultState(rooms) {
+    this._bnbMode = true;
+    this._selectedRoomIndex = null;
+
+    // Trouver le prix le plus bas parmi toutes les chambres
+    let lowestPrice = Infinity;
+    let lowestPricingData = null;
+
+    rooms.forEach(room => {
+      if (!room.pricing_data?.defaultPricing) return;
+      const dp = room.pricing_data.defaultPricing;
+      let price = dp.price || Infinity;
+
+      // En mode per_guest, prendre le prix le plus bas (1 voyageur)
+      if (dp.mode === 'per_guest' && dp.pricesPerGuest?.length > 0) {
+        price = dp.pricesPerGuest[0];
+      }
+
+      if (price < lowestPrice) {
+        lowestPrice = price;
+        lowestPricingData = room.pricing_data;
+      }
+    });
+
+    // Afficher "À partir de" avec le prix le plus bas
+    if (isFinite(lowestPrice) && lowestPricingData) {
+      const prixDirectEls = Utils.getAllElementsById("prix-direct");
+      const pourcentageEls = Utils.getAllElementsById("text-pourcentage");
+
+      // Calculer le prix plateforme
+      let platformPrice = lowestPrice;
+      const dp = lowestPricingData.defaultPricing;
+      if (dp.platformPrices) {
+        const prices = Object.values(dp.platformPrices).filter(p => p > 0);
+        if (prices.length > 0) {
+          platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+        }
+      }
+      if (platformPrice === lowestPrice) {
+        const defaultDiscount = lowestPricingData.platformPricing?.defaultDiscount || 17;
+        platformPrice = Math.round(lowestPrice * (100 / (100 - defaultDiscount)));
+      }
+
+      prixDirectEls.forEach(element => {
+        element.textContent = '';
+        element.appendChild(document.createTextNode('À partir de'));
+        element.appendChild(document.createElement('br'));
+        const strong = document.createElement('strong');
+        strong.style.fontWeight = 'bold';
+        strong.style.fontFamily = 'Inter';
+        strong.style.fontSize = '24px';
+        strong.textContent = `${Math.round(lowestPrice)}€ / nuit`;
+        element.appendChild(strong);
+      });
+
+      if (platformPrice > lowestPrice) {
+        const discount = Math.round(100 * (platformPrice - lowestPrice) / platformPrice);
+        pourcentageEls.forEach(el => {
+          el.textContent = discount > 0 ? `-${discount}%` : '';
+        });
+      }
+    }
+
+    // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
+    const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
+    reserverButtons.forEach(btn => {
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+      btn.style.cursor = 'not-allowed';
+    });
+  }
+
+  // Sélectionner une chambre
+  selectRoom(slotIndex) {
+    const room = this._roomsData[slotIndex];
+    if (!room) return;
+
+    // Si même chambre déjà sélectionnée → désélectionner
+    if (this._selectedRoomIndex === slotIndex) {
+      this.deselectRoom();
+      return;
+    }
+
+    // Désélectionner la chambre précédente (visuel)
+    if (this._selectedRoomIndex) {
+      const prevBloc = document.getElementById(`chambre-hote-${this._selectedRoomIndex}`);
+      const prevSelect = document.getElementById(`button-select-${this._selectedRoomIndex}`);
+      const prevSelected = document.getElementById(`button-selected-${this._selectedRoomIndex}`);
+      if (prevBloc) prevBloc.style.border = '';
+      if (prevSelect) prevSelect.style.display = '';
+      if (prevSelected) prevSelected.style.display = 'none';
+    }
+
+    this._selectedRoomIndex = slotIndex;
+
+    // 1. Visuel : bordure + boutons
+    const bloc = document.getElementById(`chambre-hote-${slotIndex}`);
+    const selectBtn = document.getElementById(`button-select-${slotIndex}`);
+    const selectedBtn = document.getElementById(`button-selected-${slotIndex}`);
+
+    if (bloc) bloc.style.border = '2px solid #235B59';
+    if (selectBtn) selectBtn.style.display = 'none';
+    if (selectedBtn) selectedBtn.style.display = 'flex';
+
+    // 2. Prix : injecter le pricingData de la chambre
+    if (window.priceCalculator && room.pricing_data) {
+      window.priceCalculator.pricingData = room.pricing_data;
+      window.priceCalculator.resetPrices();
+    }
+
+    // 3. Calendrier : switcher sur les dates de cette chambre
+    const calendarManager = window.detailLogementPage?.managers?.calendar;
+    if (calendarManager?.icalManager && this._roomsUnavailableDates) {
+      calendarManager.icalManager.unavailableDates = this._roomsUnavailableDates[slotIndex] || new Set();
+      if (calendarManager.picker) {
+        calendarManager.picker.updateCalendars();
+      }
+    }
+
+    // 4. Tarifs saisons : mettre à jour avec les données de la chambre
+    const tariffsManager = window.detailLogementPage?.managers?.tariffs;
+    if (tariffsManager && room.pricing_data) {
+      // Masquer toutes les saisons d'abord
+      for (let i = 1; i <= 4; i++) {
+        const seasonEl = document.getElementById(`season-${i}`);
+        if (seasonEl) seasonEl.style.display = 'none';
+      }
+      tariffsManager.displaySeasonsPricing(room.pricing_data);
+    }
+
+    // 5. Capacité voyageurs
+    const travelersManager = window.travelersManager;
+    if (travelersManager) {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      travelersManager.maxCapacity = match ? parseInt(match[1]) : 8;
+      travelersManager.updateUI();
+    }
+
+    // 6. Réactiver le bouton réserver (PriceCalculator gère le reste)
+    // Le bouton sera activé quand des dates valides seront sélectionnées
+  }
+
+  // Désélectionner la chambre active
+  deselectRoom() {
+    if (!this._selectedRoomIndex) return;
+
+    // 1. Visuel : retirer bordure + remettre boutons
+    const bloc = document.getElementById(`chambre-hote-${this._selectedRoomIndex}`);
+    const selectBtn = document.getElementById(`button-select-${this._selectedRoomIndex}`);
+    const selectedBtn = document.getElementById(`button-selected-${this._selectedRoomIndex}`);
+
+    if (bloc) bloc.style.border = '';
+    if (selectBtn) selectBtn.style.display = '';
+    if (selectedBtn) selectedBtn.style.display = 'none';
+
+    this._selectedRoomIndex = null;
+
+    // 2. Prix : remettre pricingData à null et réafficher "À partir de" combiné
+    if (window.priceCalculator) {
+      window.priceCalculator.pricingData = null;
+      window.priceCalculator.resetPrices();
+    }
+    // Réafficher le prix le plus bas manuellement
+    this.initBnbDefaultState(
+      Object.values(this._roomsData).filter(Boolean)
+    );
+
+    // 3. Calendrier : remettre les dates combinées
+    const calendarManager = window.detailLogementPage?.managers?.calendar;
+    if (calendarManager?.icalManager && this._combinedUnavailableDates) {
+      calendarManager.icalManager.unavailableDates = this._combinedUnavailableDates;
+      if (calendarManager.picker) {
+        calendarManager.picker.updateCalendars();
+      }
+    }
+
+    // 4. Tarifs saisons : masquer (pas de saisons en mode combiné)
+    for (let i = 1; i <= 4; i++) {
+      const seasonEl = document.getElementById(`season-${i}`);
+      if (seasonEl) seasonEl.style.display = 'none';
+    }
+
+    // 5. Reset dates sélectionnées
+    if (calendarManager?.picker) {
+      calendarManager.resetDatePicker(calendarManager.picker);
+    }
   }
 
 
