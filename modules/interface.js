@@ -1,4 +1,4 @@
-// LOG production V1.25
+// LOG production V1.26
 // Page google
 class InterfaceManager {
   constructor() {
@@ -746,7 +746,9 @@ setupConditionsAnnulation() {
       'Toilettes privées': 'equip-chambre-toilettes',
       'Wifi': 'equip-chambre-wifi',
       'Micro-ondes': 'equip-chambre-micro-ondes',
-      'Sèche cheveux': 'equip-chambre-seche-cheveux'
+      'Sèche cheveux': 'equip-chambre-seche-cheveux',
+      'Balcon': 'equip-chambre-balcon',
+      'Machine à café': 'equip-chambre-machine-cafe'
     };
 
     // Masquer tous les équipements
@@ -775,10 +777,11 @@ setupConditionsAnnulation() {
   }
 
   // Fermeture de la modale
-  setupRoomModalClose() {
+    setupRoomModalClose() {
     const modal = document.getElementById('modal-chambre-hote');
     if (!modal) return;
 
+    // Fermeture par nos boutons
     const closeBtns = modal.querySelectorAll('.close-modal-chambre');
     closeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -786,8 +789,15 @@ setupConditionsAnnulation() {
         document.body.classList.remove('no-scroll');
       });
     });
-  }
 
+    // Observer les changements de display (couvre les fermetures Webflow)
+    const observer = new MutationObserver(() => {
+      if (modal.style.display === 'none' || getComputedStyle(modal).display === 'none') {
+        document.body.classList.remove('no-scroll');
+      }
+    });
+    observer.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
 
   
   // Gestion des horaires d'arrivée et de départ
