@@ -1,4 +1,4 @@
-// LOG production V1.24
+// LOG production V1.25
 // Page google
 class InterfaceManager {
   constructor() {
@@ -488,9 +488,12 @@ setupConditionsAnnulation() {
   }
 
 
-  displayRoomsOnDetail(rooms) {
+    displayRoomsOnDetail(rooms) {
     const bloc = document.getElementById('bloc-chambres-hotes');
     if (!bloc) return;
+
+    // Stocker les données des chambres pour la modale
+    this._roomsData = [];
 
     // Masquer tous les blocs de chambres par défaut (1 à 5)
     for (let i = 1; i <= 5; i++) {
@@ -498,33 +501,45 @@ setupConditionsAnnulation() {
       if (chambreBloc) chambreBloc.style.display = 'none';
     }
 
-    // Remplir et afficher les blocs correspondant aux chambres existantes
-    rooms.forEach((room, index) => {
-      const chambreBloc = document.getElementById(`chambre-hote-${index + 1}`);
+    // Filtrer : ne garder que les chambres avec au moins une photo
+    const roomsWithPhotos = rooms.filter(room => {
+      const photos = room.photos || [];
+      if (photos.length === 0) return false;
+      const firstPhoto = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+      return firstPhoto && firstPhoto.trim() !== '';
+    });
+
+    if (roomsWithPhotos.length === 0) return;
+
+    let slotIndex = 0;
+
+    roomsWithPhotos.forEach((room) => {
+      if (slotIndex >= 5) return;
+      slotIndex++;
+
+      const chambreBloc = document.getElementById(`chambre-hote-${slotIndex}`);
       if (!chambreBloc) return;
 
       chambreBloc.style.display = 'flex';
 
+      // Stocker les données pour la modale
+      this._roomsData[slotIndex] = room;
+
       // 1. Image (première photo)
-      const imageEl = document.getElementById(`image-chambre-${index + 1}`);
+      const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
       if (imageEl) {
-        const photos = room.photos || [];
-        if (photos.length > 0) {
-          const photoUrl = typeof photos[0] === 'object' ? photos[0].url : photos[0];
-          if (photoUrl) {
-            if (imageEl.tagName === 'IMG') {
-              imageEl.src = photoUrl;
-            } else {
-              imageEl.style.backgroundImage = `url(${photoUrl})`;
-              imageEl.style.backgroundSize = 'cover';
-              imageEl.style.backgroundPosition = 'center';
-            }
-          }
+        const photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
+        if (imageEl.tagName === 'IMG') {
+          imageEl.src = photoUrl;
+        } else {
+          imageEl.style.backgroundImage = `url(${photoUrl})`;
+          imageEl.style.backgroundSize = 'cover';
+          imageEl.style.backgroundPosition = 'center';
         }
       }
 
       // 2. Voyageurs
-      const voyageursEl = document.getElementById(`voyageurs-chambre-${index + 1}`);
+      const voyageursEl = document.getElementById(`voyageurs-chambre-${slotIndex}`);
       if (voyageursEl) {
         const match = (room.taille_chambre || '').match(/^(\d+)/);
         const voyageurs = match ? parseInt(match[1]) : 0;
@@ -532,13 +547,13 @@ setupConditionsAnnulation() {
       }
 
       // 3. Nom
-      const nomEl = document.getElementById(`nom-chambre-${index + 1}`);
+      const nomEl = document.getElementById(`nom-chambre-${slotIndex}`);
       if (nomEl) {
         nomEl.textContent = room.name || 'Chambre';
       }
 
       // 4. Taille m²
-      const tailleEl = document.getElementById(`taille-chambre-${index + 1}`);
+      const tailleEl = document.getElementById(`taille-chambre-${slotIndex}`);
       if (tailleEl) {
         const tailleMatch = (room.taille_chambre || '').match(/(\d+)\s*m²/);
         const m2 = tailleMatch ? tailleMatch[1] : '0';
@@ -546,132 +561,233 @@ setupConditionsAnnulation() {
       }
 
       // 5. Types de lits
-      const litsEl = document.getElementById(`lits-chambre-${index + 1}`);
+      const litsEl = document.getElementById(`lits-chambre-${slotIndex}`);
       if (litsEl) {
-        const detailsLits = room.details_lits || '';
-        if (detailsLits) {
-          const groups = detailsLits.split(',').map(part => part.trim()).filter(Boolean);
-          const expandedTypes = [];
-          groups.forEach(group => {
-            const groupMatch = group.match(/^(\d+)\s+(.+)$/);
-            if (groupMatch) {
-              const count = parseInt(groupMatch[1]);
-              const type = groupMatch[2].trim();
-              for (let i = 0; i < count; i++) {
-                expandedTypes.push(type);
-              }
-            } else {
-              expandedTypes.push(group);
-            }
-          });
-          litsEl.textContent = expandedTypes.join(', ');
-        } else {
-          litsEl.textContent = '';
-        }
+        litsEl.textContent = this.formatDetailsLits(room.details_lits);
       }
 
       // 6. Prix avec pourcentage et prix barré
-      const prixEl = document.getElementById(`prix-chambre-${index + 1}`);
-      const pourcentageEl = document.getElementById(`pourcentage-chambre-${index + 1}`);
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
       
       if (prixEl && room.pricing_data) {
-        const pricingData = room.pricing_data;
-        const defaultPricing = pricingData.defaultPricing;
-        
-        if (defaultPricing) {
-          let displayPrice = 0;
-
-          if (defaultPricing.mode === 'per_guest') {
-            const prices = defaultPricing.pricesPerGuest || [];
-            displayPrice = prices.length > 0 ? prices[prices.length - 1] : (defaultPricing.price || 0);
-          } else {
-            displayPrice = defaultPricing.price || 0;
-          }
-
-          // Calculer le prix plateforme
-          let platformPrice = displayPrice;
-          let hasDiscount = false;
-
-          if (defaultPricing.platformPrices) {
-            const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
-            if (prices.length > 0) {
-              platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-              hasDiscount = true;
-            }
-          }
-
-          if (!hasDiscount) {
-            const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
-              ? pricingData.platformPricing.defaultDiscount 
-              : 17;
-            platformPrice = Math.round(displayPrice * (100 / (100 - defaultDiscount)));
-            hasDiscount = true;
-          }
-
-          // Affichage
-          prixEl.textContent = '';
-          prixEl.style.setProperty('display', 'flex', 'important');
-          prixEl.style.setProperty('flex-direction', 'row', 'important');
-          prixEl.style.setProperty('align-items', 'baseline', 'important');
-          prixEl.style.setProperty('gap', '4px', 'important');
-
-          if (hasDiscount && platformPrice > displayPrice) {
-            // Prix barré
-            const del = document.createElement('del');
-            del.textContent = `${Math.round(platformPrice)}€`;
-            del.style.setProperty('text-decoration', 'line-through', 'important');
-            del.style.setProperty('color', '#778183', 'important');
-            del.style.setProperty('font-size', '14px', 'important');
-            del.style.setProperty('font-weight', 'normal', 'important');
-            prixEl.appendChild(del);
-
-            // Prix chez nous (bold)
-            const strong = document.createElement('strong');
-            strong.textContent = `${Math.round(displayPrice)}€`;
-            strong.style.setProperty('font-weight', '600', 'important');
-            strong.style.setProperty('font-size', '16px', 'important');
-            prixEl.appendChild(strong);
-
-            // / nuit (regular)
-            const suffix = document.createElement('span');
-            suffix.textContent = '/ nuit';
-            suffix.style.setProperty('font-weight', '400', 'important');
-            suffix.style.setProperty('font-size', '16px', 'important');
-            prixEl.appendChild(suffix);
-
-            // Pourcentage
-            if (pourcentageEl) {
-              const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
-              pourcentageEl.textContent = `-${discount}%`;
-              pourcentageEl.style.display = 'block';
-            }
-          } else {
-            // Prix (bold)
-            const strong = document.createElement('strong');
-            strong.textContent = `${Math.round(displayPrice)}€`;
-            strong.style.setProperty('font-weight', '600', 'important');
-            strong.style.setProperty('font-size', '16px', 'important');
-            prixEl.appendChild(strong);
-
-            // / nuit (regular)
-            const suffix = document.createElement('span');
-            suffix.textContent = '/ nuit';
-            suffix.style.setProperty('font-weight', '400', 'important');
-            suffix.style.setProperty('font-size', '16px', 'important');
-            prixEl.appendChild(suffix);
-
-            if (pourcentageEl) {
-              pourcentageEl.style.display = 'none';
-            }
-          }
-        }
+        this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
       }
 
+      // 7. Clic → ouvrir la modale
+      chambreBloc.style.cursor = 'pointer';
+      const currentSlot = slotIndex;
+      chambreBloc.addEventListener('click', () => {
+        this.openRoomModal(this._roomsData[currentSlot]);
+      });
     });
+
+    // Configurer la fermeture de la modale
+    this.setupRoomModalClose();
 
     // Afficher le bloc parent
     bloc.style.display = 'block';
   }
+
+    // Formater les détails de lits
+  formatDetailsLits(detailsLits) {
+    if (!detailsLits) return '';
+    const groups = detailsLits.split(',').map(part => part.trim()).filter(Boolean);
+    const expandedTypes = [];
+    groups.forEach(group => {
+      const groupMatch = group.match(/^(\d+)\s+(.+)$/);
+      if (groupMatch) {
+        const count = parseInt(groupMatch[1]);
+        const type = groupMatch[2].trim();
+        for (let i = 0; i < count; i++) {
+          expandedTypes.push(type);
+        }
+      } else {
+        expandedTypes.push(group);
+      }
+    });
+    return expandedTypes.join(', ');
+  }
+
+  // Afficher le prix d'une chambre (réutilisé par les blocs et la modale)
+  displayRoomPrice(prixEl, pourcentageEl, pricingData) {
+    const defaultPricing = pricingData.defaultPricing;
+    if (!defaultPricing) return;
+
+    let displayPrice = 0;
+
+    if (defaultPricing.mode === 'per_guest') {
+      const prices = defaultPricing.pricesPerGuest || [];
+      displayPrice = prices.length > 0 ? prices[prices.length - 1] : (defaultPricing.price || 0);
+    } else {
+      displayPrice = defaultPricing.price || 0;
+    }
+
+    let platformPrice = displayPrice;
+    let hasDiscount = false;
+
+    if (defaultPricing.platformPrices) {
+      const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
+      if (prices.length > 0) {
+        platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+        hasDiscount = true;
+      }
+    }
+
+    if (!hasDiscount) {
+      const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
+        ? pricingData.platformPricing.defaultDiscount 
+        : 17;
+      platformPrice = Math.round(displayPrice * (100 / (100 - defaultDiscount)));
+      hasDiscount = true;
+    }
+
+    prixEl.textContent = '';
+    prixEl.style.setProperty('display', 'flex', 'important');
+    prixEl.style.setProperty('flex-direction', 'row', 'important');
+    prixEl.style.setProperty('align-items', 'baseline', 'important');
+    prixEl.style.setProperty('gap', '4px', 'important');
+
+    if (hasDiscount && platformPrice > displayPrice) {
+      const del = document.createElement('del');
+      del.textContent = `${Math.round(platformPrice)}€`;
+      del.style.setProperty('text-decoration', 'line-through', 'important');
+      del.style.setProperty('color', '#778183', 'important');
+      del.style.setProperty('font-size', '14px', 'important');
+      del.style.setProperty('font-weight', 'normal', 'important');
+      prixEl.appendChild(del);
+
+      const strong = document.createElement('strong');
+      strong.textContent = `${Math.round(displayPrice)}€`;
+      strong.style.setProperty('font-weight', '600', 'important');
+      strong.style.setProperty('font-size', '16px', 'important');
+      prixEl.appendChild(strong);
+
+      if (pourcentageEl) {
+        const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
+        pourcentageEl.textContent = `-${discount}%`;
+        pourcentageEl.style.display = 'block';
+      }
+    } else {
+      const strong = document.createElement('strong');
+      strong.textContent = `${Math.round(displayPrice)}€`;
+      strong.style.setProperty('font-weight', '600', 'important');
+      strong.style.setProperty('font-size', '16px', 'important');
+      prixEl.appendChild(strong);
+
+
+      if (pourcentageEl) {
+        pourcentageEl.style.display = 'none';
+      }
+    }
+  }
+
+  // Ouvrir la modale avec les infos d'une chambre
+  openRoomModal(room) {
+    const modal = document.getElementById('modal-chambre-hote');
+    if (!modal || !room) return;
+
+    // Image
+    const imageEl = document.getElementById('modal-chambre-image');
+    if (imageEl) {
+      const photos = room.photos || [];
+      if (photos.length > 0) {
+        const photoUrl = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+        if (imageEl.tagName === 'IMG') {
+          imageEl.src = photoUrl;
+        } else {
+          imageEl.style.backgroundImage = `url(${photoUrl})`;
+          imageEl.style.backgroundSize = 'cover';
+          imageEl.style.backgroundPosition = 'center';
+        }
+      }
+    }
+
+    // Voyageurs
+    const voyageursEl = document.getElementById('modal-chambre-voyageurs');
+    if (voyageursEl) {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const voyageurs = match ? parseInt(match[1]) : 0;
+      voyageursEl.textContent = `${voyageurs} voyageur${voyageurs > 1 ? 's' : ''}`;
+    }
+
+    // Nom
+    const nomEl = document.getElementById('modal-chambre-nom');
+    if (nomEl) {
+      nomEl.textContent = room.name || 'Chambre';
+    }
+
+    // Taille
+    const tailleEl = document.getElementById('modal-chambre-taille');
+    if (tailleEl) {
+      const tailleMatch = (room.taille_chambre || '').match(/(\d+)\s*m²/);
+      const m2 = tailleMatch ? tailleMatch[1] : '0';
+      tailleEl.textContent = `${m2} m²`;
+    }
+
+    // Lits
+    const litsEl = document.getElementById('modal-chambre-lits');
+    if (litsEl) {
+      litsEl.textContent = this.formatDetailsLits(room.details_lits);
+    }
+
+    // Description
+    const descEl = document.getElementById('modal-chambre-description');
+    if (descEl) {
+      descEl.textContent = room.description || '';
+    }
+
+    // Équipements — même logique que setupEquipements()
+    const equipementMapping = {
+      'Climatisation': 'equip-chambre-climatisation',
+      'Télévision': 'equip-chambre-television',
+      'Bureau': 'equip-chambre-bureau',
+      'Salle de bain privée': 'equip-chambre-salle-de-bain',
+      'Toilettes privées': 'equip-chambre-toilettes',
+      'Wifi': 'equip-chambre-wifi',
+      'Micro-ondes': 'equip-chambre-micro-ondes',
+      'Sèche cheveux': 'equip-chambre-seche-cheveux'
+    };
+
+    // Masquer tous les équipements
+    Object.values(equipementMapping).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    // Afficher ceux de la chambre
+    const equipStr = room.equipements || '';
+    if (equipStr) {
+      const equipList = equipStr.split(',').map(e => e.trim());
+      equipList.forEach(equip => {
+        const id = equipementMapping[equip];
+        if (id) {
+          const el = document.getElementById(id);
+          if (el) el.style.display = '';
+        }
+      });
+    }
+
+    // Afficher la modale
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    document.body.classList.add('no-scroll');
+  }
+
+  // Fermeture de la modale
+  setupRoomModalClose() {
+    const modal = document.getElementById('modal-chambre-hote');
+    if (!modal) return;
+
+    const closeBtns = modal.querySelectorAll('.close-modal-chambre');
+    closeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+      });
+    });
+  }
+
 
   
   // Gestion des horaires d'arrivée et de départ
