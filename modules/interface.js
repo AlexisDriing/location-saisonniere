@@ -1,4 +1,4 @@
-// LOG production V1.29
+// LOG production V1.30
 // Page google
 class InterfaceManager {
   constructor() {
@@ -790,14 +790,11 @@ setupConditionsAnnulation() {
     rooms.forEach(room => {
       if (!room.pricing_data?.defaultPricing) return;
       const dp = room.pricing_data.defaultPricing;
+      // dp.price = prix chambre pleine (même en mode per_guest)
       let price = dp.price || Infinity;
 
-      // En mode per_guest, prendre le prix le plus bas (1 voyageur)
-      if (dp.mode === 'per_guest' && dp.pricesPerGuest?.length > 0) {
-        price = dp.pricesPerGuest[0];
-      }
-
       if (price < lowestPrice) {
+
         lowestPrice = price;
         lowestPricingData = room.pricing_data;
       }
