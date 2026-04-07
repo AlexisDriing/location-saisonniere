@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.040 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.041 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -729,9 +729,9 @@ setupAddRoomSubmit() {
       return;
     }
     
-    newBtn.disabled = true;
-    const originalText = newBtn.textContent;
-    newBtn.textContent = 'Création...';
+        newBtn.disabled = true;
+    const originalText = newBtn.value;
+    newBtn.value = 'Création en cours...';
     
     try {
       const response = await fetch(`${window.CONFIG.API_URL}/create-room`, {
@@ -772,7 +772,7 @@ setupAddRoomSubmit() {
       alert('Erreur lors de la création');
     } finally {
       newBtn.disabled = false;
-      newBtn.textContent = originalText;
+      newBtn.value = originalText;
     }
   });
 }
