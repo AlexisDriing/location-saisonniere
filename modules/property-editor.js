@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.057
+// LOG production V1.5 - chambres d'hôtes v1.058
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -46,7 +46,8 @@ class PropertyEditor {
     this.roomOriginalPhotos = [];
     this.roomCurrentPhotos = [];
     this.roomSortableInstance = null;
-    this.editingRoomSeasonIndex = null;
+        this.editingRoomSeasonIndex = null;
+    this.roomsCount = 0;
 
     this.icalUrls = []; // Stockage des URLs iCal
     this.DEFAULT_ICAL_URL = 'https://calendar.google.com/calendar/ical/c_20c899760ed3ef0d0fb0db69c71909b19c0584bbbdf32e9714b224fc005ae2c0%40group.calendar.google.com/public/basic.ics';
@@ -124,8 +125,9 @@ class PropertyEditor {
       const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
       
       if (isChambreHote) {
-        this.setupParentChambreHoteDisplay();
+        await this.setupParentChambreHoteDisplay();
       } else {
+
         this.initSeasonManagement();
         this.initDiscountManagement();
         this.initIcalManagement();
@@ -202,6 +204,17 @@ setupParentChambreHoteDisplay() {
   // 6. Initialiser les éléments communs (images, extras, etc.)
   this.initImageManagement();
   this.initExtrasManagement();
+  
+  // 7. Charger le nombre de chambres pour le calcul du statut au save
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${this.propertyId}`);
+    if (response.ok) {
+      const data = await response.json();
+      this.roomsCount = (data.rooms || []).length;
+    }
+  } catch (error) {
+    console.error('⚠️ Erreur chargement nombre chambres:', error);
+  }
 }
 
 prefillLiensPlateformes() {
@@ -7202,11 +7215,19 @@ setBlockState(element, isActive) {
     }
   });
 
-  const currentStatus = this.propertyData.verification_status || 'pending-none';
+    const currentStatus = this.propertyData.verification_status || 'pending-none';
   if (currentStatus === 'pending-none') {
-    // C'est le premier enregistrement avec validation réussie
-    updates['verification_status'] = 'pending-verif';
+    if (isChambreHote) {
+      // Chambre d'hôtes : basculer seulement si au moins 1 chambre existe
+      if (this.roomsCount >= 1) {
+        updates['verification_status'] = 'pending-verif';
+      }
+    } else {
+      // Logement entier : basculer directement
+      updates['verification_status'] = 'pending-verif';
+    }
   }
+
     
   // NOUVEAU : Comparaison manuelle pour taille_maison
   if (nouvelleTailleMaison !== this.initialValues.taille_maison) {
@@ -7368,8 +7389,12 @@ setBlockState(element, isActive) {
         // Mettre à jour propertyData
         if (updates.annonce_airbnb !== undefined) this.propertyData.annonce_airbnb = updates.annonce_airbnb;
         if (updates.annonce_booking !== undefined) this.propertyData.annonce_booking = updates.annonce_booking;
-        if (updates.annonce_gites !== undefined) this.propertyData.annonce_gites = updates.annonce_gites;
+                if (updates.annonce_gites !== undefined) this.propertyData.annonce_gites = updates.annonce_gites;
+        if (updates.verification_status) {
+          this.propertyData.verification_status = updates.verification_status;
+        }
       }
+
       
       // 🆕 AJOUTER : Mettre à jour les données pricing d'origine
       if (updates.pricing_data) {
