@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.01
+// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.02
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -172,11 +172,21 @@ class TravelersManager {
       }
       if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
         window.priceCalculator.calculateAndDisplayPrices();
-      } else if (window.priceCalculator.pricingData?.defaultPricing?.mode === 'per_guest') {
-        window.priceCalculator.resetPrices();
+      }
+      // Per_guest : toujours rafraîchir le "À partir de" même sans dates
+      if (window.priceCalculator.pricingData?.defaultPricing?.mode === 'per_guest') {
+        if (!window.priceCalculator.startDate) {
+          window.priceCalculator.resetPrices();
+        }
       }
     }
+    // Mettre à jour les prix des blocs chambres
+    const interfaceManager = window.detailLogementPage?.managers?.interface;
+    if (interfaceManager?.updateAllRoomBlockPrices) {
+      interfaceManager.updateAllRoomBlockPrices();
+    }
   }
+
 
 
 // 🆕 NOUVEAU : Sauvegarder les voyageurs modifiés
