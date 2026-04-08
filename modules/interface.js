@@ -1,4 +1,4 @@
-// LOG production V1.31
+// LOG production V1.32
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1065,6 +1065,37 @@ setupConditionsAnnulation() {
     }
   }
 
+  // Mettre à jour les prix de TOUS les blocs chambres selon le nombre de voyageurs
+  updateAllRoomBlockPrices() {
+    if (!this._roomsData) return;
+
+    Object.keys(this._roomsData).forEach(slotIndex => {
+      const room = this._roomsData[slotIndex];
+      if (!room?.pricing_data?.defaultPricing) return;
+
+      const dp = room.pricing_data.defaultPricing;
+      if (dp.mode !== 'per_guest' || !dp.pricesPerGuest?.length) return;
+
+      // Recalculer le prix pour le nombre actuel de voyageurs
+      const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+      const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+      const totalGuests = Math.max(1, adultsCount + childrenCount);
+      const index = Math.min(totalGuests - 1, dp.pricesPerGuest.length - 1);
+      
+      // Créer une copie avec le prix ajusté
+      const adjustedPricing = JSON.parse(JSON.stringify(room.pricing_data));
+      adjustedPricing.defaultPricing.price = dp.pricesPerGuest[Math.max(0, index)];
+
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+
+      if (prixEl) {
+        this.displayRoomPrice(prixEl, pourcentageEl, adjustedPricing);
+      }
+    });
+  }
+
+  
   // Ouvrir la modale avec les infos d'une chambre
   openRoomModal(room) {
     const modal = document.getElementById('modal-chambre-hote');
