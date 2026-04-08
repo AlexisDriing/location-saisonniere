@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.11
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -14,7 +14,7 @@ class ReservationDataManager {
     
     // Récupérer les informations du logement
     const logementInfo = this.extractLogementInfo();
-    const bookButtons = document.querySelectorAll(".button-reserver, .button-reserver-mobile");
+    const bookButtons = document.querySelectorAll(".button-reserver:not(.chambre), .button-reserver-mobile:not(.chambre)");
     
     if (bookButtons.length === 0) {
       console.warn("⚠️ Aucun bouton de réservation trouvé avec les classes 'button-reserver' ou 'button-reserver-mobile'");
