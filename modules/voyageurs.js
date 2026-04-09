@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.02
+// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.03
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -173,7 +173,7 @@ class TravelersManager {
       if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
         window.priceCalculator.calculateAndDisplayPrices();
       }
-      // Per_guest : toujours rafraîchir le "À partir de" même sans dates
+      // Per_guest : rafraîchir le "À partir de" même sans dates
       if (window.priceCalculator.pricingData?.defaultPricing?.mode === 'per_guest') {
         if (!window.priceCalculator.startDate) {
           window.priceCalculator.resetPrices();
