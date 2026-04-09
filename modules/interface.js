@@ -1,4 +1,4 @@
-// LOG production V1.37
+// LOG production V1.38
 // Page google
 class InterfaceManager {
   constructor() {
@@ -939,6 +939,17 @@ setupConditionsAnnulation() {
     if (selectBtn) selectBtn.style.display = 'none';
     if (selectedBtn) selectedBtn.style.display = 'flex';
 
+    // Masquer les messages d'erreur AVANT le calcul
+    document.querySelectorAll('.bloc-error-days').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+
+    // Masquer le message "sélectionner 1 chambre"
+    const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
+    const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
+    if (blocSelectChambre) blocSelectChambre.style.display = 'none';
+    if (blocSelectChambreMobile) blocSelectChambreMobile.style.display = 'none';
+
     // 2. Prix : injecter le pricingData de la chambre
     if (window.priceCalculator && room.pricing_data) {
       window.priceCalculator.pricingData = room.pricing_data;
@@ -947,15 +958,8 @@ setupConditionsAnnulation() {
       } else {
         window.priceCalculator.resetPrices();
       }
-
     }
 
-    // Masquer les messages d'erreur
-    document.querySelectorAll('.bloc-error-days').forEach(el => {
-      if (el) el.style.display = 'none';
-    });
-
-        // Masquer le message "sélectionner 1 chambre"
     const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
     const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
     if (blocSelectChambre) blocSelectChambre.style.display = 'none';
