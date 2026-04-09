@@ -1,4 +1,4 @@
-// LOG production V1.38.1
+// LOG production V1.38.2
 // Page google
 class InterfaceManager {
   constructor() {
@@ -901,8 +901,9 @@ setupConditionsAnnulation() {
     this.updateRoomAvailability();
     // Masquer la ligne ménage pour les chambres d'hôtes
     document.querySelectorAll('.ligne-menage').forEach(el => {
-      el.style.display = 'none';
+      el.style.setProperty('display', 'none', 'important');
     });
+
 
   }
 
