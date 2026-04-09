@@ -1,4 +1,4 @@
-// LOG production V1.33
+// LOG production V1.34
 // Page google
 class InterfaceManager {
   constructor() {
@@ -841,6 +841,20 @@ setupConditionsAnnulation() {
       }
     }
 
+    // Capacité max = chambre avec le plus de voyageurs
+    let maxCapacity = 1;
+    rooms.forEach(room => {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const voyageurs = match ? parseInt(match[1]) : 0;
+      if (voyageurs > maxCapacity) maxCapacity = voyageurs;
+    });
+    
+    const travelersManager = window.travelersManager;
+    if (travelersManager) {
+      travelersManager.maxCapacity = maxCapacity;
+      travelersManager.updateUI();
+    }
+
     // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
     const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
     reserverButtons.forEach(btn => {
@@ -966,7 +980,20 @@ setupConditionsAnnulation() {
       if (seasonEl) seasonEl.style.display = 'none';
     }
 
-    // 5. Reset dates sélectionnées
+    // 5. Capacité : remettre le max global
+    const travelersManager = window.travelersManager;
+    if (travelersManager) {
+      let maxCapacity = 1;
+      Object.values(this._roomsData).filter(Boolean).forEach(room => {
+        const match = (room.taille_chambre || '').match(/^(\d+)/);
+        const voyageurs = match ? parseInt(match[1]) : 0;
+        if (voyageurs > maxCapacity) maxCapacity = voyageurs;
+      });
+      travelersManager.maxCapacity = maxCapacity;
+      travelersManager.updateUI();
+    }
+
+    // 6. Reset dates sélectionnées
     if (calendarManager?.picker) {
       calendarManager.resetDatePicker(calendarManager.picker);
     }
@@ -1016,8 +1043,9 @@ setupConditionsAnnulation() {
       displayPrice = defaultPricing.price || 0;
     }
 
-    // Calculer le prix plateforme pour le pourcentage
-    let platformPrice = displayPrice;
+        // Calculer le prix plateforme pour le pourcentage
+    const baseForPlatform = defaultPricing.price || displayPrice;
+    let platformPrice = baseForPlatform;
     if (defaultPricing.platformPrices) {
       const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
       if (prices.length > 0) {
@@ -1051,8 +1079,8 @@ setupConditionsAnnulation() {
 
     // Pourcentage
     if (pourcentageEl) {
-      if (platformPrice > displayPrice) {
-        const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
+      if (platformPrice > baseForPlatform) {
+        const discount = Math.round(((platformPrice - baseForPlatform) / platformPrice) * 100);
         pourcentageEl.textContent = `-${discount}%`;
         pourcentageEl.style.display = 'block';
       } else {
