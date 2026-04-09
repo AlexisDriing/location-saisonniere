@@ -600,25 +600,15 @@ setupConditionsAnnulation() {
         });
       }
 
-      // 9. Élément au survol sur l'image
+            // 9. Élément au survol sur l'image
       const hoverEl = document.getElementById(`hover-image-${slotIndex}`);
-      const hoverImageEl = document.getElementById(`image-chambre-${slotIndex}`);
-      if (hoverEl && hoverImageEl) {
-        const wrapper = document.createElement('div');
-        wrapper.style.position = 'relative';
-        wrapper.style.display = 'inline-block';
-        wrapper.style.width = '100%';
-        hoverImageEl.parentNode.insertBefore(wrapper, hoverImageEl);
-        wrapper.appendChild(hoverImageEl);
-        wrapper.appendChild(hoverEl);
+      if (hoverEl) {
+        hoverEl.style.display = 'none';
+        hoverEl.style.position = 'absolute';
+        hoverEl.style.bottom = '10px';
+        hoverEl.style.right = '10px';
+        hoverEl.style.zIndex = '2';
 
-
-        // Positionner le hover en bas à droite de l'image
-        hoverEl.style.cssText = `
-          display:none;position:absolute;bottom:10px;right:10px;z-index:2;
-        `;
-
-        // Afficher/masquer au survol du bloc
         chambreBloc.addEventListener('mouseenter', () => {
           if (chambreBloc.style.opacity !== '0.3') {
             hoverEl.style.display = 'flex';
@@ -628,6 +618,7 @@ setupConditionsAnnulation() {
           hoverEl.style.display = 'none';
         });
       }
+
 
 
 
