@@ -1,4 +1,4 @@
-// LOG production V1.35.5
+// LOG production V1.35.6
 // Page google
 class InterfaceManager {
   constructor() {
@@ -600,18 +600,18 @@ setupConditionsAnnulation() {
         });
       }
 
-            // 9. Élément au survol sur l'image
+      // 9. Élément au survol sur l'image
       const hoverEl = document.getElementById(`hover-image-${slotIndex}`);
-      const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
-      if (hoverEl && imageEl) {
-        // Créer un wrapper autour de l'image
+      const hoverImageEl = document.getElementById(`image-chambre-${slotIndex}`);
+      if (hoverEl && hoverImageEl) {
         const wrapper = document.createElement('div');
         wrapper.style.position = 'relative';
         wrapper.style.display = 'inline-block';
         wrapper.style.width = '100%';
-        imageEl.parentNode.insertBefore(wrapper, imageEl);
-        wrapper.appendChild(imageEl);
+        hoverImageEl.parentNode.insertBefore(wrapper, hoverImageEl);
+        wrapper.appendChild(hoverImageEl);
         wrapper.appendChild(hoverEl);
+
 
         // Positionner le hover en bas à droite de l'image
         hoverEl.style.cssText = `
@@ -1195,14 +1195,21 @@ setupConditionsAnnulation() {
       if (this._selectedRoomIndex === parseInt(slotIndex)) return;
 
       // Appliquer l'état
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+
       if (isUnavailable) {
         chambreBloc.style.opacity = '0.3';
         chambreBloc.style.pointerEvents = 'none';
         if (selectBtn) selectBtn.style.display = 'none';
+        if (prixEl) prixEl.textContent = 'Chambre indisponible';
+        if (pourcentageEl) pourcentageEl.style.display = 'none';
       } else {
         chambreBloc.style.opacity = '';
         chambreBloc.style.pointerEvents = '';
         if (selectBtn) selectBtn.style.display = '';
+        // Restaurer le prix
+        if (prixEl) this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
       }
     });
   }
