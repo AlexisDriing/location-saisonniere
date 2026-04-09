@@ -1,4 +1,4 @@
-// LOG production V1.35.8
+// LOG production V1.35.9
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1066,15 +1066,52 @@ setupConditionsAnnulation() {
     return expandedTypes.join(', ');
   }
 
-  // Afficher le prix d'une chambre (réutilisé par les blocs et la modale)
     displayRoomPrice(prixEl, pourcentageEl, pricingData) {
     const defaultPricing = pricingData.defaultPricing;
     if (!defaultPricing) return;
 
     let displayPrice = 0;
 
+    // Vérifier si des dates sont sélectionnées pour trouver la bonne saison
+    const pc = window.priceCalculator;
+    let activeSeason = defaultPricing;
+
+    if (pc?.startDate && pricingData.seasons?.length > 0) {
+      const month = pc.startDate.month() + 1;
+      const day = pc.startDate.date();
+      for (const season of pricingData.seasons) {
+        if (!season.periods) continue;
+        for (const period of season.periods) {
+          const [startDay, startMonth] = period.start.split("-").map(Number);
+          const [endDay, endMonth] = period.end.split("-").map(Number);
+          if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+            if ((month > startMonth || (month === startMonth && day >= startDay)) &&
+                (month < endMonth || (month === endMonth && day <= endDay))) {
+              activeSeason = season;
+            }
+          } else {
+            if ((month > startMonth || (month === startMonth && day >= startDay)) ||
+                (month < endMonth || (month === endMonth && day <= endDay))) {
+              activeSeason = season;
+            }
+          }
+        }
+      }
+    }
+
+    // Vérifier le week-end
+    let seasonPrice = activeSeason.price || 0;
+    if (pc?.startDate && activeSeason === defaultPricing && 
+        defaultPricing.weekend?.enabled && defaultPricing.weekend?.price > 0) {
+      const dayOfWeek = pc.startDate.day();
+      if (dayOfWeek === 5 || dayOfWeek === 6) {
+        seasonPrice = defaultPricing.weekend.price;
+      }
+    }
+
+    // Mode per_guest
     if (defaultPricing.mode === 'per_guest') {
-      const prices = defaultPricing.pricesPerGuest || [];
+      const prices = activeSeason.pricesPerGuest || defaultPricing.pricesPerGuest || [];
       if (prices.length > 0) {
         const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
         const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
@@ -1082,14 +1119,14 @@ setupConditionsAnnulation() {
         const index = Math.min(totalGuests - 1, prices.length - 1);
         displayPrice = prices[Math.max(0, index)];
       } else {
-        displayPrice = defaultPricing.price || 0;
+        displayPrice = seasonPrice;
       }
     } else {
-      displayPrice = defaultPricing.price || 0;
+      displayPrice = seasonPrice;
     }
 
-        // Calculer le prix plateforme pour le pourcentage
-    const baseForPlatform = defaultPricing.price || displayPrice;
+    // Pourcentage (toujours basé sur le prix max de la saison)
+    const baseForPlatform = activeSeason.price || defaultPricing.price || displayPrice;
     let platformPrice = baseForPlatform;
     if (defaultPricing.platformPrices) {
       const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
@@ -1097,13 +1134,13 @@ setupConditionsAnnulation() {
         platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
       }
     }
-    if (platformPrice === displayPrice) {
+    if (platformPrice === baseForPlatform) {
       const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
-        ? pricingData.platformPricing.defaultDiscount 
-        : 17;
-      platformPrice = Math.round(displayPrice * (100 / (100 - defaultDiscount)));
+        ? pricingData.platformPricing.defaultDiscount : 17;
+      platformPrice = Math.round(baseForPlatform * (100 / (100 - defaultDiscount)));
     }
 
+    // Affichage
     prixEl.textContent = '';
     prixEl.style.setProperty('display', 'flex', 'important');
     prixEl.style.setProperty('flex-direction', 'row', 'important');
@@ -1122,7 +1159,6 @@ setupConditionsAnnulation() {
     suffix.style.setProperty('font-size', '16px', 'important');
     prixEl.appendChild(suffix);
 
-    // Pourcentage
     if (pourcentageEl) {
       if (platformPrice > baseForPlatform) {
         const discount = Math.round(((platformPrice - baseForPlatform) / platformPrice) * 100);
@@ -1133,6 +1169,7 @@ setupConditionsAnnulation() {
       }
     }
   }
+
 
 
   // Mettre à jour les prix de TOUS les blocs chambres selon le nombre de voyageurs
