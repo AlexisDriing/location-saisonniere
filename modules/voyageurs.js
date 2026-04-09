@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.03
+// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.04
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -180,12 +180,16 @@ class TravelersManager {
         }
       }
     }
-    // Mettre à jour les prix des blocs chambres
+    // Mettre à jour les prix et la disponibilité des blocs chambres
     const interfaceManager = window.detailLogementPage?.managers?.interface;
     if (interfaceManager?.updateAllRoomBlockPrices) {
       interfaceManager.updateAllRoomBlockPrices();
     }
+    if (interfaceManager?.updateRoomAvailability) {
+      interfaceManager.updateRoomAvailability();
+    }
   }
+
 
 
 
