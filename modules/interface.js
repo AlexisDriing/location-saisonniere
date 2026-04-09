@@ -1,4 +1,4 @@
-// LOG production V1.35.9
+// LOG production V1.36
 // Page google
 class InterfaceManager {
   constructor() {
@@ -937,7 +937,12 @@ setupConditionsAnnulation() {
     // 2. Prix : injecter le pricingData de la chambre
     if (window.priceCalculator && room.pricing_data) {
       window.priceCalculator.pricingData = room.pricing_data;
-      window.priceCalculator.resetPrices();
+      if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
+        window.priceCalculator.calculateAndDisplayPrices();
+      } else {
+        window.priceCalculator.resetPrices();
+      }
+
     }
 
     // Masquer les messages d'erreur
