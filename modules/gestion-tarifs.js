@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison - LOG production V1.2
+// Gestion de l'affichage des tarifs par saison - LOG production V1.21
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -139,8 +139,10 @@ class TariffsDisplayManager {
       try {
         const attribute = dataElement.hasAttribute("data-json-tarifs-line") ? 
                          "data-json-tarifs-line" : "data-json-tarifs";
-        const jsonData = dataElement.getAttribute(attribute);
-        pricingData = JSON.parse(jsonData);
+      const jsonData = dataElement.getAttribute(attribute);
+      if (!jsonData || jsonData.trim() === '') return;
+      const pricingData = JSON.parse(jsonData);
+
       } catch (error) {
         console.error("Erreur lors du traitement des données tarifaires :", error);
         return;
