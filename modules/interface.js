@@ -1,4 +1,4 @@
-// LOG production V1.35.4
+// LOG production V1.35.5
 // Page google
 class InterfaceManager {
   constructor() {
@@ -600,24 +600,23 @@ setupConditionsAnnulation() {
         });
       }
 
-      // 9. Élément au survol
+            // 9. Élément au survol sur l'image
       const hoverEl = document.getElementById(`hover-image-${slotIndex}`);
-      if (hoverEl) {
-        // Masquer par défaut
+      const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
+      if (hoverEl && imageEl) {
+        // Créer un wrapper autour de l'image
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.width = '100%';
+        imageEl.parentNode.insertBefore(wrapper, imageEl);
+        wrapper.appendChild(imageEl);
+        wrapper.appendChild(hoverEl);
+
+        // Positionner le hover en bas à droite de l'image
         hoverEl.style.cssText = `
           display:none;position:absolute;bottom:10px;right:10px;z-index:2;
         `;
-
-        // Déplacer l'élément hover dans le conteneur de l'image
-        const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
-        if (imageEl) {
-          const imageContainer = imageEl.parentElement;
-          if (imageContainer) {
-            imageContainer.style.position = 'relative';
-            imageContainer.appendChild(hoverEl);
-          }
-        }
-
 
         // Afficher/masquer au survol du bloc
         chambreBloc.addEventListener('mouseenter', () => {
@@ -629,6 +628,7 @@ setupConditionsAnnulation() {
           hoverEl.style.display = 'none';
         });
       }
+
 
 
       if (selectedBtn) {
