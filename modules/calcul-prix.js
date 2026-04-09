@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.117
+// Calculateur de prix principal - LOG production V1.118
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -224,11 +224,15 @@ class PriceCalculator {
       }
     }
     
-    // Mettre à jour la disponibilité des chambres
+    // Mettre à jour les prix et la disponibilité des chambres
     const interfaceManager = window.detailLogementPage?.managers?.interface;
+    if (interfaceManager?.updateAllRoomBlockPrices) {
+      interfaceManager.updateAllRoomBlockPrices();
+    }
     if (interfaceManager?.updateRoomAvailability) {
       interfaceManager.updateRoomAvailability();
     }
+
 
     this.hideMinNightsError();
   }
