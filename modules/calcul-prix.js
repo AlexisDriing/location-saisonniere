@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.113
+// Calculateur de prix principal - LOG production V1.114
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -666,7 +666,7 @@ class PriceCalculator {
         });
       }
       
-      if (this.elements.textPourcentage.length) {
+            if (this.elements.textPourcentage.length) {
         if (avgPlatformPricePerNight > avgPricePerNight) {
           this.elements.textPourcentage.forEach(element => {
             element.textContent = `-${Math.round(100 * (avgPlatformPricePerNight - avgPricePerNight) / avgPlatformPricePerNight)}%`;
@@ -678,7 +678,14 @@ class PriceCalculator {
         }
       }
     }
+
+    // Mettre à jour la disponibilité des chambres
+    const interfaceManager = window.detailLogementPage?.managers?.interface;
+    if (interfaceManager?.updateRoomAvailability) {
+      interfaceManager.updateRoomAvailability();
+    }
   }
+
 
   showMinNightsError() {
     // Masquer les blocs de prix
