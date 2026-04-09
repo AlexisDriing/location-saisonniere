@@ -1,4 +1,4 @@
-// LOG production V1.36
+// LOG production V1.37
 // Page google
 class InterfaceManager {
   constructor() {
@@ -899,6 +899,11 @@ setupConditionsAnnulation() {
 
     // Vérifier la disponibilité initiale des chambres
     this.updateRoomAvailability();
+    // Masquer la ligne ménage pour les chambres d'hôtes
+    document.querySelectorAll('.ligne-menage').forEach(el => {
+      el.style.display = 'none';
+    });
+
   }
 
 
@@ -1194,6 +1199,44 @@ setupConditionsAnnulation() {
     });
   }
 
+  syncSelectedRoomPrice() {
+    if (!this._selectedRoomIndex) return;
+    
+    const prixDirect = document.querySelector('[id="prix-direct"]');
+    const prixChambre = document.getElementById(`prix-chambre-${this._selectedRoomIndex}`);
+    if (!prixDirect || !prixChambre) return;
+
+    // Extraire le prix depuis prix-direct (chercher le strong qui contient le prix)
+    const strongEl = prixDirect.querySelector('strong');
+    if (!strongEl) return;
+
+    const priceText = strongEl.textContent; // ex: "408€ / nuit" ou "408€"
+
+    // Mettre à jour le bloc chambre
+    prixChambre.textContent = '';
+    prixChambre.style.setProperty('display', 'flex', 'important');
+    prixChambre.style.setProperty('flex-direction', 'row', 'important');
+    prixChambre.style.setProperty('align-items', 'baseline', 'important');
+    prixChambre.style.setProperty('gap', '4px', 'important');
+
+    // Extraire juste le nombre
+    const priceMatch = priceText.match(/(\d+)/);
+    if (!priceMatch) return;
+
+    const strong = document.createElement('strong');
+    strong.textContent = `${priceMatch[1]}€`;
+    strong.style.setProperty('font-weight', '600', 'important');
+    strong.style.setProperty('font-size', '16px', 'important');
+    prixChambre.appendChild(strong);
+
+    const suffix = document.createElement('span');
+    suffix.textContent = '/ nuit';
+    suffix.style.setProperty('font-weight', '400', 'important');
+    suffix.style.setProperty('font-size', '16px', 'important');
+    prixChambre.appendChild(suffix);
+  }
+
+  
   updateRoomAvailability() {
     if (!this._roomsData) return;
 
