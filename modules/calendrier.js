@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.01
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -28,8 +28,7 @@ class CalendarManager {
       const icalUrls = Array.from(document.querySelectorAll('[data-ical-url]'))
         .map(e => e.getAttribute('data-ical-url'))
         .filter(e => e && e.trim() !== '');
-      
-      if (!icalUrls.length) return;
+    
       
       // Initialiser le DateRangePicker
       $('#input-calendar, #input-calendar-mobile').daterangepicker({
