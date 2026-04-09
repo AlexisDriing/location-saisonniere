@@ -1,4 +1,4 @@
-// LOG production V1.35.7
+// LOG production V1.35.8
 // Page google
 class InterfaceManager {
   constructor() {
@@ -874,6 +874,14 @@ setupConditionsAnnulation() {
       btn.style.cursor = 'not-allowed';
     });
 
+        // Afficher le message "sélectionner 1 chambre" (desktop + mobile)
+    const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
+    const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
+    if (blocSelectChambre) blocSelectChambre.style.display = 'block';
+    if (blocSelectChambreMobile) blocSelectChambreMobile.style.display = 'block';
+
+
+
     // Capacité max = chambre avec le plus de voyageurs
     let maxCapacity = 1;
     rooms.forEach(room => {
@@ -936,6 +944,13 @@ setupConditionsAnnulation() {
     document.querySelectorAll('.bloc-error-days').forEach(el => {
       if (el) el.style.display = 'none';
     });
+
+        // Masquer le message "sélectionner 1 chambre"
+    const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
+    const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
+    if (blocSelectChambre) blocSelectChambre.style.display = 'none';
+    if (blocSelectChambreMobile) blocSelectChambreMobile.style.display = 'none';
+
 
 
     // 3. Calendrier : switcher sur les dates de cette chambre
