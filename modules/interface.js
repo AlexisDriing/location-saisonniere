@@ -1,4 +1,4 @@
-// LOG production V1.35.1
+// LOG production V1.35.2
 // Page google
 class InterfaceManager {
   constructor() {
@@ -886,6 +886,11 @@ setupConditionsAnnulation() {
       travelersManager.maxCapacity = maxCapacity;
       travelersManager.updateUI();
     }
+
+    // Vérifier la disponibilité initiale des chambres
+    this.updateRoomAvailability();
+  }
+
 
     // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
     const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
