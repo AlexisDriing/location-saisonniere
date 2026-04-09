@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.116
+// Calculateur de prix principal - LOG production V1.117
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -57,6 +57,7 @@ class PriceCalculator {
     if (element) {
       try {
         const jsonData = element.getAttribute(attribute);
+        if (!jsonData || jsonData.trim() === '') return;
         this.pricingData = JSON.parse(jsonData);
       } catch (error) {
         console.error("❌ Erreur lors du chargement des données tarifaires:", error);
