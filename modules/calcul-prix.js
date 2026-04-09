@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.121
+// Calculateur de prix principal - LOG production V1.122
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -236,7 +236,12 @@ class PriceCalculator {
       interfaceManager.updateRoomAvailability();
     }
 
-
+    // Masquer la ligne ménage si mode B&B
+    if (window.detailLogementPage?.managers?.interface?._bnbMode) {
+      document.querySelectorAll('.ligne-menage').forEach(el => {
+        el.style.setProperty('display', 'none', 'important');
+      });
+    }
 
     this.hideMinNightsError();
   }
@@ -607,10 +612,11 @@ class PriceCalculator {
       this.elements.prixMenage.forEach(element => {
         const ligneMenage = element.closest('.ligne-menage') || element.parentElement;
         if (!hasCleaning) {
-          if (ligneMenage) ligneMenage.style.display = 'none';
+          if (ligneMenage) ligneMenage.style.setProperty('display', 'none', 'important');
           return;
         }
         if (ligneMenage) ligneMenage.style.display = '';
+
         if (details.cleaningFee > 0) {
           if (details.cleaningOptional) {
             element.innerHTML = `${formatPrice(details.cleaningFee)}€ <span style="color:#778183">(en option)</span>`;
