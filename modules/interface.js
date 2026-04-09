@@ -1,4 +1,4 @@
-// LOG production V1.35.3
+// LOG production V1.35.4
 // Page google
 class InterfaceManager {
   constructor() {
@@ -608,14 +608,16 @@ setupConditionsAnnulation() {
           display:none;position:absolute;bottom:10px;right:10px;z-index:2;
         `;
 
-        // Le conteneur image doit être en position relative
+        // Déplacer l'élément hover dans le conteneur de l'image
         const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
         if (imageEl) {
-          const imageParent = imageEl.parentElement;
-          if (imageParent) {
-            imageParent.style.position = 'relative';
+          const imageContainer = imageEl.parentElement;
+          if (imageContainer) {
+            imageContainer.style.position = 'relative';
+            imageContainer.appendChild(hoverEl);
           }
         }
+
 
         // Afficher/masquer au survol du bloc
         chambreBloc.addEventListener('mouseenter', () => {
