@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.115
+// Calculateur de prix principal - LOG production V1.116
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -694,7 +694,7 @@ class PriceCalculator {
   }
 
 
-  showMinNightsError() {
+    showMinNightsError() {
     // Masquer les blocs de prix
     const prixBlock = document.getElementById("bloc-calcul-prix");
     if (prixBlock) prixBlock.style.display = "none";
@@ -702,21 +702,41 @@ class PriceCalculator {
     const prixMobileBlock = document.getElementById("bloc-calcul-prix-mobile");
     if (prixMobileBlock) prixMobileBlock.style.display = "none";
     
-    // Afficher l'erreur
-    const errorBlocks = document.querySelectorAll('.bloc-error-days');
-    const minNightsTexts = [
-      document.getElementById('text-days-minimum'),
-      document.getElementById('text-days-minimum-mobile')
-    ];
-    const reserverButtons = this.getReserverButtons();
-    
+    // D'abord tout masquer
+    document.querySelectorAll('.bloc-error-days').forEach(block => {
+      if (block) block.style.display = 'none';
+    });
+
     const season = this.getSeason(this.startDate);
     const minNights = season && season.minNights ? season.minNights : 1;
+    const minNightsText = `${minNights} nuit${minNights > 1 ? 's' : ''} minimum`;
+
+    // Déterminer si c'est une chambre
+    const isChambre = window.detailLogementPage?.managers?.interface?._selectedRoomIndex;
+
+    if (isChambre) {
+      // Blocs chambre (desktop + mobile)
+      const blocChambre = document.getElementById('bloc-error-days-chambre');
+      const blocChambreMobile = document.getElementById('bloc-error-days-chambre-mobile');
+      const textChambre = document.getElementById('text-days-minimum-chambre');
+      const textChambreMobile = document.getElementById('text-days-minimum-chambre-mobile');
+      if (blocChambre) blocChambre.style.display = 'block';
+      if (blocChambreMobile) blocChambreMobile.style.display = 'block';
+      if (textChambre) textChambre.textContent = minNightsText;
+      if (textChambreMobile) textChambreMobile.textContent = minNightsText;
+    } else {
+      // Blocs logement (desktop + mobile) — seulement ceux SANS la classe .chambre
+      document.querySelectorAll('.bloc-error-days:not(.chambre)').forEach(block => {
+        if (block) block.style.display = 'block';
+      });
+      const textDesktop = document.getElementById('text-days-minimum');
+      const textMobile = document.getElementById('text-days-minimum-mobile');
+      if (textDesktop) textDesktop.textContent = minNightsText;
+      if (textMobile) textMobile.textContent = minNightsText;
+    }
     
-    errorBlocks.forEach(block => block && (block.style.display = 'block'));
-    minNightsTexts.forEach(text => text && (text.textContent = `${minNights} nuits minimum`));
-    
-    // Boutons désactivés pour nuits minimum non respectées
+    // Boutons désactivés
+    const reserverButtons = this.getReserverButtons();
     reserverButtons.forEach(button => {
       button.style.opacity = '0.3';
       button.style.pointerEvents = 'none';
@@ -724,10 +744,14 @@ class PriceCalculator {
     });
   }
 
+
   hideMinNightsError() {
     const errorBlocks = document.querySelectorAll('.bloc-error-days');
     errorBlocks.forEach(block => block && (block.style.display = 'none'));
+    const blocChambre = document.getElementById('bloc-error-days-chambre');
+    if (blocChambre) blocChambre.style.display = 'none';
   }
+
 }
 
 // Export global
