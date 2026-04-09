@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.118
+// Calculateur de prix principal - LOG production V1.119
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -597,9 +597,16 @@ class PriceCalculator {
       
     }
     
-    // Frais de ménage
+        // Frais de ménage (masquer pour les chambres d'hôtes)
     if (this.elements.prixMenage.length) {
+      const hasCleaning = this.pricingData.cleaning !== undefined;
       this.elements.prixMenage.forEach(element => {
+        const ligneMenage = element.closest('.ligne-menage') || element.parentElement;
+        if (!hasCleaning) {
+          if (ligneMenage) ligneMenage.style.display = 'none';
+          return;
+        }
+        if (ligneMenage) ligneMenage.style.display = '';
         if (details.cleaningFee > 0) {
           if (details.cleaningOptional) {
             element.innerHTML = `${formatPrice(details.cleaningFee)}€ <span style="color:#778183">(en option)</span>`;
@@ -611,6 +618,7 @@ class PriceCalculator {
         }
       });
     }
+
     
     // SOLUTION SIMPLE : Créer les éléments au lieu d'innerHTML
     if (this.elements.totalPrix.length) {
