@@ -1,4 +1,4 @@
-// LOG production V1.32
+// LOG production V1.33
 // Page google
 class InterfaceManager {
   constructor() {
@@ -591,6 +591,7 @@ setupConditionsAnnulation() {
 
       if (selectBtn) {
         selectBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
           this.selectRoom(currentSlot);
         });
@@ -598,6 +599,7 @@ setupConditionsAnnulation() {
 
       if (selectedBtn) {
         selectedBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
           this.deselectRoom();
         });
@@ -993,7 +995,7 @@ setupConditionsAnnulation() {
   }
 
   // Afficher le prix d'une chambre (réutilisé par les blocs et la modale)
-  displayRoomPrice(prixEl, pourcentageEl, pricingData) {
+    displayRoomPrice(prixEl, pourcentageEl, pricingData) {
     const defaultPricing = pricingData.defaultPricing;
     if (!defaultPricing) return;
 
@@ -1001,28 +1003,32 @@ setupConditionsAnnulation() {
 
     if (defaultPricing.mode === 'per_guest') {
       const prices = defaultPricing.pricesPerGuest || [];
-      displayPrice = prices.length > 0 ? prices[prices.length - 1] : (defaultPricing.price || 0);
+      if (prices.length > 0) {
+        const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+        const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+        const totalGuests = Math.max(1, adultsCount + childrenCount);
+        const index = Math.min(totalGuests - 1, prices.length - 1);
+        displayPrice = prices[Math.max(0, index)];
+      } else {
+        displayPrice = defaultPricing.price || 0;
+      }
     } else {
       displayPrice = defaultPricing.price || 0;
     }
 
+    // Calculer le prix plateforme pour le pourcentage
     let platformPrice = displayPrice;
-    let hasDiscount = false;
-
     if (defaultPricing.platformPrices) {
       const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
       if (prices.length > 0) {
         platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-        hasDiscount = true;
       }
     }
-
-    if (!hasDiscount) {
+    if (platformPrice === displayPrice) {
       const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
         ? pricingData.platformPricing.defaultDiscount 
         : 17;
       platformPrice = Math.round(displayPrice * (100 / (100 - defaultDiscount)));
-      hasDiscount = true;
     }
 
     prixEl.textContent = '';
@@ -1031,39 +1037,30 @@ setupConditionsAnnulation() {
     prixEl.style.setProperty('align-items', 'baseline', 'important');
     prixEl.style.setProperty('gap', '4px', 'important');
 
-    if (hasDiscount && platformPrice > displayPrice) {
-      const del = document.createElement('del');
-      del.textContent = `${Math.round(platformPrice)}€`;
-      del.style.setProperty('text-decoration', 'line-through', 'important');
-      del.style.setProperty('color', '#778183', 'important');
-      del.style.setProperty('font-size', '14px', 'important');
-      del.style.setProperty('font-weight', 'normal', 'important');
-      prixEl.appendChild(del);
+    const strong = document.createElement('strong');
+    strong.textContent = `${Math.round(displayPrice)}€`;
+    strong.style.setProperty('font-weight', '600', 'important');
+    strong.style.setProperty('font-size', '16px', 'important');
+    prixEl.appendChild(strong);
 
-      const strong = document.createElement('strong');
-      strong.textContent = `${Math.round(displayPrice)}€`;
-      strong.style.setProperty('font-weight', '600', 'important');
-      strong.style.setProperty('font-size', '16px', 'important');
-      prixEl.appendChild(strong);
+    const suffix = document.createElement('span');
+    suffix.textContent = '/ nuit';
+    suffix.style.setProperty('font-weight', '400', 'important');
+    suffix.style.setProperty('font-size', '16px', 'important');
+    prixEl.appendChild(suffix);
 
-      if (pourcentageEl) {
+    // Pourcentage
+    if (pourcentageEl) {
+      if (platformPrice > displayPrice) {
         const discount = Math.round(((platformPrice - displayPrice) / platformPrice) * 100);
         pourcentageEl.textContent = `-${discount}%`;
         pourcentageEl.style.display = 'block';
-      }
-    } else {
-      const strong = document.createElement('strong');
-      strong.textContent = `${Math.round(displayPrice)}€`;
-      strong.style.setProperty('font-weight', '600', 'important');
-      strong.style.setProperty('font-size', '16px', 'important');
-      prixEl.appendChild(strong);
-
-
-      if (pourcentageEl) {
+      } else {
         pourcentageEl.style.display = 'none';
       }
     }
   }
+
 
   // Mettre à jour les prix de TOUS les blocs chambres selon le nombre de voyageurs
   updateAllRoomBlockPrices() {
@@ -1073,27 +1070,15 @@ setupConditionsAnnulation() {
       const room = this._roomsData[slotIndex];
       if (!room?.pricing_data?.defaultPricing) return;
 
-      const dp = room.pricing_data.defaultPricing;
-      if (dp.mode !== 'per_guest' || !dp.pricesPerGuest?.length) return;
-
-      // Recalculer le prix pour le nombre actuel de voyageurs
-      const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
-      const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
-      const totalGuests = Math.max(1, adultsCount + childrenCount);
-      const index = Math.min(totalGuests - 1, dp.pricesPerGuest.length - 1);
-      
-      // Créer une copie avec le prix ajusté
-      const adjustedPricing = JSON.parse(JSON.stringify(room.pricing_data));
-      adjustedPricing.defaultPricing.price = dp.pricesPerGuest[Math.max(0, index)];
-
       const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
       const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
 
       if (prixEl) {
-        this.displayRoomPrice(prixEl, pourcentageEl, adjustedPricing);
+        this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
       }
     });
   }
+
 
   
   // Ouvrir la modale avec les infos d'une chambre
