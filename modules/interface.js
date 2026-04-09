@@ -1,4 +1,4 @@
-// LOG production V1.35.2
+// LOG production V1.35.3
 // Page google
 class InterfaceManager {
   constructor() {
@@ -873,6 +873,14 @@ setupConditionsAnnulation() {
       }
     }
 
+    // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
+    const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
+    reserverButtons.forEach(btn => {
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+      btn.style.cursor = 'not-allowed';
+    });
+
     // Capacité max = chambre avec le plus de voyageurs
     let maxCapacity = 1;
     rooms.forEach(room => {
@@ -880,6 +888,7 @@ setupConditionsAnnulation() {
       const voyageurs = match ? parseInt(match[1]) : 0;
       if (voyageurs > maxCapacity) maxCapacity = voyageurs;
     });
+    this._bnbMaxCapacity = maxCapacity;
     
     const travelersManager = window.travelersManager;
     if (travelersManager) {
@@ -891,15 +900,6 @@ setupConditionsAnnulation() {
     this.updateRoomAvailability();
   }
 
-
-    // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
-    const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
-    reserverButtons.forEach(btn => {
-      btn.style.opacity = '0.5';
-      btn.style.pointerEvents = 'none';
-      btn.style.cursor = 'not-allowed';
-    });
-  }
 
   // Sélectionner une chambre
   selectRoom(slotIndex) {
