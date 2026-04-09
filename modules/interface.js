@@ -1,4 +1,4 @@
-// LOG production V1.34
+// LOG production V1.35
 // Page google
 class InterfaceManager {
   constructor() {
@@ -482,9 +482,12 @@ setupConditionsAnnulation() {
 
       this.displayRoomsOnDetail(rooms);
 
-      // Précharger les calendriers et initialiser l'état B&B
-      await this.preloadRoomsCalendarData(rooms);
+      // Initialiser l'état B&B immédiatement (prix, capacité, boutons)
       this.initBnbDefaultState(rooms);
+
+      // Précharger les calendriers en arrière-plan
+      this.preloadRoomsCalendarData(rooms);
+
     } catch (error) {
       console.error('❌ Erreur chargement chambres:', error);
     }
