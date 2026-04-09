@@ -1,4 +1,4 @@
-// LOG production V1.35
+// LOG production V1.35.1
 // Page google
 class InterfaceManager {
   constructor() {
@@ -600,6 +600,35 @@ setupConditionsAnnulation() {
         });
       }
 
+      // 9. Élément au survol
+      const hoverEl = document.getElementById(`hover-image-${slotIndex}`);
+      if (hoverEl) {
+        // Masquer par défaut
+        hoverEl.style.cssText = `
+          display:none;position:absolute;bottom:10px;right:10px;z-index:2;
+        `;
+
+        // Le conteneur image doit être en position relative
+        const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
+        if (imageEl) {
+          const imageParent = imageEl.parentElement;
+          if (imageParent) {
+            imageParent.style.position = 'relative';
+          }
+        }
+
+        // Afficher/masquer au survol du bloc
+        chambreBloc.addEventListener('mouseenter', () => {
+          if (chambreBloc.style.opacity !== '0.3') {
+            hoverEl.style.display = 'flex';
+          }
+        });
+        chambreBloc.addEventListener('mouseleave', () => {
+          hoverEl.style.display = 'none';
+        });
+      }
+
+
       if (selectedBtn) {
         selectedBtn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -1110,6 +1139,66 @@ setupConditionsAnnulation() {
     });
   }
 
+  updateRoomAvailability() {
+    if (!this._roomsData) return;
+
+    // Récupérer le nombre de voyageurs actuel
+    const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+    const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+    const totalGuests = adultsCount + childrenCount;
+
+    // Récupérer les dates sélectionnées
+    const pc = window.priceCalculator;
+    const hasSelectedDates = pc?.startDate && pc?.endDate;
+
+    Object.keys(this._roomsData).forEach(slotIndex => {
+      const room = this._roomsData[slotIndex];
+      if (!room) return;
+
+      const chambreBloc = document.getElementById(`chambre-hote-${slotIndex}`);
+      const selectBtn = document.getElementById(`button-select-${slotIndex}`);
+      if (!chambreBloc) return;
+
+      let isUnavailable = false;
+
+      // 1. Vérifier la capacité
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const roomCapacity = match ? parseInt(match[1]) : 0;
+      if (totalGuests > roomCapacity) {
+        isUnavailable = true;
+      }
+
+      // 2. Vérifier les dates (si des dates sont sélectionnées)
+      if (!isUnavailable && hasSelectedDates && this._roomsUnavailableDates) {
+        const roomDates = this._roomsUnavailableDates[slotIndex];
+        if (roomDates) {
+          let checkDate = moment(pc.startDate).startOf('day');
+          const endDate = moment(pc.endDate).startOf('day');
+          while (checkDate.isBefore(endDate)) {
+            if (roomDates.has(checkDate.format('YYYY-MM-DD'))) {
+              isUnavailable = true;
+              break;
+            }
+            checkDate.add(1, 'day');
+          }
+        }
+      }
+
+      // Ne pas toucher la chambre actuellement sélectionnée
+      if (this._selectedRoomIndex === parseInt(slotIndex)) return;
+
+      // Appliquer l'état
+      if (isUnavailable) {
+        chambreBloc.style.opacity = '0.3';
+        chambreBloc.style.pointerEvents = 'none';
+        if (selectBtn) selectBtn.style.display = 'none';
+      } else {
+        chambreBloc.style.opacity = '';
+        chambreBloc.style.pointerEvents = '';
+        if (selectBtn) selectBtn.style.display = '';
+      }
+    });
+  }
 
   
   // Ouvrir la modale avec les infos d'une chambre
