@@ -1,4 +1,4 @@
-// LOG production V1.38.5
+// LOG production V1.38.6
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1012,12 +1012,27 @@ setupConditionsAnnulation() {
         // 2. Prix : remettre pricingData à null
     if (window.priceCalculator) {
       window.priceCalculator.pricingData = null;
+      window.priceCalculator.startDate = null;
+      window.priceCalculator.endDate = null;
     }
+    
+    // Masquer le bloc calcul prix (aucune chambre sélectionnée)
+    const blocPrix = document.getElementById('bloc-calcul-prix');
+    if (blocPrix) blocPrix.style.display = 'none';
+    const blocPrixMobile = document.getElementById('bloc-calcul-prix-mobile');
+    if (blocPrixMobile) blocPrixMobile.style.display = 'none';
     
     // Réafficher le prix le plus bas
     this.initBnbDefaultState(
       Object.values(this._roomsData).filter(Boolean)
     );
+
+    // Recalculer les prix des blocs chambres si des dates sont dans le picker
+    const picker = window.detailLogementPage?.managers?.calendar?.picker;
+    if (picker?.startDate && picker?.endDate) {
+      this.syncSelectedRoomPrice();
+    }
+
 
     // 3. Calendrier : remettre les dates combinées
     const calendarManager = window.detailLogementPage?.managers?.calendar;
@@ -1367,12 +1382,16 @@ setupConditionsAnnulation() {
         if (selectBtn) selectBtn.style.display = 'none';
         if (prixEl) prixEl.textContent = 'Chambre indisponible';
         if (pourcentageEl) pourcentageEl.style.display = 'none';
-      } else {
+        } else {
         chambreBloc.style.opacity = '';
         chambreBloc.style.pointerEvents = '';
         if (selectBtn) selectBtn.style.display = '';
-        // Restaurer le prix
-        if (prixEl) this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
+        // Restaurer le prix seulement si pas de dates (sinon syncSelectedRoomPrice gère)
+        const hasPickerDates = window.detailLogementPage?.managers?.calendar?.picker?.startDate && 
+                               window.detailLogementPage?.managers?.calendar?.picker?.endDate;
+        if (prixEl && !hasPickerDates) {
+          this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
+        }
       }
     });
   }
