@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.125
+// Calculateur de prix principal - LOG production V1.126
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -54,11 +54,25 @@ class PriceCalculator {
       attribute = "data-json-tarifs";
     }
     
-    if (element) {
+        if (element) {
       try {
         const jsonData = element.getAttribute(attribute);
         if (!jsonData || jsonData.trim() === '') return;
-        this.pricingData = JSON.parse(jsonData);
+        const parsedData = JSON.parse(jsonData);
+        
+        // Pour les chambres d'hôtes, ne garder que caution/acompte
+        const typeElement = document.querySelector('[data-mode-location]');
+        if (typeElement && typeElement.getAttribute('data-mode-location') === "Chambre d'hôtes") {
+          this._parentCautionAcompte = {
+            caution: parsedData.caution || null,
+            acompte: parsedData.acompte || null
+          };
+          this.pricingData = null;
+          return;
+        }
+        
+        this.pricingData = parsedData;
+
       } catch (error) {
         console.error("❌ Erreur lors du chargement des données tarifaires:", error);
       }
