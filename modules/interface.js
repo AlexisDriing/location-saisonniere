@@ -1,4 +1,4 @@
-// LOG production V1.38.6
+// LOG production V1.38.7
 // Page google
 class InterfaceManager {
   constructor() {
@@ -945,15 +945,21 @@ setupConditionsAnnulation() {
       if (el) el.style.display = 'none';
     });
 
-    // 2. Prix : injecter le pricingData de la chambre
+        // 2. Prix : injecter le pricingData de la chambre
     if (window.priceCalculator && room.pricing_data) {
       window.priceCalculator.pricingData = room.pricing_data;
-      if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
+      
+      // Vérifier les dates dans le picker (pas dans PriceCalculator qui peut les avoir effacées)
+      const picker = window.detailLogementPage?.managers?.calendar?.picker;
+      if (picker?.startDate && picker?.endDate && picker.endDate.diff(picker.startDate, 'days') > 0) {
+        window.priceCalculator.startDate = picker.startDate;
+        window.priceCalculator.endDate = picker.endDate;
         window.priceCalculator.calculateAndDisplayPrices();
       } else {
         window.priceCalculator.resetPrices();
       }
     }
+
 
     const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
     const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
