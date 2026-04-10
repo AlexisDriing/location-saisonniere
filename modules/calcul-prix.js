@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.123
+// Calculateur de prix principal - LOG production V1.124
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -78,15 +78,21 @@ class PriceCalculator {
 
   listenForDateChanges() {
     if (typeof jQuery !== 'undefined' && jQuery("#input-calendar, #input-calendar-mobile").length) {
-      jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
+            jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
         if (picker.startDate && picker.endDate) {
           this.startDate = picker.startDate;
           this.endDate = picker.endDate;
           this.calculateAndDisplayPrices();
+          // Mettre à jour les prix des blocs chambres même sans chambre sélectionnée
+          const interfaceManager = window.detailLogementPage?.managers?.interface;
+          if (interfaceManager?.syncSelectedRoomPrice) {
+            interfaceManager.syncSelectedRoomPrice();
+          }
         } else {
           this.resetPrices();
         }
       });
+
       
       jQuery("#input-calendar, #input-calendar-mobile").on("cancel.daterangepicker", () => {
         this.resetPrices();
