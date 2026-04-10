@@ -1,4 +1,4 @@
-// LOG production V1.38.4
+// LOG production V1.38.5
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1009,12 +1009,12 @@ setupConditionsAnnulation() {
 
     this._selectedRoomIndex = null;
 
-    // 2. Prix : remettre pricingData à null et réafficher "À partir de" combiné
+        // 2. Prix : remettre pricingData à null
     if (window.priceCalculator) {
       window.priceCalculator.pricingData = null;
-      window.priceCalculator.resetPrices();
     }
-    // Réafficher le prix le plus bas manuellement
+    
+    // Réafficher le prix le plus bas
     this.initBnbDefaultState(
       Object.values(this._roomsData).filter(Boolean)
     );
