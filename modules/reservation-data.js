@@ -1,4 +1,4 @@
-// LOG production V1.13
+// LOG production V1.14
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -179,7 +179,7 @@ class ReservationDataManager {
       logementNom: logementInfo.nom,
       logementImage: logementInfo.image,
       logementAdresse: logementInfo.adresse,
-      logementReduction: logementInfo.reduction,
+      logementReduction: Utils.getElementByIdWithFallback("text-pourcentage")?.textContent?.trim() || logementInfo.reduction,
       logementUrl: currentPageUrl,
       siteInternet: siteInternet,
       datesTexte,
