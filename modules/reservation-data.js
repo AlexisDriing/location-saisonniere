@@ -1,4 +1,4 @@
-// LOG production V1.12
+// LOG production V1.13
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -133,11 +133,18 @@ class ReservationDataManager {
     let caution = null;
     let acompte = null;
     
-    if (window.priceCalculator && window.priceCalculator.pricingData) {
-      const pricingData = window.priceCalculator.pricingData;
-      caution = pricingData.caution;
-      acompte = pricingData.acompte;
+    if (window.priceCalculator) {
+      if (window.priceCalculator.pricingData) {
+        caution = window.priceCalculator.pricingData.caution;
+        acompte = window.priceCalculator.pricingData.acompte;
+      }
+      // Pour les chambres d'hôtes, caution/acompte sont stockés séparément
+      if (window.priceCalculator._parentCautionAcompte) {
+        caution = window.priceCalculator._parentCautionAcompte.caution;
+        acompte = window.priceCalculator._parentCautionAcompte.acompte;
+      }
     }
+
     
     if (window.priceCalculator && window.priceCalculator.startDate) {
       prixDetails = {
