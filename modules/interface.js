@@ -1,4 +1,4 @@
-// LOG production V1.38.8
+// LOG production V1.38.9
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1325,13 +1325,13 @@ setupConditionsAnnulation() {
       suffix.style.setProperty('font-weight', '400', 'important');
       suffix.style.setProperty('font-size', '16px', 'important');
       prixEl.appendChild(suffix);
-    });
+
       // Remettre le pourcentage visible
       const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
       if (pourcentageEl && pourcentageEl.textContent && pourcentageEl.textContent.trim() !== '') {
         pourcentageEl.style.display = 'block';
       }
-
+    });
   }
 
 
