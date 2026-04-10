@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.122
+// Calculateur de prix principal - LOG production V1.123
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -611,11 +611,12 @@ class PriceCalculator {
       const hasCleaning = this.pricingData.cleaning !== undefined;
       this.elements.prixMenage.forEach(element => {
         const ligneMenage = element.closest('.ligne-menage') || element.parentElement;
-        if (!hasCleaning) {
+        if (!hasCleaning || window.detailLogementPage?.managers?.interface?._bnbMode) {
           if (ligneMenage) ligneMenage.style.setProperty('display', 'none', 'important');
           return;
         }
         if (ligneMenage) ligneMenage.style.display = '';
+
 
         if (details.cleaningFee > 0) {
           if (details.cleaningOptional) {
