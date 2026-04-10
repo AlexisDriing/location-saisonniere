@@ -1,4 +1,4 @@
-// LOG production V1.38.2
+// LOG production V1.38.3
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1198,42 +1198,95 @@ setupConditionsAnnulation() {
     });
   }
 
-  syncSelectedRoomPrice() {
-    if (!this._selectedRoomIndex) return;
-    
-    const prixDirect = document.querySelector('[id="prix-direct"]');
-    const prixChambre = document.getElementById(`prix-chambre-${this._selectedRoomIndex}`);
-    if (!prixDirect || !prixChambre) return;
+    syncSelectedRoomPrice() {
+    const pc = window.priceCalculator;
+    if (!pc?.startDate || !pc?.endDate || !this._roomsData) return;
 
-    // Extraire le prix depuis prix-direct (chercher le strong qui contient le prix)
-    const strongEl = prixDirect.querySelector('strong');
-    if (!strongEl) return;
+    Object.keys(this._roomsData).forEach(slotIndex => {
+      const room = this._roomsData[slotIndex];
+      if (!room?.pricing_data) return;
 
-    const priceText = strongEl.textContent; // ex: "408€ / nuit" ou "408€"
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      if (!prixEl) return;
 
-    // Mettre à jour le bloc chambre
-    prixChambre.textContent = '';
-    prixChambre.style.setProperty('display', 'flex', 'important');
-    prixChambre.style.setProperty('flex-direction', 'row', 'important');
-    prixChambre.style.setProperty('align-items', 'baseline', 'important');
-    prixChambre.style.setProperty('gap', '4px', 'important');
+      // Calculer le prix moyen par nuit pour cette chambre avec les dates actuelles
+      let totalPrice = 0;
+      let nights = 0;
+      let currentDate = moment(pc.startDate).startOf('day');
+      const endDate = moment(pc.endDate).startOf('day');
 
-    // Extraire juste le nombre
-    const priceMatch = priceText.match(/(\d+)/);
-    if (!priceMatch) return;
+      while (currentDate.isBefore(endDate)) {
+        const month = currentDate.month() + 1;
+        const day = currentDate.date();
+        let nightPrice = room.pricing_data.defaultPricing?.price || 0;
 
-    const strong = document.createElement('strong');
-    strong.textContent = `${priceMatch[1]}€`;
-    strong.style.setProperty('font-weight', '600', 'important');
-    strong.style.setProperty('font-size', '16px', 'important');
-    prixChambre.appendChild(strong);
+        // Chercher la saison active
+        if (room.pricing_data.seasons?.length > 0) {
+          for (const season of room.pricing_data.seasons) {
+            if (!season.periods) continue;
+            for (const period of season.periods) {
+              const [startDay, startMonth] = period.start.split("-").map(Number);
+              const [endDay, endMonth] = period.end.split("-").map(Number);
+              let inSeason = false;
+              if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+                inSeason = (month > startMonth || (month === startMonth && day >= startDay)) &&
+                           (month < endMonth || (month === endMonth && day <= endDay));
+              } else {
+                inSeason = (month > startMonth || (month === startMonth && day >= startDay)) ||
+                           (month < endMonth || (month === endMonth && day <= endDay));
+              }
+              if (inSeason) nightPrice = season.price;
+            }
+          }
+        }
 
-    const suffix = document.createElement('span');
-    suffix.textContent = '/ nuit';
-    suffix.style.setProperty('font-weight', '400', 'important');
-    suffix.style.setProperty('font-size', '16px', 'important');
-    prixChambre.appendChild(suffix);
+        // Week-end
+        const dp = room.pricing_data.defaultPricing;
+        if (dp?.weekend?.enabled && dp.weekend.price > 0) {
+          const dayOfWeek = currentDate.day();
+          if (dayOfWeek === 5 || dayOfWeek === 6) {
+            nightPrice = dp.weekend.price;
+          }
+        }
+
+        // Per_guest
+        if (dp?.mode === 'per_guest' && dp.pricesPerGuest?.length > 0) {
+          const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+          const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+          const totalGuests = Math.max(1, adultsCount + childrenCount);
+          const index = Math.min(totalGuests - 1, dp.pricesPerGuest.length - 1);
+          nightPrice = dp.pricesPerGuest[Math.max(0, index)];
+        }
+
+        totalPrice += nightPrice;
+        nights++;
+        currentDate.add(1, 'day');
+      }
+
+      if (nights === 0) return;
+      const avgPrice = Math.round(totalPrice / nights);
+
+      // Afficher
+      prixEl.textContent = '';
+      prixEl.style.setProperty('display', 'flex', 'important');
+      prixEl.style.setProperty('flex-direction', 'row', 'important');
+      prixEl.style.setProperty('align-items', 'baseline', 'important');
+      prixEl.style.setProperty('gap', '4px', 'important');
+
+      const strong = document.createElement('strong');
+      strong.textContent = `${avgPrice}€`;
+      strong.style.setProperty('font-weight', '600', 'important');
+      strong.style.setProperty('font-size', '16px', 'important');
+      prixEl.appendChild(strong);
+
+      const suffix = document.createElement('span');
+      suffix.textContent = '/ nuit';
+      suffix.style.setProperty('font-weight', '400', 'important');
+      suffix.style.setProperty('font-size', '16px', 'important');
+      prixEl.appendChild(suffix);
+    });
   }
+
 
   
   updateRoomAvailability() {
