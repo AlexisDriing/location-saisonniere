@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.124
+// Calculateur de prix principal - LOG production V1.125
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -231,16 +231,18 @@ class PriceCalculator {
     }
     
         // Mettre à jour les prix et la disponibilité des chambres
-    const interfaceManager = window.detailLogementPage?.managers?.interface;
-    if (interfaceManager?.updateAllRoomBlockPrices) {
-      interfaceManager.updateAllRoomBlockPrices();
-    }
-    if (interfaceManager?.syncSelectedRoomPrice) {
+        const interfaceManager = window.detailLogementPage?.managers?.interface;
+    const hasPickerDates = window.detailLogementPage?.managers?.calendar?.picker?.startDate && 
+                           window.detailLogementPage?.managers?.calendar?.picker?.endDate;
+    if (hasPickerDates && interfaceManager?.syncSelectedRoomPrice) {
       interfaceManager.syncSelectedRoomPrice();
+    } else if (interfaceManager?.updateAllRoomBlockPrices) {
+      interfaceManager.updateAllRoomBlockPrices();
     }
     if (interfaceManager?.updateRoomAvailability) {
       interfaceManager.updateRoomAvailability();
     }
+
 
     // Masquer la ligne ménage si mode B&B
     if (window.detailLogementPage?.managers?.interface?._bnbMode) {
@@ -716,17 +718,15 @@ class PriceCalculator {
       }
     }
 
-        // Mettre à jour les prix et la disponibilité des chambres
+    // Mettre à jour les prix et la disponibilité des chambres
     const interfaceManager = window.detailLogementPage?.managers?.interface;
-    if (interfaceManager?.updateAllRoomBlockPrices) {
-      interfaceManager.updateAllRoomBlockPrices();
-    }
     if (interfaceManager?.syncSelectedRoomPrice) {
       interfaceManager.syncSelectedRoomPrice();
     }
     if (interfaceManager?.updateRoomAvailability) {
       interfaceManager.updateRoomAvailability();
     }
+
   }
 
 
