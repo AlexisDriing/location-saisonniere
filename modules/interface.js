@@ -1,4 +1,4 @@
-// LOG production V1.38.3
+// LOG production V1.38.4
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1046,11 +1046,6 @@ setupConditionsAnnulation() {
       travelersManager.maxCapacity = maxCapacity;
       travelersManager.updateUI();
     }
-
-    // 6. Reset dates sélectionnées
-    if (calendarManager?.picker) {
-      calendarManager.resetDatePicker(calendarManager.picker);
-    }
   }
 
 
@@ -1249,14 +1244,39 @@ setupConditionsAnnulation() {
           }
         }
 
-        // Per_guest
-        if (dp?.mode === 'per_guest' && dp.pricesPerGuest?.length > 0) {
+                // Per_guest : utiliser le pricesPerGuest de la saison active si disponible
+        if (dp?.mode === 'per_guest') {
           const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
           const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
           const totalGuests = Math.max(1, adultsCount + childrenCount);
-          const index = Math.min(totalGuests - 1, dp.pricesPerGuest.length - 1);
-          nightPrice = dp.pricesPerGuest[Math.max(0, index)];
+          
+          // Chercher le pricesPerGuest de la saison active pour cette nuit
+          let activePricesPerGuest = dp.pricesPerGuest || [];
+          if (room.pricing_data.seasons?.length > 0) {
+            for (const season of room.pricing_data.seasons) {
+              if (!season.periods || !season.pricesPerGuest?.length) continue;
+              for (const period of season.periods) {
+                const [startDay, startMonth] = period.start.split("-").map(Number);
+                const [endDay, endMonth] = period.end.split("-").map(Number);
+                let inSeason = false;
+                if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+                  inSeason = (month > startMonth || (month === startMonth && day >= startDay)) &&
+                             (month < endMonth || (month === endMonth && day <= endDay));
+                } else {
+                  inSeason = (month > startMonth || (month === startMonth && day >= startDay)) ||
+                             (month < endMonth || (month === endMonth && day <= endDay));
+                }
+                if (inSeason) activePricesPerGuest = season.pricesPerGuest;
+              }
+            }
+          }
+          
+          if (activePricesPerGuest.length > 0) {
+            const index = Math.min(totalGuests - 1, activePricesPerGuest.length - 1);
+            nightPrice = activePricesPerGuest[Math.max(0, index)];
+          }
         }
+
 
         totalPrice += nightPrice;
         nights++;
