@@ -1,4 +1,4 @@
-// LOG production V1.11
+// LOG production V1.12
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -161,7 +161,12 @@ class ReservationDataManager {
       siteInternet = siteInternetElement.getAttribute("data-site-internet") || "";
     }
     
-    // Créer l'objet de données de réservation
+    // Récupérer les infos de la chambre sélectionnée si B&B
+    const interfaceManager = window.detailLogementPage?.managers?.interface;
+    const selectedRoom = interfaceManager?._selectedRoomIndex 
+      ? interfaceManager._roomsData[interfaceManager._selectedRoomIndex] 
+      : null;
+
     const reservationData = {
       logementId: propertyId,
       logementNom: logementInfo.nom,
@@ -181,8 +186,30 @@ class ReservationDataManager {
       caution,
       acompte,
       dateReservation: new Date().toISOString(),
-      hoteEmail: document.getElementById("email-hote")?.getAttribute("data-email") || ""
+      hoteEmail: document.getElementById("email-hote")?.getAttribute("data-email") || "",
+      isChambreHote: !!selectedRoom,
+      chambre: selectedRoom ? {
+        nom: selectedRoom.name || '',
+        image: (() => {
+          const photos = selectedRoom.photos || [];
+          if (photos.length > 0) {
+            return typeof photos[0] === 'object' ? photos[0].url : photos[0];
+          }
+          return '';
+        })(),
+        voyageurs: (() => {
+          const match = (selectedRoom.taille_chambre || '').match(/^(\d+)/);
+          const v = match ? parseInt(match[1]) : 0;
+          return `${v} voyageur${v > 1 ? 's' : ''}`;
+        })(),
+        taille: (() => {
+          const match = (selectedRoom.taille_chambre || '').match(/(\d+)\s*m²/);
+          return match ? `${match[1]} m²` : '';
+        })(),
+        lits: interfaceManager?.formatDetailsLits(selectedRoom.details_lits) || ''
+      } : null
     };
+
     
     // Sauvegarder dans localStorage
     localStorage.setItem("reservation_data", JSON.stringify(reservationData));
