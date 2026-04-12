@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.2
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.21
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -905,8 +905,8 @@ if (hostImageElement) {
       optionsElement.setAttribute('data-option-accueil', propData.options.join(', '));
     }
     
-    // JSON tarifs pour le calcul des prix
-    const tarifElement = newCard.querySelector('[data-json-tarifs-line]');
+        // JSON tarifs pour le calcul des prix
+    const tarifElement = newCard.querySelector('[data-json-tarifs-line]') || newCard.querySelector('.data-none');
     if (tarifElement && propData.pricing_data) {
       tarifElement.setAttribute('data-json-tarifs-line', JSON.stringify(propData.pricing_data));
     }
