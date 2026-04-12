@@ -1,4 +1,4 @@
-// LOG production V1.38.10
+// LOG production V1.38.11
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1024,7 +1024,13 @@ setupConditionsAnnulation() {
 
     this._selectedRoomIndex = null;
 
-        // 2. Prix : remettre pricingData à null
+    // Masquer les blocs d'erreur
+    document.querySelectorAll('.bloc-error-days').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+
+    // 2. Prix : remettre pricingData à null
+
     if (window.priceCalculator) {
       window.priceCalculator.pricingData = null;
       window.priceCalculator.startDate = null;
