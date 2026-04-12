@@ -1,4 +1,4 @@
-// LOG production V1.38.15
+// LOG production V1.38.16
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1895,7 +1895,9 @@ setupImmatriculation() {
     
     openBtn.addEventListener("click", function(e) {
       e.preventDefault();
+      e.stopImmediatePropagation();
       document.body.classList.add("no-scroll");
+
       popin.style.display = "flex";
       popin.style.opacity = "1";
       const popup = popin.querySelector('.bloc-popup');
