@@ -1,4 +1,4 @@
-// LOG production V1.38.13
+// LOG production V1.38.14
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1878,8 +1878,9 @@ setupImmatriculation() {
     });
   }
   // Gestion des popins
-  setupPopins() {
+    setupPopins() {
     this.setupPopin(".pop-up.photos", ".bloc-link-images", ".button-card, .app, .second, .profile, .conciergerie, .logements");
+    this.setupPopin(".popin-price", "#btn-season", ".button-modal-prix.close");
   }
 
   setupPopin(popinSelector, openSelector, closeSelectors) {
