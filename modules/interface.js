@@ -1,4 +1,4 @@
-// LOG production V1.38.9
+// LOG production V1.38.10
 // Page google
 class InterfaceManager {
   constructor() {
@@ -799,11 +799,20 @@ setupConditionsAnnulation() {
       }
     }
 
-    // Mettre à jour le picker avec les dates combinées
+        // Mettre à jour le picker avec les dates combinées
     if (calendarManager.picker) {
       calendarManager.picker.updateCalendars();
     }
+
+    // Mettre à jour la disponibilité des chambres maintenant que les iCal sont chargés
+    this.updateRoomAvailability();
+    
+    // Si des dates sont dans le picker, mettre à jour les prix aussi
+    if (calendarManager.picker?.startDate && calendarManager.picker?.endDate) {
+      this.syncSelectedRoomPrice();
+    }
   }
+
 
   // Initialiser l'état par défaut pour un logement chambre d'hôtes
   initBnbDefaultState(rooms) {
