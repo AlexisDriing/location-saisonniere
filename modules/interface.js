@@ -1,4 +1,4 @@
-// LOG production V1.38.14
+// LOG production V1.38.15
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1878,7 +1878,7 @@ setupImmatriculation() {
     });
   }
   // Gestion des popins
-    setupPopins() {
+  setupPopins() {
     this.setupPopin(".pop-up.photos", ".bloc-link-images", ".button-card, .app, .second, .profile, .conciergerie, .logements");
     this.setupPopin(".popin-price", "#btn-season", ".button-modal-prix.close");
   }
@@ -1893,13 +1893,21 @@ setupImmatriculation() {
       return;
     }
     
-    openBtn.addEventListener("click", function() {
+    openBtn.addEventListener("click", function(e) {
+      e.preventDefault();
       document.body.classList.add("no-scroll");
-      popin.style.display = "block";
+      popin.style.display = "flex";
+      popin.style.opacity = "1";
+      const popup = popin.querySelector('.bloc-popup');
+      if (popup) {
+        popup.style.opacity = '1';
+        popup.style.transform = 'none';
+      }
     });
     
     closeBtns.forEach(btn => {
-      btn.addEventListener("click", function() {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
         document.body.classList.remove("no-scroll");
         popin.style.display = "none";
       });
