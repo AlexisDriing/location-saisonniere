@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.059
+// LOG production V1.5 - chambres d'hôtes v1.060
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -201,9 +201,13 @@ async setupParentChambreHoteDisplay() {
   // 5. Configurer les listeners des liens
   this.setupLiensPlateformesListeners();
   
-  // 6. Initialiser les éléments communs (images, extras, etc.)
+  // 6. Initialiser les formatters (heures, suffixes €/%)
+  this.initFormFormatters();
+  
+  // 7. Initialiser les éléments communs (images, extras, etc.)
   this.initImageManagement();
   this.initExtrasManagement();
+
   
   // 7. Charger le nombre de chambres pour le calcul du statut au save
   try {
@@ -584,7 +588,7 @@ setupRoomFieldListeners() {
   });
   
   // Champs numériques
-  ['voyageurs-input-chambre', 'lits-input-chambre', 'taille-chambre'].forEach(id => {
+  ['voyageurs-input-chambre', 'lits-input-chambre', 'taille-chambre', 'default-min-nights-input-chambre', 'season-min-nights-input-chambre', 'season-min-nights-input-edit-chambre'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
       input.addEventListener('input', (e) => {
@@ -592,6 +596,7 @@ setupRoomFieldListeners() {
       });
     }
   });
+
   
   // Équipements
   Object.values(PropertyEditor.ROOM_EQUIPEMENTS_MAPPING).forEach(id => {
@@ -4622,7 +4627,7 @@ prefillHoraires() {
     
     if (arriveeInput) arriveeInput.style.display = 'none';
     const blocCreneau = document.getElementById('bloc-arrivee-creneau');
-    if (blocCreneau) blocCreneau.style.display = 'block';
+    if (blocCreneau) blocCreneau.style.display = 'flex';
     if (debutInput) debutInput.value = debut;
     if (finInput) finInput.value = fin;
   } else {
