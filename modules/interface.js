@@ -1,4 +1,4 @@
-// LOG production V1.38.18
+// LOG production V1.38.20
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1037,11 +1037,26 @@ setupConditionsAnnulation() {
       if (el) el.style.display = 'none';
     });
 
-    // 2. Prix : remettre pricingData à null
+    // 2. Prix : remettre pricingData à null et resynchroniser les dates depuis le picker
     if (window.priceCalculator) {
       window.priceCalculator.pricingData = null;
-      window.priceCalculator.startDate = null;
-      window.priceCalculator.endDate = null;
+      
+      // Resynchroniser les dates depuis le picker (desktop ou mobile)
+      const desktopPicker = window.detailLogementPage?.managers?.calendar?.picker;
+      const mobilePicker = typeof jQuery !== 'undefined' ? jQuery('#input-calendar-mobile').data('daterangepicker') : null;
+      
+      if (mobilePicker?.startDate && mobilePicker?.endDate && 
+          mobilePicker.endDate.diff(mobilePicker.startDate, 'days') > 0) {
+        window.priceCalculator.startDate = mobilePicker.startDate;
+        window.priceCalculator.endDate = mobilePicker.endDate;
+      } else if (desktopPicker?.startDate && desktopPicker?.endDate && 
+                 desktopPicker.endDate.diff(desktopPicker.startDate, 'days') > 0) {
+        window.priceCalculator.startDate = desktopPicker.startDate;
+        window.priceCalculator.endDate = desktopPicker.endDate;
+      } else {
+        window.priceCalculator.startDate = null;
+        window.priceCalculator.endDate = null;
+      }
     }
     
     // Masquer le bloc calcul prix (aucune chambre sélectionnée)
@@ -1055,24 +1070,11 @@ setupConditionsAnnulation() {
       Object.values(this._roomsData).filter(Boolean)
     );
 
-    // Resynchroniser les dates du PriceCalculator depuis le picker
-    const desktopPicker = window.detailLogementPage?.managers?.calendar?.picker;
-    const mobilePicker = typeof jQuery !== 'undefined' ? jQuery('#input-calendar-mobile').data('daterangepicker') : null;
-    
-    if (mobilePicker?.startDate && mobilePicker?.endDate && 
-        mobilePicker.endDate.diff(mobilePicker.startDate, 'days') > 0) {
-      window.priceCalculator.startDate = mobilePicker.startDate;
-      window.priceCalculator.endDate = mobilePicker.endDate;
-    } else if (desktopPicker?.startDate && desktopPicker?.endDate && 
-               desktopPicker.endDate.diff(desktopPicker.startDate, 'days') > 0) {
-      window.priceCalculator.startDate = desktopPicker.startDate;
-      window.priceCalculator.endDate = desktopPicker.endDate;
-    }
-
     // Recalculer les prix des blocs chambres si des dates existent
     if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
       this.syncSelectedRoomPrice();
     }
+
 
     // 3. Calendrier : remettre les dates combinées
     const calendarManager = window.detailLogementPage?.managers?.calendar;
