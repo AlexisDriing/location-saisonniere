@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.041 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.042 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -729,12 +729,30 @@ setupAddRoomSubmit() {
       return;
     }
     
-        newBtn.disabled = true;
+                newBtn.disabled = true;
     const originalText = newBtn.value;
     newBtn.value = 'Création en cours...';
+    newBtn.style.position = 'relative';
+    newBtn.style.overflow = 'hidden';
+    
+    // Barre de progression
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = 'position:absolute;bottom:0;left:0;height:3px;background:#235B59;width:0%;transition:width 0.3s;border-radius:0 0 4px 4px;';
+    newBtn.parentElement.style.position = 'relative';
+    newBtn.parentElement.appendChild(progressBar);
+    
+    // Animation progressive
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      if (progress < 90) {
+        progress += (90 - progress) * 0.1;
+        progressBar.style.width = `${Math.round(progress)}%`;
+      }
+    }, 100);
     
     try {
       const response = await fetch(`${window.CONFIG.API_URL}/create-room`, {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -770,10 +788,16 @@ setupAddRoomSubmit() {
     } catch (error) {
       console.error('❌ Erreur création chambre:', error);
       alert('Erreur lors de la création');
-    } finally {
-      newBtn.disabled = false;
-      newBtn.value = originalText;
+      } finally {
+      clearInterval(progressInterval);
+      progressBar.style.width = '100%';
+      setTimeout(() => {
+        progressBar.remove();
+        newBtn.disabled = false;
+        newBtn.value = originalText;
+      }, 300);
     }
+
   });
 }
 
