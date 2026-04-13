@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.045 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.046 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1041,11 +1041,22 @@ checkPopupTrigger() {
       });
       
       if (response.ok) {
+        // Accélérer la barre mais ne pas terminer — la page va changer
         clearInterval(progressInterval);
-        progressBar.style.width = '100%';
+        let fastProgress = progress;
+        const fastInterval = setInterval(() => {
+          if (fastProgress < 98) {
+            fastProgress += (98 - fastProgress) * 0.15;
+            progressBar.style.width = `${Math.round(fastProgress)}%`;
+          }
+        }, 100);
+        
         const data = await response.json();
+        clearInterval(fastInterval);
+        progressBar.style.width = '100%';
         window.location.href = `/mon-espace/modification-logement?id=${data.itemId}`;
       }
+
 
       
     } catch (error) {
