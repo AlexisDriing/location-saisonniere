@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.044 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.045 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1011,7 +1011,6 @@ checkPopupTrigger() {
     
         // Désactiver le bouton
     submitButton.disabled = true;
-    const originalText = submitButton.value;
     submitButton.value = 'Création en cours...';
     submitButton.style.opacity = '0.7';
     
