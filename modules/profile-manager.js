@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.043 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.044 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1009,9 +1009,25 @@ checkPopupTrigger() {
     const selectedModeLocation = document.querySelector('input[name="mode-location-creation"]:checked');
     const modeLocation = selectedModeLocation ? selectedModeLocation.value : 'Logement entier';
     
-    // Désactiver le bouton
+        // Désactiver le bouton
     submitButton.disabled = true;
-    submitButton.value = 'Création...';
+    const originalText = submitButton.value;
+    submitButton.value = 'Création en cours...';
+    submitButton.style.opacity = '0.7';
+    
+    // Barre de progression sous le bouton
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = 'width:0%;height:4px;background:#235B59;border-radius:4px;transition:width 0.3s;margin-top:6px;';
+    submitButton.insertAdjacentElement('afterend', progressBar);
+    
+    // Animation progressive
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      if (progress < 90) {
+        progress += (90 - progress) * 0.1;
+        progressBar.style.width = `${Math.round(progress)}%`;
+      }
+    }, 100);
     
     try {
       const response = await fetch(`${window.CONFIG.API_URL}/create-property`, {
@@ -1026,6 +1042,8 @@ checkPopupTrigger() {
       });
       
       if (response.ok) {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
         const data = await response.json();
         window.location.href = `/mon-espace/modification-logement?id=${data.itemId}`;
       }
@@ -1034,9 +1052,13 @@ checkPopupTrigger() {
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
+      clearInterval(progressInterval);
+      progressBar.remove();
       submitButton.disabled = false;
       submitButton.value = originalText;
+      submitButton.style.opacity = '';
     }
+
     });
   }
 }
