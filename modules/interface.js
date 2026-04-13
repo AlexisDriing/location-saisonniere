@@ -1,4 +1,4 @@
-// LOG production V1.38.16
+// LOG production V1.38.17
 // Page google
 class InterfaceManager {
   constructor() {
@@ -460,10 +460,13 @@ setupConditionsAnnulation() {
         }
       }
 
-      // Si chambre d'hôtes, charger et afficher les chambres
+       // Si chambre d'hôtes, charger et afficher les chambres
       if (typeLogement === "Chambre d'hôtes") {
+        const infoChambreHotes = document.getElementById('info-chambre-hotes');
+        if (infoChambreHotes) infoChambreHotes.style.display = 'flex';
         this.loadAndDisplayRooms();
       }
+
     }
   }
 
