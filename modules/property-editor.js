@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.062
+// LOG production V1.5 - chambres d'hôtes v1.063
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -424,7 +424,8 @@ initRoomImageManagement() {
   const blocPublished = document.getElementById('bloc-photos-chambre-published');
   if (blocPublished) {
     const status = this.propertyData.verification_status || 'pending-none';
-    blocPublished.style.display = status === 'published' ? 'flex' : 'none';
+    const hasPhotos = this.roomCurrentPhotos && this.roomCurrentPhotos.length > 0;
+    blocPublished.style.display = (status === 'published' && !hasPhotos) ? 'flex' : 'none';
   }
 }
 
