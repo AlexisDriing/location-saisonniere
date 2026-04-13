@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.060
+// LOG production V1.5 - chambres d'hôtes v1.061
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -1307,11 +1307,13 @@ setupRoomDiscountListeners(blocElement, index) {
   
   if (nightsInput) {
     nightsInput.oninput = (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '');
       const value = parseInt(e.target.value) || 0;
       this.roomPricingData.discounts[index].nights = value;
       this.enableButtons();
     };
   }
+
   
   if (percentageInput) {
     percentageInput.oninput = (e) => {
@@ -3125,8 +3127,37 @@ setupTimeFormatters() {
           this.value = this.value.replace(/[^\d]/g, '');
         }
       });
+        });
+
+    // Pourcentage
+    document.querySelectorAll('[data-suffix="pourcent"]').forEach(input => {
+      input.addEventListener('input', function() {
+        const value = this.value.replace(/[^\d]/g, '');
+        this.setAttribute('data-raw-value', value || '0');
+      });
+      
+      input.addEventListener('blur', function() {
+        const value = this.value.replace(/[^\d]/g, '');
+        if (value) {
+          this.setAttribute('data-raw-value', value);
+          this.value = value + ' %';
+        } else {
+          this.removeAttribute('data-raw-value');
+          this.value = '';
+        }
+      });
+      
+      input.addEventListener('focus', function() {
+        const rawValue = this.getAttribute('data-raw-value');
+        if (rawValue) {
+          this.value = rawValue;
+        } else {
+          this.value = this.value.replace(/[^\d]/g, '');
+        }
+      });
     });
   }
+
   
   getRawValue(input) {
   // D'abord vérifier data-raw-value
@@ -5027,7 +5058,7 @@ setupArriveeModelisteners() {
       
       if (arriveeInput) { arriveeInput.style.display = 'none'; arriveeInput.value = ''; }
       const blocCreneau = document.getElementById('bloc-arrivee-creneau');
-      if (blocCreneau) blocCreneau.style.display = 'block';
+      if (blocCreneau) blocCreneau.style.display = 'flex';
       
       setTimeout(() => debutInput?.focus(), 100);
       this.enableButtons();
@@ -5220,12 +5251,13 @@ setupDiscountListeners(blocElement, index) {
   const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
   
   if (nightsInput) {
-    // SIMPLE : Directement récupérer la valeur de l'input
     nightsInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '');
       const value = parseInt(e.target.value) || 0;
       this.pricingData.discounts[index].nights = value;
       this.enableButtons();
     });
+
     
     // NOUVEAU : Validation au blur pour les doublons
     nightsInput.addEventListener('blur', () => {
