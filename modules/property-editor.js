@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.061
+// LOG production V1.5 - chambres d'hôtes v1.062
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -408,7 +408,8 @@ initRoomImageManagement() {
         if (tallyUrl) {
           const params = new URLSearchParams({
             property_id: this.roomId || '',
-            property_name: this.roomData.name || '',
+            property_name: this.propertyData.name || '',
+            room_name: this.roomData.name || '',
             email: this.propertyData.email || ''
           });
           window.open(`${tallyUrl}?${params.toString()}`, '_blank');
