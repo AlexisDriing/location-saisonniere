@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.042 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.043 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -729,17 +729,16 @@ setupAddRoomSubmit() {
       return;
     }
     
-                newBtn.disabled = true;
+            newBtn.disabled = true;
     const originalText = newBtn.value;
     newBtn.value = 'Création en cours...';
-    newBtn.style.position = 'relative';
-    newBtn.style.overflow = 'hidden';
+    newBtn.style.opacity = '0.7';
     
-    // Barre de progression
+    // Barre de progression sous le bouton
     const progressBar = document.createElement('div');
-    progressBar.style.cssText = 'position:absolute;bottom:0;left:0;height:3px;background:#235B59;width:0%;transition:width 0.3s;border-radius:0 0 4px 4px;';
-    newBtn.parentElement.style.position = 'relative';
-    newBtn.parentElement.appendChild(progressBar);
+    progressBar.style.cssText = 'width:0%;height:4px;background:#235B59;border-radius:4px;transition:width 0.3s;margin-top:6px;';
+    newBtn.insertAdjacentElement('afterend', progressBar);
+
     
     // Animation progressive
     let progress = 0;
@@ -795,6 +794,7 @@ setupAddRoomSubmit() {
         progressBar.remove();
         newBtn.disabled = false;
         newBtn.value = originalText;
+        newBtn.style.opacity = '';
       }, 300);
     }
 
