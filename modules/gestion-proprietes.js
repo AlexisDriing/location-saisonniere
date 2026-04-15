@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.21
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.22
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1288,8 +1288,9 @@ if (hostImageElement) {
         window.filtersManager.state.adultes = data.adultes || 1;
         window.filtersManager.state.enfants = data.enfants || 0;
         
-        // Mettre à jour l'interface
+        // Mettre à jour l'interface (bouton + chiffres)
         window.filtersManager.updateVoyageursFilter();
+        window.filtersManager.updateTravelersUI();
       }
       
       // Nettoyer après utilisation
