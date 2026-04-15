@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.048 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.049 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -594,27 +594,35 @@ openManageRoomsModal(property) {
     bloc.style.display = 'flex';
     
         // Image (remplir seulement si verified ou published)
-    const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
+        const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
     if (imageEl) {
-      // Toujours nettoyer d'abord
-      if (imageEl.tagName === 'IMG') {
-        imageEl.src = '';
-        imageEl.removeAttribute('src');
-      } else {
-        imageEl.style.backgroundImage = '';
+      // Sauvegarder le src d'origine (image par défaut Webflow) au premier passage
+      if (imageEl.tagName === 'IMG' && !imageEl.dataset.defaultSrc) {
+        imageEl.dataset.defaultSrc = imageEl.src;
+      } else if (imageEl.tagName !== 'IMG' && !imageEl.dataset.defaultBg) {
+        imageEl.dataset.defaultBg = imageEl.style.backgroundImage;
       }
       
       const status = this.getPropertyStatus(property);
+      let photoUrl = null;
       if ((status === 'verified' || status === 'published') && room.photos && room.photos.length > 0) {
-        const photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
-        if (photoUrl) {
-          if (imageEl.tagName === 'IMG') {
-            imageEl.src = photoUrl;
-          } else {
-            imageEl.style.backgroundImage = `url(${photoUrl})`;
-            imageEl.style.backgroundSize = 'cover';
-            imageEl.style.backgroundPosition = 'center';
-          }
+        photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
+      }
+      
+      if (photoUrl) {
+        if (imageEl.tagName === 'IMG') {
+          imageEl.src = photoUrl;
+        } else {
+          imageEl.style.backgroundImage = `url(${photoUrl})`;
+          imageEl.style.backgroundSize = 'cover';
+          imageEl.style.backgroundPosition = 'center';
+        }
+      } else {
+        // Restaurer l'image par défaut Webflow
+        if (imageEl.tagName === 'IMG') {
+          imageEl.src = imageEl.dataset.defaultSrc || '';
+        } else {
+          imageEl.style.backgroundImage = imageEl.dataset.defaultBg || '';
         }
       }
     }
