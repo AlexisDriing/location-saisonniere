@@ -1,4 +1,4 @@
-// LOG production V1.38.20
+// LOG production V1.38.21
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1509,9 +1509,15 @@ setupConditionsAnnulation() {
       if (el) el.style.display = 'none';
     });
 
-    // Afficher ceux de la chambre
+    // Afficher/masquer les blocs parents selon si la chambre a des équipements
     const equipStr = room.equipements || '';
-    if (equipStr) {
+    const blocEquipement = document.getElementById('bloc-equipement');
+    const lineEquipement = document.getElementById('line-equipement');
+    
+    if (equipStr && equipStr.trim() !== '') {
+      if (blocEquipement) blocEquipement.style.display = '';
+      if (lineEquipement) lineEquipement.style.display = '';
+      
       const equipList = equipStr.split(',').map(e => e.trim());
       equipList.forEach(equip => {
         const id = equipementMapping[equip];
@@ -1520,6 +1526,9 @@ setupConditionsAnnulation() {
           if (el) el.style.display = '';
         }
       });
+    } else {
+      if (blocEquipement) blocEquipement.style.display = 'none';
+      if (lineEquipement) lineEquipement.style.display = 'none';
     }
 
     // Afficher la modale
