@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.2
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.3
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -501,7 +501,7 @@ class SearchMapManager {
   }
 
   selectSuggestion(suggestion, inputElement, suggestionsElement) {
-    inputElement.value = suggestion.name;
+  inputElement.value = suggestion.context;
     
     suggestionsElement.innerHTML = '';
     suggestionsElement.style.display = 'none';
