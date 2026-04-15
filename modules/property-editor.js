@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.063
+// LOG production V1.5 - chambres d'hôtes v1.064
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3234,6 +3234,10 @@ setupTimeFormatters() {
   
   
   prefillForm() {
+    
+    // Masquer le bloc choix type de logement (déjà défini à la création)
+    const blocChoixType = document.getElementById('bloc-choix-type-logement');
+    if (blocChoixType) blocChoixType.style.display = 'none';
     
     // 1. Afficher le nom du logement
     const titleElement = document.getElementById('logement-name-edit');
