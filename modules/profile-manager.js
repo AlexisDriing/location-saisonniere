@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.047 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.048 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -593,9 +593,17 @@ openManageRoomsModal(property) {
     
     bloc.style.display = 'flex';
     
-    // Image (remplir seulement si verified ou published)
+        // Image (remplir seulement si verified ou published)
     const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
     if (imageEl) {
+      // Toujours nettoyer d'abord
+      if (imageEl.tagName === 'IMG') {
+        imageEl.src = '';
+        imageEl.removeAttribute('src');
+      } else {
+        imageEl.style.backgroundImage = '';
+      }
+      
       const status = this.getPropertyStatus(property);
       if ((status === 'verified' || status === 'published') && room.photos && room.photos.length > 0) {
         const photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
