@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.046 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.047 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -496,7 +496,7 @@ displayRoomImagesOnCard(rooms, targetElement, status) {
       // Slot correspond à une chambre existante : afficher
       slot.style.display = 'flex';
       
-      // Remplir l'image seulement si verified ou published
+            // Remplir l'image seulement si verified ou published
       if (showImages) {
         const room = rooms[i];
         const photos = room.photos || [];
@@ -505,6 +505,12 @@ displayRoomImagesOnCard(rooms, targetElement, status) {
         if (photos.length > 0) {
           const firstPhoto = photos[0];
           photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
+        }
+        
+        // Si pas de photo, utiliser l'image par défaut
+        if (!photoUrl) {
+          const defaultImg = document.getElementById('default-room-image');
+          photoUrl = defaultImg?.src || null;
         }
         
         if (photoUrl) {
