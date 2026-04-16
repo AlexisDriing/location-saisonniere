@@ -1,4 +1,4 @@
-// LOG production V1.38.21
+// LOG production V1.38.22
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1944,6 +1944,12 @@ setupImmatriculation() {
         document.body.classList.remove("no-scroll");
         popin.style.display = "none";
       });
+    });
+
+    popin.addEventListener("click", function(e) {
+      if (e.target === popin) {
+        document.body.classList.remove("no-scroll");
+      }
     });
   }
 }
