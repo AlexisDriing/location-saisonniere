@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.064
+// LOG production V1.5 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3879,9 +3879,15 @@ countVisiblePlages(isEdit = false) {
     this.setupSeasonValidationListeners(false);
     
     // Votre code pour afficher la modal
-    const modal = document.getElementById('modal-add-season'); // Adaptez l'ID
+    const modal = document.getElementById('modal-add-season');
     if (modal) {
       modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      const popup = modal.querySelector('.bloc-popup');
+      if (popup) {
+        popup.style.opacity = '1';
+        popup.style.transform = 'none';
+      }
     }
   }
 
@@ -3993,9 +3999,15 @@ openEditSeasonModal(seasonIndex) {
   this.setupSeasonValidationListeners(true);
   
   // Afficher la modal
-  const modal = document.getElementById('modal-edit-season'); // Adaptez l'ID selon votre modal
+  const modal = document.getElementById('modal-edit-season');
   if (modal) {
     modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    const popup = modal.querySelector('.bloc-popup');
+    if (popup) {
+      popup.style.opacity = '1';
+      popup.style.transform = 'none';
+    }
   }
 }
   
@@ -4231,6 +4243,12 @@ closeSeasonModal() {
   const modal = document.getElementById('modal-add-season');
   if (modal) {
     modal.style.display = 'none';
+    modal.style.opacity = '1';
+    const popup = modal.querySelector('.bloc-popup');
+    if (popup) {
+      popup.style.opacity = '1';
+      popup.style.transform = 'none';
+    }
   }
   this.resetSeasonModal();
   
@@ -4249,6 +4267,12 @@ closeSeasonModal() {
     const modal = document.getElementById('modal-edit-season');
     if (modal) {
       modal.style.display = 'none';
+      modal.style.opacity = '1';
+      const popup = modal.querySelector('.bloc-popup');
+      if (popup) {
+        popup.style.opacity = '1';
+        popup.style.transform = 'none';
+      }
     }
     
     // NOUVEAU : Nettoyer toutes les erreurs de la modal de modification
