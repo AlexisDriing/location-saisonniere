@@ -1,4 +1,4 @@
-// LOG production V1.16
+// LOG production V1.17
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -147,19 +147,22 @@ class ReservationDataManager {
 
     
     if (window.priceCalculator && window.priceCalculator.startDate) {
-      prixDetails = {
-        calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
-        prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
-        prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
-        prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
-        prixSupplement: document.getElementById("prix-supplement")?.textContent || "",
-        calculSupplement: document.getElementById("calcul-supplement")?.textContent || "",
-        totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
-        dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
-        dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
-        hasReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent !== ""
-      };
-    }
+    const ligneSupplement = Utils.getElementByIdWithFallback("ligne-supplement-voyageurs");
+    const supplementVisible = ligneSupplement && ligneSupplement.style.display !== "none";
+  
+    prixDetails = {
+      calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
+      prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
+      prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
+      prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
+      prixSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("prix-supplement")?.textContent || "") : "",
+      calculSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("calcul-supplement")?.textContent || "") : "",
+      totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
+      dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
+      dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
+      hasReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent !== ""
+    };
+  }
     
     // Récupérer le site internet
     const siteInternetElement = document.querySelector("[data-site-internet]");
