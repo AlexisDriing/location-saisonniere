@@ -1,4 +1,4 @@
-// LOG production V1.14
+// LOG production V1.15
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -8,6 +8,7 @@ class ReservationDataManager {
   init() {
     this.setupReservationButtons();
     this.loadSearchDataFromStorage();
+    this.toggleChambreHoteBlocs();
   }
 
   setupReservationButtons() {
@@ -222,6 +223,24 @@ class ReservationDataManager {
     localStorage.setItem("reservation_data", JSON.stringify(reservationData));
   }
 
+  toggleChambreHoteBlocs() {
+    const raw = localStorage.getItem("reservation_data");
+    if (!raw) return;
+
+    try {
+      const data = JSON.parse(raw);
+      const isChambre = data.isChambreHote === true;
+
+      const blocRecap = document.getElementById('bloc-recap-chambre');
+      const lineChambre = document.getElementById('line-chambre');
+
+      if (blocRecap) blocRecap.style.display = isChambre ? 'flex' : 'none';
+      if (lineChambre) lineChambre.style.display = isChambre ? 'block' : 'none';
+    } catch (e) {
+      // Erreur de parsing, on laisse masqué par défaut
+    }
+  }
+  
   loadSearchDataFromStorage() {
   // 🆕 NOUVEAU : D'abord vérifier s'il y a des dates modifiées (retour navigation)
   let storedData = localStorage.getItem("current_detail_dates");
