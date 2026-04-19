@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production V3
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.3
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -192,9 +192,8 @@ class SearchMapManager {
 
     async handleSearch(inputElement) {
     const city = inputElement.value;
-    const userLocation = await this.getCoordinatesFromAddress(city);
+    const geocodeResult = await this.getCoordinatesFromAddress(city);
   
-    // Réinitialiser le flag d'attente de géocodage et annuler le timeout de sécurité
     if (window.propertyManager) {
       window.propertyManager._waitingForGeocode = false;
       if (window.propertyManager._geocodeTimeout) {
@@ -203,17 +202,87 @@ class SearchMapManager {
       }
     }
   
-    if (userLocation) {    
+    if (geocodeResult) {
+      let zoneInfo = null;
+      if (geocodeResult.search_type === 'region') {
+        zoneInfo = {
+          polygon_source: geocodeResult.polygon_source || 'bbox',
+          geo_feature_name: geocodeResult.geo_feature_name || geocodeResult.display_name,
+          geo_feature_code: geocodeResult.geo_feature_code || null,
+          bbox: geocodeResult.bbox || null
+        };
+      }
+      
       if (window.propertyManager) {
-        window.propertyManager.setSearchLocation(userLocation);
+        window.propertyManager.setSearchLocation(geocodeResult.coordinates, geocodeResult.search_type, zoneInfo);
         window.propertyManager.applyFilters();
       }
     } else {
-      console.error('Impossible de récupérer les coordonnées de la ville recherchée.');
-      // Appliquer quand même les filtres (sans coordonnées) si on a des dates
+      console.error('Impossible de recuperer les coordonnees de la ville recherchee.');
       if (window.propertyManager && window.propertyManager.startDate) {
         window.propertyManager.applyFilters();
       }
+    }
+  }
+
+  async handleSuggestionClick(suggestion) {
+    // Les coordonnées sont déjà dans la suggestion → 0 appel Mapbox
+    const coordinates = {
+      lng: suggestion.coordinates[0],
+      lat: suggestion.coordinates[1]
+    };
+    
+    // Réinitialiser le flag de géocodage
+    if (window.propertyManager) {
+      window.propertyManager._waitingForGeocode = false;
+      if (window.propertyManager._geocodeTimeout) {
+        clearTimeout(window.propertyManager._geocodeTimeout);
+        window.propertyManager._geocodeTimeout = null;
+      }
+    }
+    
+    // Déterminer le type de recherche
+    const placeType = suggestion.placeType || 'place';
+    let searchType = 'place';
+    if (placeType === 'region' || placeType === 'district') {
+      searchType = 'region';
+    } else if (placeType === 'poi') {
+      searchType = 'place'; // Les POI se comportent comme des villes (distance en km)
+    }
+    
+    // Pour les zones, résoudre le polygone via le serveur (SANS appel Mapbox)
+    let zoneInfo = null;
+    
+    if (searchType === 'region') {
+      try {
+        let resolveUrl = `${window.CONFIG.API_URL}/resolve-zone?name=${encodeURIComponent(suggestion.name)}&type=${encodeURIComponent(placeType)}`;
+        if (suggestion.shortCode) {
+          resolveUrl += `&code=${encodeURIComponent(suggestion.shortCode)}`;
+        }
+        
+        const response = await fetch(resolveUrl);
+        const data = await response.json();
+        
+        zoneInfo = {
+          polygon_source: data.polygon_source || 'bbox',
+          geo_feature_name: data.geo_feature_name || suggestion.name,
+          geo_feature_code: data.geo_feature_code || null,
+          bbox: suggestion.bbox || null
+        };
+      } catch (error) {
+        console.error('Erreur resolve-zone:', error);
+        zoneInfo = {
+          polygon_source: 'bbox',
+          geo_feature_name: suggestion.name,
+          geo_feature_code: null,
+          bbox: suggestion.bbox || null
+        };
+      }
+    }
+    
+    if (window.propertyManager) {
+      window.propertyManager.setSearchLocation(coordinates, searchType, zoneInfo);
+      window.propertyManager.applyFilters();
     }
   }
 
@@ -223,7 +292,6 @@ class SearchMapManager {
 
   async fetchSuggestions(query) {
     try {
-      // 🔒 MAINTENANT on utilise VOTRE serveur au lieu de l'API Mapbox directement
       const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}`;
       
       const response = await fetch(url);
@@ -233,13 +301,32 @@ class SearchMapManager {
       
       const data = await response.json();
       if (!data.features || !Array.isArray(data.features)) {
-        console.error("Réponse inattendue du serveur:", data);
+        console.error("Reponse inattendue du serveur:", data);
         return [];
       }
       
-      return this.filterAndFormatSuggestions(data.features);
+      // Formater les résultats Mapbox
+      const mapboxResults = this.filterAndFormatSuggestions(data.features);
+      
+      // Formater les POI locaux
+      const localPOIs = (data.local_pois || []).map(poi => ({
+        name: poi.name,
+        subtitle: poi.subtitle,
+        context: `${poi.name}, ${poi.subtitle}`,
+        coordinates: [poi.lng, poi.lat],
+        placeType: 'poi',
+        templateType: 'poi',
+        fullContext: poi.name,
+        bbox: null,
+        shortCode: null
+      }));
+      
+      // Combiner : POI en premier, puis résultats Mapbox, max 5 au total
+      const combined = [...localPOIs, ...mapboxResults].slice(0, 5);
+      
+      return combined;
     } catch (error) {
-      console.error('❌ Erreur lors de la récupération des suggestions :', error);
+      console.error('Erreur lors de la recuperation des suggestions :', error);
       return [];
     }
   }
@@ -253,7 +340,15 @@ class SearchMapManager {
       const data = await response.json();
 
       if (data.coordinates) {
-        return data.coordinates;
+        return {
+          coordinates: data.coordinates,
+          search_type: data.search_type || 'place',
+          display_name: data.display_name || address,
+          polygon_source: data.polygon_source || null,
+          geo_feature_name: data.geo_feature_name || null,
+          geo_feature_code: data.geo_feature_code || null,
+          bbox: data.bbox || null
+        };
       } else {
         console.error('Adresse introuvable :', address);
         return null;
@@ -265,33 +360,76 @@ class SearchMapManager {
   }
 
   filterAndFormatSuggestions(features) {
-    const allowedKeywords = ['museum', 'monument', 'tour', 'tower', 'eiffel', 'statue', 'cathedral', 'church', 'attraction'];
+    const seen = new Set();
     
     return features
-      .filter((feature) => {
-        const placeType = feature.place_type?.[0];
-        const name = feature.text?.toLowerCase() || '';
-        const fullName = feature.place_name?.toLowerCase() || '';
-
-        if (placeType === 'poi') {
-          return allowedKeywords.some(kw => name.includes(kw) || fullName.includes(kw));
-        }
-
-        return placeType === 'place' || placeType === 'region';
-      })
       .map((feature) => {
-        let placeType = "place";
-        if (feature.place_type && Array.isArray(feature.place_type) && feature.place_type.length > 0) {
-          placeType = feature.place_type[0];
+        let placeType = feature.place_type?.[0] || 'place';
+        if (Array.isArray(feature.place_type) && feature.place_type.includes('region')) {
+          placeType = 'region';
+        }
+        const name = feature.text || '';
+        const placeName = feature.place_name || '';
+        
+        const contextParts = placeName.split(',').map(p => p.trim());
+        
+        let subtitle = '';
+        let country = contextParts.length > 0 ? contextParts[contextParts.length - 1] : '';
+        
+        if (placeType === 'region' || placeType === 'district') {
+          const shortCode = feature.properties?.short_code || '';
+          const isDepartement = /^FR-\d{2,3}[AB]?$/i.test(shortCode);
+          
+          if (isDepartement) {
+            subtitle = `Département, ${country}`;
+          } else if (country && country !== name) {
+            subtitle = `Région, ${country}`;
+          } else {
+            subtitle = 'Région';
+          }
+        } else {
+          // Villes, locality, neighborhood : département + pays
+          if (contextParts.length >= 3) {
+            subtitle = `${contextParts[1]}, ${country}`;
+          } else if (contextParts.length === 2) {
+            subtitle = country;
+          } else {
+            subtitle = '';
+          }
+        }
+        
+        const dedupeKey = `${name.toLowerCase()}|${subtitle.toLowerCase()}`;
+        if (seen.has(dedupeKey)) {
+          return null;
+        }
+        seen.add(dedupeKey);
+        
+        let templateType = 'city';
+        if (placeType === 'region' || placeType === 'district') {
+          templateType = 'region';
         }
         
         return {
-          name: feature.text,
-          context: feature.place_name,
+          name: name,
+          subtitle: subtitle,
+          context: placeName,
           coordinates: feature.geometry?.coordinates || [0, 0],
-          placeType: placeType
+          placeType: placeType,
+          templateType: templateType,
+          fullContext: placeName,
+          bbox: feature.bbox || null,
+          shortCode: feature.properties?.short_code || null
         };
-      });
+      })
+      .filter(item => item !== null)
+      .sort((a, b) => {
+        // Régions/départements en premier dans les suggestions
+        const priority = { 'region': 0, 'district': 0, 'place': 1, 'locality': 1, 'neighborhood': 2 };
+        const prioA = priority[a.placeType] ?? 1;
+        const prioB = priority[b.placeType] ?? 1;
+        return prioA - prioB;
+      })
+      .slice(0, 5);
   }
 
   // ================================
@@ -316,61 +454,34 @@ class SearchMapManager {
   }
 
   createSuggestionItem(suggestion, inputElement, suggestionsElement) {
-    // Extraire le pays depuis le contexte
-    let country = "";
-    if (suggestion.context) {
-      const contextParts = suggestion.context.split(',').map(part => part.trim());
-      if (contextParts.length > 0) {
-        country = contextParts[contextParts.length - 1];
-      }
+    // Déterminer le template selon le type
+    let templateId = 'template-city';
+    if (suggestion.templateType === 'poi') {
+      templateId = 'template-poi';
+    } else if (suggestion.templateType === 'region') {
+      templateId = 'template-region';
     }
     
-    const displayName = suggestion.name + (country ? ", " + country : "");
-    
-    // Déterminer le type et le template
-    let templateId = "template-city";
-    let typeLabel = "Ville";
-    
-    switch(suggestion.placeType) {
-      case 'city':
-      case 'place':
-        templateId = "template-city";
-        typeLabel = "Ville";
-        break;
-      case 'poi':
-        templateId = "template-poi";
-        typeLabel = "Monument";
-        break;
-      case 'region':
-        templateId = "template-region";
-        typeLabel = "Région";
-        break;
-      default:
-        templateId = "template-city";
-        break;
-    }
-    
-    // Récupérer le template
     const template = document.getElementById(templateId);
     if (!template) {
       console.error(`Template ${templateId} introuvable`);
       return;
     }
     
-    // Cloner et configurer l'élément
     const suggestionItem = template.cloneNode(true);
     suggestionItem.id = '';
     suggestionItem.style.display = 'flex';
     
-    // Remplir le contenu
+    // Ligne 1 : Nom du lieu (en gras dans ton design)
     const nameElement = suggestionItem.querySelector('.suggestion-name');
     if (nameElement) {
-      nameElement.textContent = displayName;
+      nameElement.textContent = suggestion.name;
     }
     
+    // Ligne 2 : Contexte (département + pays, ou type + pays)
     const typeElement = suggestionItem.querySelector('.suggestion-type');
     if (typeElement) {
-      typeElement.textContent = typeLabel;
+      typeElement.textContent = suggestion.subtitle;
     }
     
     const contextElement = suggestionItem.querySelector('.suggestion-context');
@@ -378,28 +489,25 @@ class SearchMapManager {
       contextElement.style.display = 'none';
     }
     
-    // Stocker le contexte complet
-    suggestion.fullContext = displayName;
+    // Stocker le nom pour remplir l'input quand on clique
+    suggestion.fullContext = suggestion.name;
     
     // Gestionnaire de clic
     suggestionItem.addEventListener('click', () => {
       this.selectSuggestion(suggestion, inputElement, suggestionsElement);
     });
     
-    // Ajouter à la liste
     suggestionsElement.appendChild(suggestionItem);
   }
 
   selectSuggestion(suggestion, inputElement, suggestionsElement) {
-    // Mettre à jour le champ de saisie
-    inputElement.value = suggestion.fullContext;
+  inputElement.value = suggestion.context;
     
-    // Masquer les suggestions
     suggestionsElement.innerHTML = '';
     suggestionsElement.style.display = 'none';
     
-    // Déclencher la recherche
-    this.handleSearch(inputElement);
+    // Utiliser directement les coordonnées de la suggestion → 0 appel Mapbox
+    this.handleSuggestionClick(suggestion);
   }
 
   // ================================
@@ -428,12 +536,21 @@ class SearchMapManager {
 
   // Méthode pour rechercher programmatiquement
   async searchLocation(address) {
-    const coordinates = await this.getCoordinatesFromAddress(address);
-    if (coordinates && window.propertyManager) {
-      window.propertyManager.setSearchLocation(coordinates);
+    const result = await this.getCoordinatesFromAddress(address);
+    if (result && window.propertyManager) {
+      let zoneInfo = null;
+      if (result.search_type === 'region') {
+        zoneInfo = {
+          polygon_source: result.polygon_source || 'bbox',
+          geo_feature_name: result.geo_feature_name || result.display_name,
+          geo_feature_code: result.geo_feature_code || null,
+          bbox: result.bbox || null
+        };
+      }
+      window.propertyManager.setSearchLocation(result.coordinates, result.search_type, zoneInfo);
       window.propertyManager.applyFilters();
     }
-    return coordinates;
+    return result ? result.coordinates : null;
   }
 
   // Méthode pour nettoyer la recherche

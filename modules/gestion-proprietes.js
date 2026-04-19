@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V1.1
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.22
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -576,6 +576,19 @@ class PropertyManager {
       
       if (filters.latitude && filters.longitude) {
         url += `latitude=${filters.latitude}&longitude=${filters.longitude}&`;
+        
+        if (filters.polygon_source) {
+          url += `polygon_source=${encodeURIComponent(filters.polygon_source)}&`;
+        }
+        if (filters.geo_feature_name) {
+          url += `geo_feature_name=${encodeURIComponent(filters.geo_feature_name)}&`;
+        }
+        if (filters.geo_feature_code) {
+          url += `geo_feature_code=${encodeURIComponent(filters.geo_feature_code)}&`;
+        }
+        if (filters.bbox) {
+          url += `bbox=${encodeURIComponent(filters.bbox)}&`;
+        }
       }
       
       if (filters.amenities && filters.amenities.length > 0) {
@@ -803,17 +816,23 @@ class PropertyManager {
       capacityElement.textContent = capacityText;
     }
     
-    // Distance (si recherche géographique)
-    if (this.searchLocation && propData.distance !== undefined) {
+    // Distance ou nom de zone
+    if (this.searchLocation) {
       const distanceElement = newCard.querySelector('.distance');
       const separatorElement = newCard.querySelector('.separateur');
       
       if (distanceElement) {
-        distanceElement.textContent = `${Math.round(propData.distance)} km`;
-        distanceElement.style.display = 'inline';
+        if (this.searchType === 'region') {
+          distanceElement.style.display = 'none';
+        } else if (propData.distance !== undefined && propData.distance !== null) {
+          distanceElement.textContent = `${Math.round(propData.distance)} km`;
+          distanceElement.style.display = 'inline';
+        } else {
+          distanceElement.style.display = 'none';
+        }
       }
       if (separatorElement) {
-        separatorElement.style.display = 'inline';
+        separatorElement.style.display = distanceElement?.style.display === 'inline' ? 'inline' : 'none';
       }
     }
     
@@ -886,8 +905,8 @@ if (hostImageElement) {
       optionsElement.setAttribute('data-option-accueil', propData.options.join(', '));
     }
     
-    // JSON tarifs pour le calcul des prix
-    const tarifElement = newCard.querySelector('[data-json-tarifs-line]');
+        // JSON tarifs pour le calcul des prix
+    const tarifElement = newCard.querySelector('[data-json-tarifs-line]') || newCard.querySelector('.data-none');
     if (tarifElement && propData.pricing_data) {
       tarifElement.setAttribute('data-json-tarifs-line', JSON.stringify(propData.pricing_data));
     }
@@ -917,6 +936,17 @@ if (hostImageElement) {
       filters.latitude = this.searchLocation.lat;
       filters.longitude = this.searchLocation.lng;
       filters.distance_max = 100;
+      
+      if (this.zoneInfo) {
+        filters.polygon_source = this.zoneInfo.polygon_source;
+        filters.geo_feature_name = this.zoneInfo.geo_feature_name;
+        filters.geo_feature_code = this.zoneInfo.geo_feature_code;
+        if (this.zoneInfo.bbox) {
+          filters.bbox = Array.isArray(this.zoneInfo.bbox) 
+            ? this.zoneInfo.bbox.join(',') 
+            : this.zoneInfo.bbox;
+        }
+      }
     }
     
     const adultsElement = document.getElementById('chiffres-adultes');
@@ -1076,6 +1106,12 @@ if (hostImageElement) {
     
     if (endPage - startPage + 1 < maxVisiblePages && startPage > 1) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    // Mobile : réduire à 3 pages visibles quand on est au milieu (ellipses des 2 côtés)
+    if (isMobile && startPage > 1 && endPage < this.totalPages) {
+      startPage = this.currentPage - 1;
+      endPage = this.currentPage + 1;
     }
     
     if (startPage > 1) {
@@ -1252,8 +1288,9 @@ if (hostImageElement) {
         window.filtersManager.state.adultes = data.adultes || 1;
         window.filtersManager.state.enfants = data.enfants || 0;
         
-        // Mettre à jour l'interface
+        // Mettre à jour l'interface (bouton + chiffres)
         window.filtersManager.updateVoyageursFilter();
+        window.filtersManager.updateTravelersUI();
       }
       
       // Nettoyer après utilisation
@@ -1304,8 +1341,10 @@ if (hostImageElement) {
     return `${startDay}-${endDay} ${month}`;
   }
 
-  setSearchLocation(location) {
+  setSearchLocation(location, searchType, zoneInfo) {
     this.searchLocation = location;
+    this.searchType = searchType || 'place';
+    this.zoneInfo = zoneInfo || null;
   }
 
   // ================================
@@ -1315,6 +1354,8 @@ if (hostImageElement) {
   resetFilters() {
     this.currentFilters = {};
     this.searchLocation = null;
+    this.searchType = null;
+    this.zoneInfo = null;
     
     document.querySelectorAll('.distance').forEach(element => {
       element.classList.remove('visible');

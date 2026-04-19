@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.38.22
 // Page google
 class InterfaceManager {
   constructor() {
@@ -445,23 +445,1121 @@ setupConditionsAnnulation() {
 
   // Gestion de l'affichage conditionnel pour Chambre d'hôtes
   setupChambreHoteDisplay() {
-    // Récupérer le type de logement
     const typeElement = document.querySelector('[data-mode-location]');
     
     if (typeElement) {
       const typeLogement = typeElement.getAttribute('data-mode-location');
       
-      // Afficher/masquer l'élément chambre d'hôtes
+      // Afficher/masquer le tag chambre d'hôtes
       const chambreHoteElement = document.querySelector('.chambres-hote');
       if (chambreHoteElement) {
         if (typeLogement === "Chambre d'hôtes") {
-          chambreHoteElement.style.display = 'inline-flex'; // ou 'flex' selon votre CSS
+          chambreHoteElement.style.display = 'inline-flex';
         } else {
           chambreHoteElement.style.display = 'none';
         }
       }
+
+       // Si chambre d'hôtes, charger et afficher les chambres
+      if (typeLogement === "Chambre d'hôtes") {
+        const infoChambreHotes = document.getElementById('info-chambre-hotes');
+        if (infoChambreHotes) infoChambreHotes.style.display = 'flex';
+        this.loadAndDisplayRooms();
+      }
+
     }
   }
+
+    async loadAndDisplayRooms() {
+    const slug = window.location.pathname.split("/").pop();
+    if (!slug) return;
+
+    try {
+      const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${slug}`);
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      const rooms = data.rooms || [];
+      
+      if (rooms.length === 0) return;
+
+      this.displayRoomsOnDetail(rooms);
+
+      // Initialiser l'état B&B immédiatement (prix, capacité, boutons)
+      this.initBnbDefaultState(rooms);
+
+      // Précharger les calendriers en arrière-plan
+      this.preloadRoomsCalendarData(rooms);
+
+    } catch (error) {
+      console.error('❌ Erreur chargement chambres:', error);
+    }
+  }
+
+
+
+    displayRoomsOnDetail(rooms) {
+    const bloc = document.getElementById('bloc-chambres-hotes');
+    if (!bloc) return;
+
+    // Stocker les données des chambres pour la modale
+    this._roomsData = [];
+
+    // Masquer tous les blocs de chambres par défaut (1 à 5)
+    for (let i = 1; i <= 5; i++) {
+      const chambreBloc = document.getElementById(`chambre-hote-${i}`);
+      if (chambreBloc) chambreBloc.style.display = 'none';
+    }
+
+    // Filtrer : ne garder que les chambres avec au moins une photo
+    const roomsWithPhotos = rooms.filter(room => {
+      const photos = room.photos || [];
+      if (photos.length === 0) return false;
+      const firstPhoto = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+      return firstPhoto && firstPhoto.trim() !== '';
+    });
+
+    if (roomsWithPhotos.length === 0) return;
+
+    let slotIndex = 0;
+
+    roomsWithPhotos.forEach((room) => {
+      if (slotIndex >= 5) return;
+      slotIndex++;
+
+      const chambreBloc = document.getElementById(`chambre-hote-${slotIndex}`);
+      if (!chambreBloc) return;
+
+      chambreBloc.style.display = 'flex';
+
+      // Stocker les données pour la modale
+      this._roomsData[slotIndex] = room;
+
+      // 1. Image (première photo)
+      const imageEl = document.getElementById(`image-chambre-${slotIndex}`);
+      if (imageEl) {
+        const photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
+        if (imageEl.tagName === 'IMG') {
+          imageEl.src = photoUrl;
+        } else {
+          imageEl.style.backgroundImage = `url(${photoUrl})`;
+          imageEl.style.backgroundSize = 'cover';
+          imageEl.style.backgroundPosition = 'center';
+        }
+      }
+
+      // 2. Voyageurs
+      const voyageursEl = document.getElementById(`voyageurs-chambre-${slotIndex}`);
+      if (voyageursEl) {
+        const match = (room.taille_chambre || '').match(/^(\d+)/);
+        const voyageurs = match ? parseInt(match[1]) : 0;
+        voyageursEl.textContent = `${voyageurs} voyageur${voyageurs > 1 ? 's' : ''}`;
+      }
+
+      // 3. Nom
+      const nomEl = document.getElementById(`nom-chambre-${slotIndex}`);
+      if (nomEl) {
+        nomEl.textContent = room.name || 'Chambre';
+      }
+
+      // 4. Taille m²
+      const tailleEl = document.getElementById(`taille-chambre-${slotIndex}`);
+      if (tailleEl) {
+        const tailleMatch = (room.taille_chambre || '').match(/(\d+)\s*m²/);
+        const m2 = tailleMatch ? tailleMatch[1] : '0';
+        tailleEl.textContent = `${m2} m²`;
+      }
+
+      // 5. Types de lits
+      const litsEl = document.getElementById(`lits-chambre-${slotIndex}`);
+      if (litsEl) {
+        litsEl.textContent = this.formatDetailsLits(room.details_lits);
+      }
+
+      // 6. Prix avec pourcentage et prix barré
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+      
+      if (prixEl && room.pricing_data) {
+        this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
+      }
+
+            // 7. Clic → ouvrir la modale
+      chambreBloc.style.cursor = 'pointer';
+      const currentSlot = slotIndex;
+      chambreBloc.addEventListener('click', () => {
+        this.openRoomModal(this._roomsData[currentSlot]);
+      });
+
+      // 8. Boutons sélection
+      const selectBtn = document.getElementById(`button-select-${slotIndex}`);
+      const selectedBtn = document.getElementById(`button-selected-${slotIndex}`);
+
+      if (selectBtn) {
+        selectBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.selectRoom(currentSlot);
+        });
+      }
+
+      // 9. Élément au survol sur l'image (desktop uniquement)
+      const hoverEl = document.getElementById(`hover-image-${slotIndex}`);
+      if (hoverEl) {
+        hoverEl.style.display = 'none';
+        
+        if (window.innerWidth >= 768) {
+          hoverEl.style.position = 'absolute';
+          hoverEl.style.bottom = '10px';
+          hoverEl.style.right = '10px';
+          hoverEl.style.zIndex = '2';
+
+          chambreBloc.addEventListener('mouseenter', () => {
+            if (chambreBloc.style.opacity !== '0.3') {
+              hoverEl.style.display = 'flex';
+            }
+          });
+          chambreBloc.addEventListener('mouseleave', () => {
+            hoverEl.style.display = 'none';
+          });
+        }
+      }
+
+
+      if (selectedBtn) {
+        selectedBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.deselectRoom();
+        });
+      }
+    });
+
+
+    // Configurer la fermeture de la modale
+    this.setupRoomModalClose();
+
+    // Afficher le bloc parent
+    bloc.style.display = 'block';
+  }
+
+    setupCarousel(photos) {
+    const container = document.getElementById('carousel-chambre');
+    const imageEl = document.getElementById('modal-chambre-image');
+    const prevBtn = document.getElementById('carousel-prev');
+    const nextBtn = document.getElementById('carousel-next');
+    const dotsContainer = document.getElementById('carousel-dots');
+
+    if (!container || !imageEl || !photos || photos.length === 0) return;
+
+    // Extraire les URLs
+    const urls = photos
+      .map(p => typeof p === 'object' ? p.url : p)
+      .filter(url => url && url.trim() !== '');
+
+    if (urls.length === 0) return;
+
+    let currentIndex = 0;
+
+    // Positionner le conteneur
+    container.style.position = 'relative';
+    container.style.overflow = 'hidden';
+
+    // Fonction pour afficher une image
+    const showImage = (index) => {
+      currentIndex = index;
+      if (imageEl.tagName === 'IMG') {
+        imageEl.src = urls[currentIndex];
+      } else {
+        imageEl.style.backgroundImage = `url(${urls[currentIndex]})`;
+        imageEl.style.backgroundSize = 'cover';
+        imageEl.style.backgroundPosition = 'center';
+      }
+      // Mettre à jour les dots
+      if (dotsContainer) {
+        Array.from(dotsContainer.children).forEach((dot, i) => {
+          dot.style.opacity = i === currentIndex ? '1' : '0.6';
+        });
+      }
+    };
+
+    // Positionner et configurer les flèches
+        const styleArrow = (btn, side) => {
+      if (!btn) return;
+      btn.style.setProperty('position', 'absolute', 'important');
+      btn.style.setProperty('top', '50%', 'important');
+      btn.style.setProperty(side, '8px', 'important');
+      btn.style.setProperty('transform', 'translateY(-50%)', 'important');
+      btn.style.setProperty('z-index', '2', 'important');
+      btn.style.setProperty('cursor', 'pointer', 'important');
+      btn.style.display = urls.length > 1 ? 'flex' : 'none';
+    };
+
+
+    styleArrow(prevBtn, 'left');
+    styleArrow(nextBtn, 'right');
+
+    if (prevBtn) {
+      const newPrev = prevBtn.cloneNode(true);
+      prevBtn.parentNode.replaceChild(newPrev, prevBtn);
+      styleArrow(newPrev, 'left');
+      newPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showImage(currentIndex === 0 ? urls.length - 1 : currentIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      const newNext = nextBtn.cloneNode(true);
+      nextBtn.parentNode.replaceChild(newNext, nextBtn);
+      styleArrow(newNext, 'right');
+      newNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showImage(currentIndex === urls.length - 1 ? 0 : currentIndex + 1);
+      });
+    }
+
+        // Générer les dots
+    if (dotsContainer) {
+      dotsContainer.innerHTML = '';
+      dotsContainer.style.cssText = `
+        position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+        display:${urls.length > 1 ? 'flex' : 'none'};
+        gap:6px;z-index:2;
+      `;
+
+      urls.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+          width:10px;height:10px;border-radius:50%;
+          background:#fff;cursor:pointer;
+          opacity:${i === 0 ? '1' : '0.6'};
+          transition:opacity 0.2s;
+        `;
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showImage(i);
+        });
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    // Afficher la première image
+    showImage(0);
+  }
+
+    // Précharger les données iCal de toutes les chambres
+  async preloadRoomsCalendarData(rooms) {
+    // Attendre que le CalendarManager soit prêt (picker initialisé)
+    let calendarManager = null;
+    for (let i = 0; i < 30; i++) {
+      calendarManager = window.detailLogementPage?.managers?.calendar;
+      if (calendarManager?.picker) break;
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    if (!calendarManager?.icalManager) return;
+
+    const icalManager = calendarManager.icalManager;
+    const today = moment().startOf('day');
+    const twoYears = moment().add(2, 'year').endOf('month');
+
+    // Collecter toutes les URLs iCal de toutes les chambres
+    const allUrls = [];
+    rooms.forEach(room => {
+      (room.ical_urls || []).forEach(url => {
+        if (url && url.trim() !== '') allUrls.push(url);
+      });
+    });
+
+    if (allUrls.length === 0) {
+      this._combinedUnavailableDates = new Set();
+      this._roomsUnavailableDates = {};
+      return;
+    }
+
+    // Charger tout (chaque URL est mise en cache par ICalManager)
+    await icalManager.loadAllUnavailableDates(allUrls);
+    this._combinedUnavailableDates = new Set(icalManager.unavailableDates);
+
+    // Construire les Sets par chambre
+    this._roomsUnavailableDates = {};
+    const roomsWithPhotos = rooms.filter(room => {
+      const photos = room.photos || [];
+      if (photos.length === 0) return false;
+      const firstPhoto = typeof photos[0] === 'object' ? photos[0].url : photos[0];
+      return firstPhoto && firstPhoto.trim() !== '';
+    });
+
+    for (let i = 0; i < roomsWithPhotos.length; i++) {
+      const roomUrls = (roomsWithPhotos[i].ical_urls || []).filter(u => u && u.trim() !== '');
+      if (roomUrls.length > 0) {
+        const events = await Promise.all(
+          roomUrls.map(url => icalManager.getICalData(url, today, twoYears))
+        );
+        this._roomsUnavailableDates[i + 1] = new Set(events.flat().map(e => e.date));
+      } else {
+        this._roomsUnavailableDates[i + 1] = new Set();
+      }
+    }
+
+        // Mettre à jour le picker avec les dates combinées
+    if (calendarManager.picker) {
+      calendarManager.picker.updateCalendars();
+    }
+
+    // Mettre à jour la disponibilité des chambres maintenant que les iCal sont chargés
+    this.updateRoomAvailability();
+    
+    // Si des dates sont dans le picker, mettre à jour les prix aussi
+    if (calendarManager.picker?.startDate && calendarManager.picker?.endDate) {
+      this.syncSelectedRoomPrice();
+    }
+  }
+
+
+  // Initialiser l'état par défaut pour un logement chambre d'hôtes
+  initBnbDefaultState(rooms) {
+    this._bnbMode = true;
+    this._selectedRoomIndex = null;
+
+    // Trouver le prix le plus bas parmi toutes les chambres
+    let lowestPrice = Infinity;
+    let lowestPricingData = null;
+
+    rooms.forEach(room => {
+      if (!room.pricing_data?.defaultPricing) return;
+      const dp = room.pricing_data.defaultPricing;
+      // dp.price = prix chambre pleine (même en mode per_guest)
+      let price = dp.price || Infinity;
+
+      if (price < lowestPrice) {
+
+        lowestPrice = price;
+        lowestPricingData = room.pricing_data;
+      }
+    });
+
+    // Afficher "À partir de" avec le prix le plus bas
+    if (isFinite(lowestPrice) && lowestPricingData) {
+      const prixDirectEls = Utils.getAllElementsById("prix-direct");
+      const pourcentageEls = Utils.getAllElementsById("text-pourcentage");
+
+      // Calculer le prix plateforme
+      let platformPrice = lowestPrice;
+      const dp = lowestPricingData.defaultPricing;
+      if (dp.platformPrices) {
+        const prices = Object.values(dp.platformPrices).filter(p => p > 0);
+        if (prices.length > 0) {
+          platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+        }
+      }
+      if (platformPrice === lowestPrice) {
+        const defaultDiscount = lowestPricingData.platformPricing?.defaultDiscount || 17;
+        platformPrice = Math.round(lowestPrice * (100 / (100 - defaultDiscount)));
+      }
+
+      prixDirectEls.forEach(element => {
+        element.textContent = '';
+        element.appendChild(document.createTextNode('À partir de'));
+        element.appendChild(document.createElement('br'));
+        const strong = document.createElement('strong');
+        strong.style.fontWeight = 'bold';
+        strong.style.fontFamily = 'Inter';
+        strong.style.fontSize = '24px';
+        strong.textContent = `${Math.round(lowestPrice)}€ / nuit`;
+        element.appendChild(strong);
+      });
+
+      if (platformPrice > lowestPrice) {
+        const discount = Math.round(100 * (platformPrice - lowestPrice) / platformPrice);
+        pourcentageEls.forEach(el => {
+          el.textContent = discount > 0 ? `-${discount}%` : '';
+        });
+      }
+    }
+
+    // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
+    const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
+    reserverButtons.forEach(btn => {
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+      btn.style.cursor = 'not-allowed';
+    });
+
+        // Afficher le message "sélectionner 1 chambre" (desktop + mobile)
+    const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
+    const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
+    if (blocSelectChambre) blocSelectChambre.style.display = 'block';
+    if (blocSelectChambreMobile) blocSelectChambreMobile.style.display = 'block';
+
+
+
+    // Capacité max = chambre avec le plus de voyageurs
+    let maxCapacity = 1;
+    rooms.forEach(room => {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const voyageurs = match ? parseInt(match[1]) : 0;
+      if (voyageurs > maxCapacity) maxCapacity = voyageurs;
+    });
+    this._bnbMaxCapacity = maxCapacity;
+    
+    const travelersManager = window.travelersManager;
+    if (travelersManager) {
+      travelersManager.maxCapacity = maxCapacity;
+      travelersManager.updateUI();
+    }
+
+    // Vérifier la disponibilité initiale des chambres
+    this.updateRoomAvailability();
+    // Masquer la ligne ménage pour les chambres d'hôtes
+    document.querySelectorAll('.ligne-menage').forEach(el => {
+      el.style.setProperty('display', 'none', 'important');
+    });
+
+
+  }
+
+
+  // Sélectionner une chambre
+  selectRoom(slotIndex) {
+    const room = this._roomsData[slotIndex];
+    if (!room) return;
+
+    // Si même chambre déjà sélectionnée → désélectionner
+    if (this._selectedRoomIndex === slotIndex) {
+      this.deselectRoom();
+      return;
+    }
+
+    // Désélectionner la chambre précédente (visuel)
+    if (this._selectedRoomIndex) {
+      const prevBloc = document.getElementById(`chambre-hote-${this._selectedRoomIndex}`);
+      const prevSelect = document.getElementById(`button-select-${this._selectedRoomIndex}`);
+      const prevSelected = document.getElementById(`button-selected-${this._selectedRoomIndex}`);
+      if (prevBloc) prevBloc.style.border = '';
+      if (prevSelect) prevSelect.style.display = '';
+      if (prevSelected) prevSelected.style.display = 'none';
+    }
+
+    this._selectedRoomIndex = slotIndex;
+
+    // 1. Visuel : bordure + boutons
+    const bloc = document.getElementById(`chambre-hote-${slotIndex}`);
+    const selectBtn = document.getElementById(`button-select-${slotIndex}`);
+    const selectedBtn = document.getElementById(`button-selected-${slotIndex}`);
+
+    if (bloc) bloc.style.border = '2px solid #235B59';
+    if (selectBtn) selectBtn.style.display = 'none';
+    if (selectedBtn) selectedBtn.style.display = 'flex';
+
+    // Masquer les messages d'erreur AVANT le calcul
+    document.querySelectorAll('.bloc-error-days').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+
+        // 2. Prix : injecter le pricingData de la chambre
+    if (window.priceCalculator && room.pricing_data) {
+      window.priceCalculator.pricingData = room.pricing_data;
+      
+      // Vérifier les dates dans le picker (pas dans PriceCalculator qui peut les avoir effacées)
+      const desktopPicker = window.detailLogementPage?.managers?.calendar?.picker;
+      const mobilePicker = typeof jQuery !== 'undefined' ? jQuery('#input-calendar-mobile').data('daterangepicker') : null;
+      const activePicker = (mobilePicker?.startDate && mobilePicker?.endDate && mobilePicker.endDate.diff(mobilePicker.startDate, 'days') > 0) 
+        ? mobilePicker : desktopPicker;
+      if (activePicker?.startDate && activePicker?.endDate && activePicker.endDate.diff(activePicker.startDate, 'days') > 0) {
+        window.priceCalculator.startDate = activePicker.startDate;
+        window.priceCalculator.endDate = activePicker.endDate;
+
+        window.priceCalculator.calculateAndDisplayPrices();
+      } else {
+        window.priceCalculator.resetPrices();
+      }
+    }
+
+
+    const blocSelectChambre = document.getElementById('bloc-error-select-chambre');
+    const blocSelectChambreMobile = document.getElementById('bloc-error-select-chambre-mobile');
+    if (blocSelectChambre) blocSelectChambre.style.display = 'none';
+    if (blocSelectChambreMobile) blocSelectChambreMobile.style.display = 'none';
+
+
+
+    // 3. Calendrier : switcher sur les dates de cette chambre
+    const calendarManager = window.detailLogementPage?.managers?.calendar;
+    if (calendarManager?.icalManager && this._roomsUnavailableDates) {
+      calendarManager.icalManager.unavailableDates = this._roomsUnavailableDates[slotIndex] || new Set();
+      if (calendarManager.picker) {
+        calendarManager.picker.updateCalendars();
+      }
+    }
+
+    // 4. Tarifs saisons : mettre à jour avec les données de la chambre
+    const tariffsManager = window.detailLogementPage?.managers?.tariffs;
+    if (tariffsManager && room.pricing_data) {
+      // Masquer toutes les saisons d'abord
+      for (let i = 1; i <= 4; i++) {
+        const seasonEl = document.getElementById(`season-${i}`);
+        if (seasonEl) seasonEl.style.display = 'none';
+      }
+      tariffsManager.displaySeasonsPricing(room.pricing_data);
+    }
+
+    // 5. Capacité voyageurs
+    const travelersManager = window.travelersManager;
+    if (travelersManager) {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      travelersManager.maxCapacity = match ? parseInt(match[1]) : 8;
+      travelersManager.updateUI();
+    }
+
+    // 6. Réactiver le bouton réserver (PriceCalculator gère le reste)
+    // Le bouton sera activé quand des dates valides seront sélectionnées
+  }
+
+  // Désélectionner la chambre active
+  deselectRoom() {
+    if (!this._selectedRoomIndex) return;
+
+    // 1. Visuel : retirer bordure + remettre boutons
+    const bloc = document.getElementById(`chambre-hote-${this._selectedRoomIndex}`);
+    const selectBtn = document.getElementById(`button-select-${this._selectedRoomIndex}`);
+    const selectedBtn = document.getElementById(`button-selected-${this._selectedRoomIndex}`);
+
+    if (bloc) bloc.style.border = '';
+    if (selectBtn) selectBtn.style.display = '';
+    if (selectedBtn) selectedBtn.style.display = 'none';
+
+    this._selectedRoomIndex = null;
+
+    // Masquer les blocs d'erreur
+    document.querySelectorAll('.bloc-error-days').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+
+    // 2. Prix : remettre pricingData à null et resynchroniser les dates depuis le picker
+    if (window.priceCalculator) {
+      window.priceCalculator.pricingData = null;
+      
+      // Resynchroniser les dates depuis le picker (desktop ou mobile)
+      const desktopPicker = window.detailLogementPage?.managers?.calendar?.picker;
+      const mobilePicker = typeof jQuery !== 'undefined' ? jQuery('#input-calendar-mobile').data('daterangepicker') : null;
+      
+      if (mobilePicker?.startDate && mobilePicker?.endDate && 
+          mobilePicker.endDate.diff(mobilePicker.startDate, 'days') > 0) {
+        window.priceCalculator.startDate = mobilePicker.startDate;
+        window.priceCalculator.endDate = mobilePicker.endDate;
+      } else if (desktopPicker?.startDate && desktopPicker?.endDate && 
+                 desktopPicker.endDate.diff(desktopPicker.startDate, 'days') > 0) {
+        window.priceCalculator.startDate = desktopPicker.startDate;
+        window.priceCalculator.endDate = desktopPicker.endDate;
+      } else {
+        window.priceCalculator.startDate = null;
+        window.priceCalculator.endDate = null;
+      }
+    }
+    
+    // Masquer le bloc calcul prix (aucune chambre sélectionnée)
+    const blocPrix = document.getElementById('bloc-calcul-prix');
+    if (blocPrix) blocPrix.style.display = 'none';
+    const blocPrixMobile = document.getElementById('bloc-calcul-prix-mobile');
+    if (blocPrixMobile) blocPrixMobile.style.display = 'none';
+    
+    // Réafficher le prix le plus bas
+    this.initBnbDefaultState(
+      Object.values(this._roomsData).filter(Boolean)
+    );
+
+    // Recalculer les prix des blocs chambres si des dates existent
+    if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
+      this.syncSelectedRoomPrice();
+    }
+
+
+    // 3. Calendrier : remettre les dates combinées
+    const calendarManager = window.detailLogementPage?.managers?.calendar;
+    if (calendarManager?.icalManager && this._combinedUnavailableDates) {
+      calendarManager.icalManager.unavailableDates = this._combinedUnavailableDates;
+      if (calendarManager.picker) {
+        calendarManager.picker.updateCalendars();
+      }
+    }
+
+    // 4. Tarifs saisons : masquer (pas de saisons en mode combiné)
+    for (let i = 1; i <= 4; i++) {
+      const seasonEl = document.getElementById(`season-${i}`);
+      if (seasonEl) seasonEl.style.display = 'none';
+    }
+
+    // 5. Capacité : remettre le max global
+    const travelersManager = window.travelersManager;
+    if (travelersManager) {
+      let maxCapacity = 1;
+      Object.values(this._roomsData).filter(Boolean).forEach(room => {
+        const match = (room.taille_chambre || '').match(/^(\d+)/);
+        const voyageurs = match ? parseInt(match[1]) : 0;
+        if (voyageurs > maxCapacity) maxCapacity = voyageurs;
+      });
+      travelersManager.maxCapacity = maxCapacity;
+      travelersManager.updateUI();
+    }
+  }
+
+
+
+  
+    // Formater les détails de lits
+  formatDetailsLits(detailsLits) {
+    if (!detailsLits) return '';
+    const groups = detailsLits.split(',').map(part => part.trim()).filter(Boolean);
+    const expandedTypes = [];
+    groups.forEach(group => {
+      const groupMatch = group.match(/^(\d+)\s+(.+)$/);
+      if (groupMatch) {
+        const count = parseInt(groupMatch[1]);
+        const type = groupMatch[2].trim();
+        for (let i = 0; i < count; i++) {
+          expandedTypes.push(type);
+        }
+      } else {
+        expandedTypes.push(group);
+      }
+    });
+    return expandedTypes.join(', ');
+  }
+
+    displayRoomPrice(prixEl, pourcentageEl, pricingData) {
+    const defaultPricing = pricingData.defaultPricing;
+    if (!defaultPricing) return;
+
+    let displayPrice = 0;
+
+    // Vérifier si des dates sont sélectionnées pour trouver la bonne saison
+    const pc = window.priceCalculator;
+    let activeSeason = defaultPricing;
+
+    if (pc?.startDate && pricingData.seasons?.length > 0) {
+      const month = pc.startDate.month() + 1;
+      const day = pc.startDate.date();
+      for (const season of pricingData.seasons) {
+        if (!season.periods) continue;
+        for (const period of season.periods) {
+          const [startDay, startMonth] = period.start.split("-").map(Number);
+          const [endDay, endMonth] = period.end.split("-").map(Number);
+          if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+            if ((month > startMonth || (month === startMonth && day >= startDay)) &&
+                (month < endMonth || (month === endMonth && day <= endDay))) {
+              activeSeason = season;
+            }
+          } else {
+            if ((month > startMonth || (month === startMonth && day >= startDay)) ||
+                (month < endMonth || (month === endMonth && day <= endDay))) {
+              activeSeason = season;
+            }
+          }
+        }
+      }
+    }
+
+    // Vérifier le week-end
+    let seasonPrice = activeSeason.price || 0;
+    if (pc?.startDate && activeSeason === defaultPricing && 
+        defaultPricing.weekend?.enabled && defaultPricing.weekend?.price > 0) {
+      const dayOfWeek = pc.startDate.day();
+      if (dayOfWeek === 5 || dayOfWeek === 6) {
+        seasonPrice = defaultPricing.weekend.price;
+      }
+    }
+
+    // Mode per_guest
+    if (defaultPricing.mode === 'per_guest') {
+      const prices = activeSeason.pricesPerGuest || defaultPricing.pricesPerGuest || [];
+      if (prices.length > 0) {
+        const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+        const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+        const totalGuests = Math.max(1, adultsCount + childrenCount);
+        const index = Math.min(totalGuests - 1, prices.length - 1);
+        displayPrice = prices[Math.max(0, index)];
+      } else {
+        displayPrice = seasonPrice;
+      }
+    } else {
+      displayPrice = seasonPrice;
+    }
+
+    // Pourcentage (toujours basé sur le prix max de la saison)
+    const baseForPlatform = activeSeason.price || defaultPricing.price || displayPrice;
+    let platformPrice = baseForPlatform;
+    if (defaultPricing.platformPrices) {
+      const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
+      if (prices.length > 0) {
+        platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+      }
+    }
+    if (platformPrice === baseForPlatform) {
+      const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
+        ? pricingData.platformPricing.defaultDiscount : 17;
+      platformPrice = Math.round(baseForPlatform * (100 / (100 - defaultDiscount)));
+    }
+
+    // Affichage
+    prixEl.textContent = '';
+    prixEl.style.setProperty('display', 'flex', 'important');
+    prixEl.style.setProperty('flex-direction', 'row', 'important');
+    prixEl.style.setProperty('align-items', 'baseline', 'important');
+    prixEl.style.setProperty('gap', '4px', 'important');
+
+    const strong = document.createElement('strong');
+    strong.textContent = `${Math.round(displayPrice)}€`;
+    strong.style.setProperty('font-weight', '600', 'important');
+    strong.style.setProperty('font-size', '16px', 'important');
+    prixEl.appendChild(strong);
+
+    const suffix = document.createElement('span');
+    suffix.textContent = '/ nuit';
+    suffix.style.setProperty('font-weight', '400', 'important');
+    suffix.style.setProperty('font-size', '16px', 'important');
+    prixEl.appendChild(suffix);
+
+    if (pourcentageEl) {
+      if (platformPrice > baseForPlatform) {
+        const discount = Math.round(((platformPrice - baseForPlatform) / platformPrice) * 100);
+        pourcentageEl.textContent = `-${discount}%`;
+        pourcentageEl.style.display = 'block';
+      } else {
+        pourcentageEl.style.display = 'none';
+      }
+    }
+  }
+
+
+
+  // Mettre à jour les prix de TOUS les blocs chambres selon le nombre de voyageurs
+  updateAllRoomBlockPrices() {
+    if (!this._roomsData) return;
+
+    Object.keys(this._roomsData).forEach(slotIndex => {
+      const room = this._roomsData[slotIndex];
+      if (!room?.pricing_data?.defaultPricing) return;
+
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+
+      if (prixEl) {
+        this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
+      }
+    });
+  }
+
+    syncSelectedRoomPrice() {
+    const pc = window.priceCalculator;
+    if (!pc?.startDate || !pc?.endDate || !this._roomsData) return;
+
+    Object.keys(this._roomsData).forEach(slotIndex => {
+      const room = this._roomsData[slotIndex];
+      if (!room?.pricing_data) return;
+
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      if (!prixEl) return;
+
+      // Calculer le prix moyen par nuit pour cette chambre avec les dates actuelles
+      let totalPrice = 0;
+      let nights = 0;
+      let currentDate = moment(pc.startDate).startOf('day');
+      const endDate = moment(pc.endDate).startOf('day');
+
+      while (currentDate.isBefore(endDate)) {
+        const month = currentDate.month() + 1;
+        const day = currentDate.date();
+        let nightPrice = room.pricing_data.defaultPricing?.price || 0;
+
+        // Chercher la saison active
+        if (room.pricing_data.seasons?.length > 0) {
+          for (const season of room.pricing_data.seasons) {
+            if (!season.periods) continue;
+            for (const period of season.periods) {
+              const [startDay, startMonth] = period.start.split("-").map(Number);
+              const [endDay, endMonth] = period.end.split("-").map(Number);
+              let inSeason = false;
+              if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+                inSeason = (month > startMonth || (month === startMonth && day >= startDay)) &&
+                           (month < endMonth || (month === endMonth && day <= endDay));
+              } else {
+                inSeason = (month > startMonth || (month === startMonth && day >= startDay)) ||
+                           (month < endMonth || (month === endMonth && day <= endDay));
+              }
+              if (inSeason) nightPrice = season.price;
+            }
+          }
+        }
+
+        // Week-end
+        const dp = room.pricing_data.defaultPricing;
+        if (dp?.weekend?.enabled && dp.weekend.price > 0) {
+          const dayOfWeek = currentDate.day();
+          if (dayOfWeek === 5 || dayOfWeek === 6) {
+            nightPrice = dp.weekend.price;
+          }
+        }
+
+                // Per_guest : utiliser le pricesPerGuest de la saison active si disponible
+        if (dp?.mode === 'per_guest') {
+          const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+          const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+          const totalGuests = Math.max(1, adultsCount + childrenCount);
+          
+          // Chercher le pricesPerGuest de la saison active pour cette nuit
+          let activePricesPerGuest = dp.pricesPerGuest || [];
+          if (room.pricing_data.seasons?.length > 0) {
+            for (const season of room.pricing_data.seasons) {
+              if (!season.periods || !season.pricesPerGuest?.length) continue;
+              for (const period of season.periods) {
+                const [startDay, startMonth] = period.start.split("-").map(Number);
+                const [endDay, endMonth] = period.end.split("-").map(Number);
+                let inSeason = false;
+                if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+                  inSeason = (month > startMonth || (month === startMonth && day >= startDay)) &&
+                             (month < endMonth || (month === endMonth && day <= endDay));
+                } else {
+                  inSeason = (month > startMonth || (month === startMonth && day >= startDay)) ||
+                             (month < endMonth || (month === endMonth && day <= endDay));
+                }
+                if (inSeason) activePricesPerGuest = season.pricesPerGuest;
+              }
+            }
+          }
+          
+          if (activePricesPerGuest.length > 0) {
+            const index = Math.min(totalGuests - 1, activePricesPerGuest.length - 1);
+            nightPrice = activePricesPerGuest[Math.max(0, index)];
+          }
+        }
+
+
+        totalPrice += nightPrice;
+        nights++;
+        currentDate.add(1, 'day');
+      }
+
+      if (nights === 0) return;
+      const avgPrice = Math.round(totalPrice / nights);
+
+      // Afficher
+      prixEl.textContent = '';
+      prixEl.style.setProperty('display', 'flex', 'important');
+      prixEl.style.setProperty('flex-direction', 'row', 'important');
+      prixEl.style.setProperty('align-items', 'baseline', 'important');
+      prixEl.style.setProperty('gap', '4px', 'important');
+
+      const strong = document.createElement('strong');
+      strong.textContent = `${avgPrice}€`;
+      strong.style.setProperty('font-weight', '600', 'important');
+      strong.style.setProperty('font-size', '16px', 'important');
+      prixEl.appendChild(strong);
+
+      const suffix = document.createElement('span');
+      suffix.textContent = '/ nuit';
+      suffix.style.setProperty('font-weight', '400', 'important');
+      suffix.style.setProperty('font-size', '16px', 'important');
+      prixEl.appendChild(suffix);
+
+      // Remettre le pourcentage visible
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+      if (pourcentageEl && pourcentageEl.textContent && pourcentageEl.textContent.trim() !== '') {
+        pourcentageEl.style.display = 'block';
+      }
+    });
+  }
+
+
+  
+  updateRoomAvailability() {
+    if (!this._roomsData) return;
+
+    // Récupérer le nombre de voyageurs actuel
+    const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1');
+    const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0');
+    const totalGuests = adultsCount + childrenCount;
+
+    // Récupérer les dates sélectionnées
+    const pc = window.priceCalculator;
+    const hasSelectedDates = pc?.startDate && pc?.endDate;
+
+    Object.keys(this._roomsData).forEach(slotIndex => {
+      const room = this._roomsData[slotIndex];
+      if (!room) return;
+
+      const chambreBloc = document.getElementById(`chambre-hote-${slotIndex}`);
+      const selectBtn = document.getElementById(`button-select-${slotIndex}`);
+      if (!chambreBloc) return;
+
+      let isUnavailable = false;
+
+      // 1. Vérifier la capacité
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const roomCapacity = match ? parseInt(match[1]) : 0;
+      if (totalGuests > roomCapacity) {
+        isUnavailable = true;
+      }
+
+      // 2. Vérifier les dates (si des dates sont sélectionnées)
+      if (!isUnavailable && hasSelectedDates && this._roomsUnavailableDates) {
+        const roomDates = this._roomsUnavailableDates[slotIndex];
+        if (roomDates) {
+          let checkDate = moment(pc.startDate).startOf('day');
+          const endDate = moment(pc.endDate).startOf('day');
+          while (checkDate.isBefore(endDate)) {
+            if (roomDates.has(checkDate.format('YYYY-MM-DD'))) {
+              isUnavailable = true;
+              break;
+            }
+            checkDate.add(1, 'day');
+          }
+        }
+      }
+
+      // Ne pas toucher la chambre actuellement sélectionnée
+      if (this._selectedRoomIndex === parseInt(slotIndex)) return;
+
+      // Appliquer l'état
+      const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+
+      if (isUnavailable) {
+        chambreBloc.style.opacity = '0.3';
+        chambreBloc.style.pointerEvents = 'none';
+        if (selectBtn) selectBtn.style.display = 'none';
+        if (prixEl) prixEl.textContent = 'Chambre indisponible';
+        if (pourcentageEl) pourcentageEl.style.display = 'none';
+        } else {
+        chambreBloc.style.opacity = '';
+        chambreBloc.style.pointerEvents = '';
+        if (selectBtn) selectBtn.style.display = '';
+        // Restaurer le prix seulement si pas de dates (sinon syncSelectedRoomPrice gère)
+        const hasPickerDates = window.detailLogementPage?.managers?.calendar?.picker?.startDate && 
+                               window.detailLogementPage?.managers?.calendar?.picker?.endDate;
+        if (prixEl && !hasPickerDates) {
+          this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
+        }
+      }
+    });
+  }
+
+  
+  // Ouvrir la modale avec les infos d'une chambre
+  openRoomModal(room) {
+    const modal = document.getElementById('modal-chambre-hote');
+    if (!modal || !room) return;
+
+        // Carrousel images
+    this.setupCarousel(room.photos || []);
+
+
+    // Voyageurs
+    const voyageursEl = document.getElementById('modal-chambre-voyageurs');
+    if (voyageursEl) {
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const voyageurs = match ? parseInt(match[1]) : 0;
+      voyageursEl.textContent = `${voyageurs} voyageur${voyageurs > 1 ? 's' : ''}`;
+    }
+
+    // Nom
+    const nomEl = document.getElementById('modal-chambre-nom');
+    if (nomEl) {
+      nomEl.textContent = room.name || 'Chambre';
+    }
+
+    // Taille
+    const tailleEl = document.getElementById('modal-chambre-taille');
+    if (tailleEl) {
+      const tailleMatch = (room.taille_chambre || '').match(/(\d+)\s*m²/);
+      const m2 = tailleMatch ? tailleMatch[1] : '0';
+      tailleEl.textContent = `${m2} m²`;
+    }
+
+    // Lits
+    const litsEl = document.getElementById('modal-chambre-lits');
+    if (litsEl) {
+      litsEl.textContent = this.formatDetailsLits(room.details_lits);
+    }
+
+    // Description
+    const descEl = document.getElementById('modal-chambre-description');
+    if (descEl) {
+      descEl.textContent = room.description || '';
+    }
+
+    // Équipements — même logique que setupEquipements()
+    const equipementMapping = {
+      'Climatisation': 'equip-chambre-climatisation',
+      'Télévision': 'equip-chambre-television',
+      'Bureau': 'equip-chambre-bureau',
+      'Salle de bain privée': 'equip-chambre-salle-de-bain',
+      'Toilettes privées': 'equip-chambre-toilettes',
+      'Wifi': 'equip-chambre-wifi',
+      'Micro-ondes': 'equip-chambre-micro-ondes',
+      'Sèche cheveux': 'equip-chambre-seche-cheveux',
+      'Balcon': 'equip-chambre-balcon',
+      'Machine à café': 'equip-chambre-machine-cafe'
+    };
+
+    // Masquer tous les équipements
+    Object.values(equipementMapping).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    // Afficher/masquer les blocs parents selon si la chambre a des équipements
+    const equipStr = room.equipements || '';
+    const blocEquipement = document.getElementById('bloc-equipement');
+    const lineEquipement = document.getElementById('line-equipement');
+    
+    if (equipStr && equipStr.trim() !== '') {
+      if (blocEquipement) blocEquipement.style.display = '';
+      if (lineEquipement) lineEquipement.style.display = '';
+      
+      const equipList = equipStr.split(',').map(e => e.trim());
+      equipList.forEach(equip => {
+        const id = equipementMapping[equip];
+        if (id) {
+          const el = document.getElementById(id);
+          if (el) el.style.display = '';
+        }
+      });
+    } else {
+      if (blocEquipement) blocEquipement.style.display = 'none';
+      if (lineEquipement) lineEquipement.style.display = 'none';
+    }
+
+    // Afficher la modale
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    document.body.classList.add('no-scroll');
+  }
+
+  // Fermeture de la modale
+    setupRoomModalClose() {
+    const modal = document.getElementById('modal-chambre-hote');
+    if (!modal) return;
+
+    // Fermeture par nos boutons
+    const closeBtns = modal.querySelectorAll('.close-modal-chambre');
+    closeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+      });
+    });
+
+    // Observer les changements de display (couvre les fermetures Webflow)
+    const observer = new MutationObserver(() => {
+      if (modal.style.display === 'none' || getComputedStyle(modal).display === 'none') {
+        document.body.classList.remove('no-scroll');
+      }
+    });
+    observer.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
+
   
   // Gestion des horaires d'arrivée et de départ
   setupHoraires() {
@@ -475,62 +1573,45 @@ setupConditionsAnnulation() {
     const horairesString = horairesElement.getAttribute('data-heure-arrivee-depart');
     
     if (!horairesString || horairesString.trim() === '') {
-      console.log('📋 Aucun horaire personnalisé défini');
       return;
     }
     
-    // Parser les horaires (séparés par une virgule)
     const horaires = horairesString.split(',').map(h => h.trim());
     
     if (horaires.length !== 2) {
-      console.warn('⚠️ Format d\'horaires incorrect. Attendu: "HH:MM,HH:MM"');
       return;
     }
     
-    // NOUVEAU : Formater de HH:MM vers HHhMM
     const formatHeure = (heure) => {
-      // Si c'est déjà au format HH:MM
-      if (/^\d{1,2}:\d{2}$/.test(heure)) {
-        return heure.replace(':', 'h');
-      }
-      // Si c'est juste un nombre (ancien format)
-      if (/^\d+$/.test(heure)) {
-        return `${heure}h00`;
-      }
-      // Si c'est au format XXh sans minutes
-      if (/^\d+h$/.test(heure)) {
-        return `${heure}00`;
-      }
-      // Si c'est au format XXhYY
-      if (/^\d+h\d+$/.test(heure)) {
-        return heure;
-      }
+      if (/^\d{1,2}:\d{2}$/.test(heure)) return heure.replace(':', 'h');
+      if (/^\d+$/.test(heure)) return `${heure}h00`;
+      if (/^\d+h$/.test(heure)) return `${heure}00`;
+      if (/^\d+h\d+$/.test(heure)) return heure;
       return heure;
     };
     
-    const heureArrivee = formatHeure(horaires[0]);
+    const partieArrivee = horaires[0];
     const heureDepart = formatHeure(horaires[1]);
     
+    // Construire le texte d'arrivée selon le format
+    let texteArrivee = '';
+    
+    if (partieArrivee.includes('-')) {
+      // Créneau : "14:00-18:00" → "Entre 14h00 et 18h00"
+      const [debut, fin] = partieArrivee.split('-').map(h => formatHeure(h.trim()));
+      texteArrivee = `Arrivée entre ${debut} et ${fin}`;
+    } else {
+      // Heure fixe : "16:00" → "Arrivée à partir de 16h00"
+      texteArrivee = `Arrivée à partir de ${formatHeure(partieArrivee)}`;
+    }
     
     const textHorairesElement = document.querySelector('.text-horaires');
     
     if (!textHorairesElement) {
-      console.warn('⚠️ Élément .text-horaires non trouvé');
       return;
     }
     
-    let texteActuel = textHorairesElement.textContent;
-    const heuresExistantes = texteActuel.match(/\d+h\d+/g) || [];
-    
-    if (heuresExistantes.length >= 2) {
-      texteActuel = texteActuel.replace(heuresExistantes[0], heureArrivee);
-      texteActuel = texteActuel.replace(heuresExistantes[1], heureDepart);
-    } else {
-      console.warn('⚠️ Impossible de trouver 2 horaires dans le texte');
-      return;
-    }
-    
-    textHorairesElement.textContent = texteActuel;
+    textHorairesElement.textContent = `${texteArrivee} - Départ avant ${heureDepart}`;
   }
 
   // Gestion des réductions
@@ -830,7 +1911,7 @@ setupImmatriculation() {
   // Gestion des popins
   setupPopins() {
     this.setupPopin(".pop-up.photos", ".bloc-link-images", ".button-card, .app, .second, .profile, .conciergerie, .logements");
-    this.setupPopin(".popin-price", ".button-modal-prix", ".button-modal-prix, .close");
+    this.setupPopin(".popin-price", "#btn-season", ".button-modal-prix.close");
   }
 
   setupPopin(popinSelector, openSelector, closeSelectors) {
@@ -843,16 +1924,32 @@ setupImmatriculation() {
       return;
     }
     
-    openBtn.addEventListener("click", function() {
+    openBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       document.body.classList.add("no-scroll");
-      popin.style.display = "block";
+
+      popin.style.display = "flex";
+      popin.style.opacity = "1";
+      const popup = popin.querySelector('.bloc-popup');
+      if (popup) {
+        popup.style.opacity = '1';
+        popup.style.transform = 'none';
+      }
     });
     
     closeBtns.forEach(btn => {
-      btn.addEventListener("click", function() {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
         document.body.classList.remove("no-scroll");
         popin.style.display = "none";
       });
+    });
+
+    popin.addEventListener("click", function(e) {
+      if (e.target === popin) {
+        document.body.classList.remove("no-scroll");
+      }
     });
   }
 }

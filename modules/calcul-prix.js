@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.111
+// Calculateur de prix principal - LOG production V1.127
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -54,10 +54,25 @@ class PriceCalculator {
       attribute = "data-json-tarifs";
     }
     
-    if (element) {
+        if (element) {
       try {
         const jsonData = element.getAttribute(attribute);
-        this.pricingData = JSON.parse(jsonData);
+        if (!jsonData || jsonData.trim() === '') return;
+        const parsedData = JSON.parse(jsonData);
+        
+        // Pour les chambres d'hôtes, ne garder que caution/acompte
+        const typeElement = document.querySelector('[data-mode-location]');
+        if (typeElement && typeElement.getAttribute('data-mode-location') === "Chambre d'hôtes") {
+          this._parentCautionAcompte = {
+            caution: parsedData.caution || null,
+            acompte: parsedData.acompte || null
+          };
+          this.pricingData = null;
+          return;
+        }
+        
+        this.pricingData = parsedData;
+
       } catch (error) {
         console.error("❌ Erreur lors du chargement des données tarifaires:", error);
       }
@@ -77,15 +92,25 @@ class PriceCalculator {
 
   listenForDateChanges() {
     if (typeof jQuery !== 'undefined' && jQuery("#input-calendar, #input-calendar-mobile").length) {
-      jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
+            jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
         if (picker.startDate && picker.endDate) {
           this.startDate = picker.startDate;
           this.endDate = picker.endDate;
           this.calculateAndDisplayPrices();
+          // Mettre à jour les prix et la disponibilité des blocs chambres
+          const interfaceManager = window.detailLogementPage?.managers?.interface;
+          if (interfaceManager?.syncSelectedRoomPrice) {
+            interfaceManager.syncSelectedRoomPrice();
+          }
+          if (interfaceManager?.updateRoomAvailability) {
+            interfaceManager.updateRoomAvailability();
+          }
+
         } else {
           this.resetPrices();
         }
       });
+
       
       jQuery("#input-calendar, #input-calendar-mobile").on("cancel.daterangepicker", () => {
         this.resetPrices();
@@ -96,8 +121,9 @@ class PriceCalculator {
   }
 
   getReserverButtons() {
-    return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]');
+    return document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
   }
+
 
   resetPrices() {
     this.startDate = null;
@@ -173,20 +199,23 @@ class PriceCalculator {
       let platformPrice = 0;
       let bestSeason = null;
       
-      // Commencer par vérifier le prix par défaut
+            // Commencer par vérifier le prix par défaut
       if (this.pricingData && this.pricingData.defaultPricing) {
-        minPrice = this.pricingData.defaultPricing.price;
+        const perGuestPrice = this.getPerGuestPrice(this.pricingData.defaultPricing);
+        minPrice = perGuestPrice || this.pricingData.defaultPricing.price;
         bestSeason = this.pricingData.defaultPricing;
-        platformPrice = this.getPlatformPrice(bestSeason);
+        platformPrice = this.getPlatformPrice(bestSeason, perGuestPrice || null);
       }
       
       // Puis vérifier les saisons pour un prix potentiellement plus bas
       if (this.pricingData && this.pricingData.seasons) {
         for (const season of this.pricingData.seasons) {
-          if (season.price < minPrice) {
-            minPrice = season.price;
+          const seasonPerGuestPrice = this.getPerGuestPrice(season);
+          const seasonPrice = seasonPerGuestPrice || season.price;
+          if (seasonPrice < minPrice) {
+            minPrice = seasonPrice;
             bestSeason = season;
-            platformPrice = this.getPlatformPrice(season);
+            platformPrice = this.getPlatformPrice(season, seasonPerGuestPrice || null);
           }
         }
       }
@@ -225,8 +254,30 @@ class PriceCalculator {
       }
     }
     
+        // Mettre à jour les prix et la disponibilité des chambres
+        const interfaceManager = window.detailLogementPage?.managers?.interface;
+    const hasPickerDates = window.detailLogementPage?.managers?.calendar?.picker?.startDate && 
+                           window.detailLogementPage?.managers?.calendar?.picker?.endDate;
+    if (hasPickerDates && interfaceManager?.syncSelectedRoomPrice) {
+      interfaceManager.syncSelectedRoomPrice();
+    } else if (interfaceManager?.updateAllRoomBlockPrices) {
+      interfaceManager.updateAllRoomBlockPrices();
+    }
+    if (interfaceManager?.updateRoomAvailability) {
+      interfaceManager.updateRoomAvailability();
+    }
+
+
+    // Masquer la ligne ménage si mode B&B
+    if (window.detailLogementPage?.managers?.interface?._bnbMode) {
+      document.querySelectorAll('.ligne-menage').forEach(el => {
+        el.style.setProperty('display', 'none', 'important');
+      });
+    }
+
     this.hideMinNightsError();
   }
+
 
   calculateAndDisplayPrices() {
     if (!this.pricingData || !this.startDate || !this.endDate) {
@@ -283,16 +334,17 @@ class PriceCalculator {
       let currentDate = moment(this.startDate).startOf("day");
       const endDate = moment(this.endDate).startOf("day");
       
-      while (currentDate.isBefore(endDate)) {
+           while (currentDate.isBefore(endDate)) {
         const season = this.getSeason(currentDate);
         if (!season) {
           currentDate.add(1, "day");
           continue;
         }
         
-        // NOUVEAU : Déterminer le prix de la nuit (week-end ou normal)
-        let nightPrice = season.price;
-        const dayOfWeek = currentDate.day(); // 0=dimanche, 5=vendredi, 6=samedi
+        // Déterminer le prix de la nuit
+        const perGuestPrice = this.getPerGuestPrice(season);
+        let nightPrice = perGuestPrice || season.price;
+        const dayOfWeek = currentDate.day();
         
         if (season === this.pricingData.defaultPricing && 
             this.pricingData.defaultPricing.weekend?.enabled &&
@@ -301,16 +353,17 @@ class PriceCalculator {
           nightPrice = this.pricingData.defaultPricing.weekend.price;
         }
         
-        // Ne passer overridePrice QUE si c'est un prix week-end (différent du prix normal de la saison)
-        const isWeekendPrice = nightPrice !== season.price;
+        // Passer en override si le prix est différent du prix de base de la saison
+        const overridePrice = nightPrice !== season.price ? nightPrice : null;
         
         const nightInfo = {
           date: currentDate.format("YYYY-MM-DD"),
           formattedDate: currentDate.format("DD/MM/YYYY"),
           season: season.name,
           price: nightPrice,
-          platformPrice: this.getPlatformPrice(season, isWeekendPrice ? nightPrice : null)
+          platformPrice: this.getPlatformPrice(season, overridePrice)
         };
+
         
         details.nightsBreakdown.push(nightInfo);
         details.nightsPrice += nightPrice;
@@ -320,11 +373,13 @@ class PriceCalculator {
       
       details.originalNightsPrice = details.nightsPrice;
 
-      // 🆕 NOUVEAU : Supplément voyageurs
+      // Supplément voyageurs (pas en mode per_guest, le prix inclut déjà les voyageurs)
       details.extraGuestsFee = 0;
       details.extraGuestsCount = 0;
+      if (this.pricingData.defaultPricing?.mode !== 'per_guest') {
       const extraGuests = this.pricingData.extraGuests;
       if (extraGuests && extraGuests.enabled && extraGuests.threshold > 0 && extraGuests.pricePerPerson > 0) {
+
         const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
         const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
         const totalGuests = adultsCount + childrenCount;
@@ -340,6 +395,7 @@ class PriceCalculator {
           // Ajouter aussi au prix plateforme
           details.platformPrice += details.extraGuestsFee;
         }
+      }
       }
       
       // Appliquer les réductions de séjour
@@ -478,6 +534,24 @@ class PriceCalculator {
     return basePrice * (100 / (100 - defaultDiscount));
   }
 
+    getPerGuestPrice(season = null) {
+    if (this.pricingData?.defaultPricing?.mode !== 'per_guest') return null;
+    
+    const source = (season && season.pricesPerGuest?.length > 0) 
+      ? season 
+      : this.pricingData.defaultPricing;
+    const prices = source.pricesPerGuest;
+    
+    if (!prices || prices.length === 0) return null;
+    
+    const adultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
+    const childrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+    const totalGuests = Math.max(1, adultsCount + childrenCount);
+    const index = Math.min(totalGuests - 1, prices.length - 1);
+    return prices[Math.max(0, index)];
+  }
+
+  
   updateUI(details) {
     // Afficher les blocs de calcul
     const blocPrix = document.getElementById("bloc-calcul-prix");
@@ -566,9 +640,18 @@ class PriceCalculator {
       
     }
     
-    // Frais de ménage
+        // Frais de ménage (masquer pour les chambres d'hôtes)
     if (this.elements.prixMenage.length) {
+      const hasCleaning = this.pricingData.cleaning !== undefined;
       this.elements.prixMenage.forEach(element => {
+        const ligneMenage = element.closest('.ligne-menage') || element.parentElement;
+        if (!hasCleaning || window.detailLogementPage?.managers?.interface?._bnbMode) {
+          if (ligneMenage) ligneMenage.style.setProperty('display', 'none', 'important');
+          return;
+        }
+        if (ligneMenage) ligneMenage.style.display = '';
+
+
         if (details.cleaningFee > 0) {
           if (details.cleaningOptional) {
             element.innerHTML = `${formatPrice(details.cleaningFee)}€ <span style="color:#778183">(en option)</span>`;
@@ -580,6 +663,7 @@ class PriceCalculator {
         }
       });
     }
+
     
     // SOLUTION SIMPLE : Créer les éléments au lieu d'innerHTML
     if (this.elements.totalPrix.length) {
@@ -647,7 +731,7 @@ class PriceCalculator {
         });
       }
       
-      if (this.elements.textPourcentage.length) {
+            if (this.elements.textPourcentage.length) {
         if (avgPlatformPricePerNight > avgPricePerNight) {
           this.elements.textPourcentage.forEach(element => {
             element.textContent = `-${Math.round(100 * (avgPlatformPricePerNight - avgPricePerNight) / avgPlatformPricePerNight)}%`;
@@ -659,9 +743,21 @@ class PriceCalculator {
         }
       }
     }
+
+    // Mettre à jour les prix et la disponibilité des chambres
+    const interfaceManager = window.detailLogementPage?.managers?.interface;
+    if (interfaceManager?.syncSelectedRoomPrice) {
+      interfaceManager.syncSelectedRoomPrice();
+    }
+    if (interfaceManager?.updateRoomAvailability) {
+      interfaceManager.updateRoomAvailability();
+    }
+
   }
 
-  showMinNightsError() {
+
+
+    showMinNightsError() {
     // Masquer les blocs de prix
     const prixBlock = document.getElementById("bloc-calcul-prix");
     if (prixBlock) prixBlock.style.display = "none";
@@ -669,21 +765,41 @@ class PriceCalculator {
     const prixMobileBlock = document.getElementById("bloc-calcul-prix-mobile");
     if (prixMobileBlock) prixMobileBlock.style.display = "none";
     
-    // Afficher l'erreur
-    const errorBlocks = document.querySelectorAll('.bloc-error-days');
-    const minNightsTexts = [
-      document.getElementById('text-days-minimum'),
-      document.getElementById('text-days-minimum-mobile')
-    ];
-    const reserverButtons = this.getReserverButtons();
-    
+    // D'abord tout masquer
+    document.querySelectorAll('.bloc-error-days').forEach(block => {
+      if (block) block.style.display = 'none';
+    });
+
     const season = this.getSeason(this.startDate);
     const minNights = season && season.minNights ? season.minNights : 1;
+    const minNightsText = `${minNights} nuit${minNights > 1 ? 's' : ''} minimum`;
+
+    // Déterminer si c'est une chambre
+    const isChambre = window.detailLogementPage?.managers?.interface?._selectedRoomIndex;
+
+    if (isChambre) {
+      // Blocs chambre (desktop + mobile)
+      const blocChambre = document.getElementById('bloc-error-days-chambre');
+      const blocChambreMobile = document.getElementById('bloc-error-days-chambre-mobile');
+      const textChambre = document.getElementById('text-days-minimum-chambre');
+      const textChambreMobile = document.getElementById('text-days-minimum-chambre-mobile');
+      if (blocChambre) blocChambre.style.display = 'block';
+      if (blocChambreMobile) blocChambreMobile.style.display = 'block';
+      if (textChambre) textChambre.textContent = minNightsText;
+      if (textChambreMobile) textChambreMobile.textContent = minNightsText;
+    } else {
+      // Blocs logement (desktop + mobile) — seulement ceux SANS la classe .chambre
+      document.querySelectorAll('.bloc-error-days:not(.chambre)').forEach(block => {
+        if (block) block.style.display = 'block';
+      });
+      const textDesktop = document.getElementById('text-days-minimum');
+      const textMobile = document.getElementById('text-days-minimum-mobile');
+      if (textDesktop) textDesktop.textContent = minNightsText;
+      if (textMobile) textMobile.textContent = minNightsText;
+    }
     
-    errorBlocks.forEach(block => block && (block.style.display = 'block'));
-    minNightsTexts.forEach(text => text && (text.textContent = `${minNights} nuits minimum`));
-    
-    // Boutons désactivés pour nuits minimum non respectées
+    // Boutons désactivés
+    const reserverButtons = this.getReserverButtons();
     reserverButtons.forEach(button => {
       button.style.opacity = '0.3';
       button.style.pointerEvents = 'none';
@@ -691,10 +807,14 @@ class PriceCalculator {
     });
   }
 
+
   hideMinNightsError() {
     const errorBlocks = document.querySelectorAll('.bloc-error-days');
     errorBlocks.forEach(block => block && (block.style.display = 'none'));
+    const blocChambre = document.getElementById('bloc-error-days-chambre');
+    if (blocChambre) blocChambre.style.display = 'none';
   }
+
 }
 
 // Export global

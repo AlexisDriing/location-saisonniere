@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.17
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -14,7 +14,7 @@ class ReservationDataManager {
     
     // Récupérer les informations du logement
     const logementInfo = this.extractLogementInfo();
-    const bookButtons = document.querySelectorAll(".button-reserver, .button-reserver-mobile");
+    const bookButtons = document.querySelectorAll(".button-reserver:not(.chambre), .button-reserver-mobile:not(.chambre)");
     
     if (bookButtons.length === 0) {
       console.warn("⚠️ Aucun bouton de réservation trouvé avec les classes 'button-reserver' ou 'button-reserver-mobile'");
@@ -133,26 +133,36 @@ class ReservationDataManager {
     let caution = null;
     let acompte = null;
     
-    if (window.priceCalculator && window.priceCalculator.pricingData) {
-      const pricingData = window.priceCalculator.pricingData;
-      caution = pricingData.caution;
-      acompte = pricingData.acompte;
+    if (window.priceCalculator) {
+      if (window.priceCalculator.pricingData) {
+        caution = window.priceCalculator.pricingData.caution;
+        acompte = window.priceCalculator.pricingData.acompte;
+      }
+      // Pour les chambres d'hôtes, caution/acompte sont stockés séparément
+      if (window.priceCalculator._parentCautionAcompte) {
+        caution = window.priceCalculator._parentCautionAcompte.caution;
+        acompte = window.priceCalculator._parentCautionAcompte.acompte;
+      }
     }
+
     
     if (window.priceCalculator && window.priceCalculator.startDate) {
-      prixDetails = {
-        calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
-        prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
-        prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
-        prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
-        prixSupplement: document.getElementById("prix-supplement")?.textContent || "",
-        calculSupplement: document.getElementById("calcul-supplement")?.textContent || "",
-        totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
-        dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
-        dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
-        hasReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent !== ""
-      };
-    }
+    const ligneSupplement = Utils.getElementByIdWithFallback("ligne-supplement-voyageurs");
+    const supplementVisible = ligneSupplement && ligneSupplement.style.display !== "none";
+  
+    prixDetails = {
+      calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
+      prixNuit: Utils.getElementByIdWithFallback("prix-nuit")?.textContent || "",
+      prixReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent || "",
+      prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
+      prixSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("prix-supplement")?.textContent || "") : "",
+      calculSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("calcul-supplement")?.textContent || "") : "",
+      totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
+      dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
+      dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
+      hasReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent !== ""
+    };
+  }
     
     // Récupérer le site internet
     const siteInternetElement = document.querySelector("[data-site-internet]");
@@ -161,13 +171,18 @@ class ReservationDataManager {
       siteInternet = siteInternetElement.getAttribute("data-site-internet") || "";
     }
     
-    // Créer l'objet de données de réservation
+    // Récupérer les infos de la chambre sélectionnée si B&B
+    const interfaceManager = window.detailLogementPage?.managers?.interface;
+    const selectedRoom = interfaceManager?._selectedRoomIndex 
+      ? interfaceManager._roomsData[interfaceManager._selectedRoomIndex] 
+      : null;
+
     const reservationData = {
       logementId: propertyId,
       logementNom: logementInfo.nom,
       logementImage: logementInfo.image,
       logementAdresse: logementInfo.adresse,
-      logementReduction: logementInfo.reduction,
+      logementReduction: Utils.getElementByIdWithFallback("text-pourcentage")?.textContent?.trim() || logementInfo.reduction,
       logementUrl: currentPageUrl,
       siteInternet: siteInternet,
       datesTexte,
@@ -181,13 +196,35 @@ class ReservationDataManager {
       caution,
       acompte,
       dateReservation: new Date().toISOString(),
-      hoteEmail: document.getElementById("email-hote")?.getAttribute("data-email") || ""
+      hoteEmail: document.getElementById("email-hote")?.getAttribute("data-email") || "",
+      isChambreHote: !!selectedRoom,
+      chambre: selectedRoom ? {
+        nom: selectedRoom.name || '',
+        image: (() => {
+          const photos = selectedRoom.photos || [];
+          if (photos.length > 0) {
+            return typeof photos[0] === 'object' ? photos[0].url : photos[0];
+          }
+          return '';
+        })(),
+        voyageurs: (() => {
+          const match = (selectedRoom.taille_chambre || '').match(/^(\d+)/);
+          const v = match ? parseInt(match[1]) : 0;
+          return `${v} voyageur${v > 1 ? 's' : ''}`;
+        })(),
+        taille: (() => {
+          const match = (selectedRoom.taille_chambre || '').match(/(\d+)\s*m²/);
+          return match ? `${match[1]} m²` : '';
+        })(),
+        lits: interfaceManager?.formatDetailsLits(selectedRoom.details_lits) || ''
+      } : null
     };
+
     
     // Sauvegarder dans localStorage
     localStorage.setItem("reservation_data", JSON.stringify(reservationData));
   }
-
+  
   loadSearchDataFromStorage() {
   // 🆕 NOUVEAU : D'abord vérifier s'il y a des dates modifiées (retour navigation)
   let storedData = localStorage.getItem("current_detail_dates");

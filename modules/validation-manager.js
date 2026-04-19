@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.50
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -100,10 +100,9 @@ class ValidationManager {
             messages: { empty: "Les frais de ménage doivent être définis" }
           },
           'ical-url-1': {
-            required: true,
+            required: false,
             pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
             messages: { 
-              empty: "Au moins un lien calendrier est obligatoire",
               invalid: "Le lien doit être une URL de calendrier valide"
             }
           },
@@ -169,9 +168,27 @@ class ValidationManager {
       tab4: {
         fields: {
           'heure-arrivee-input': {
-            required: true,
+            required: false,
+            conditionalRequired: true,
+            conditionalCheck: () => document.getElementById('arrivee-fixe')?.checked,
             messages: {
               empty: "L'heure d'arrivée est obligatoire"
+            }
+          },
+          'heure-arrivee-debut-input': {
+            required: false,
+            conditionalRequired: true,
+            conditionalCheck: () => document.getElementById('arrivee-creneau')?.checked,
+            messages: {
+              empty: "L'heure de début est obligatoire"
+            }
+          },
+          'heure-arrivee-fin-input': {
+            required: false,
+            conditionalRequired: true,
+            conditionalCheck: () => document.getElementById('arrivee-creneau')?.checked,
+            messages: {
+              empty: "L'heure de fin est obligatoire"
             }
           },
           'heure-depart-input': {
@@ -256,8 +273,93 @@ class ValidationManager {
         tabIndicatorId: 'error-indicator-tab5'
       }
     };
-  }
+  
 
+  // Config de validation pour les chambres
+    this.roomValidationConfig = {
+      tab1: {
+        fields: {
+          'name-input-chambre': {
+            required: true,
+            minLength: 2,
+            maxLength: 80,
+            messages: {
+              empty: "Le nom de la chambre est obligatoire",
+              minLength: "Le nom doit contenir au moins 2 caractères",
+              maxLength: "Le nom ne peut pas dépasser 80 caractères"
+            }
+          },
+          'voyageurs-input-chambre': {
+            required: true,
+            min: 1,
+            messages: {
+              empty: "Le nombre de voyageurs est obligatoire",
+              min: "Minimum 1 voyageur"
+            }
+          },
+          'lits-input-chambre': {
+            required: true,
+            min: 1,
+            messages: {
+              empty: "Le nombre de lits est obligatoire",
+              min: "Minimum 1 lit"
+            }
+          },
+          'taille-chambre': {
+            required: true,
+            min: 1,
+            messages: {
+              empty: "La taille en m² est obligatoire",
+              min: "La taille doit être supérieure à 0"
+            }
+          },
+          'texte-chambre': {
+            required: true,
+            maxLength: 1000,
+            messages: {
+              empty: "La description de la chambre est obligatoire",
+              maxLength: "Maximum 1000 caractères (actuellement: {count})"
+            }
+          }
+        },
+        tabIndicatorId: 'error-indicator-tab1-chambre'
+      },
+      tab3: {
+        fields: {
+          'ical-url-1-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          },
+          'ical-url-2-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          },
+          'ical-url-3-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          },
+          'ical-url-4-chambre': {
+            required: false,
+            pattern: /^(?:https?|webcal):\/\/[^\s]+(?:\.ical|\.ics|\/ical|\/calendar|\/export|\/feed)?/i,
+            messages: {
+              invalid: "Le lien doit être une URL de calendrier valide"
+            }
+          }
+        },
+        tabIndicatorId: 'error-indicator-tab3-chambre'
+      }
+    };
+  }
+  
   // Configurer les compteurs de caractères
   setupCharacterCounters() {
     const textareasWithLimit = [
@@ -265,7 +367,8 @@ class ValidationManager {
       { id: 'description-alentours-input', limit: 1000 },
       { id: 'conditions-annulation-input', limit: 1000 },
       { id: 'inclus-reservation-input', limit: 500 },
-      { id: 'cadeaux-input', limit: 250 }
+      { id: 'cadeaux-input', limit: 250 },
+      { id: 'texte-chambre', limit: 1000 }
     ];
 
     textareasWithLimit.forEach(({ id, limit }) => {
@@ -304,11 +407,23 @@ class ValidationManager {
     let fieldConfig = null;
     let tabKey = null;
     
+    // Chercher dans la config logement
     for (const [tab, config] of Object.entries(this.validationConfig)) {
       if (config.fields[fieldId]) {
         fieldConfig = config.fields[fieldId];
         tabKey = tab;
         break;
+      }
+    }
+    
+    // Si pas trouvé, chercher dans la config chambre
+    if (!fieldConfig) {
+      for (const [tab, config] of Object.entries(this.roomValidationConfig)) {
+        if (config.fields[fieldId]) {
+          fieldConfig = config.fields[fieldId];
+          tabKey = tab;
+          break;
+        }
       }
     }
     
@@ -342,6 +457,21 @@ class ValidationManager {
       const message = fieldConfig.messages.maxLength.replace('{count}', value.length);
       this.showFieldError(fieldId, message);
       return;
+    }
+    
+    // Validation créneau arrivée : début doit être avant fin
+    if (fieldId === 'heure-arrivee-debut-input' || fieldId === 'heure-arrivee-fin-input') {
+      const debutInput = document.getElementById('heure-arrivee-debut-input');
+      const finInput = document.getElementById('heure-arrivee-fin-input');
+      const debut = debutInput?.value || '';
+      const fin = finInput?.value || '';
+      
+      if (debut && fin && debut >= fin) {
+        this.showFieldError('heure-arrivee-debut-input', "L'heure de début doit être avant l'heure de fin");
+        return;
+      } else {
+        this.hideFieldError('heure-arrivee-debut-input');
+      }
     }
     
     // Si on arrive ici, pas d'erreur
@@ -395,12 +525,21 @@ class ValidationManager {
     this.tabErrors.clear();
     let isValid = true;
     
+    // Si logement parent chambre d'hôtes, skip la tab 3
+    const isChambreHote = (this.editor.propertyData?.mode_location || '') === "Chambre d'hôtes";
+    
     // Parcourir toutes les tabs
     for (const [tabKey, tabConfig] of Object.entries(this.validationConfig)) {
+      // Ignorer la tab 3 pour les logements parent chambre d'hôtes
+      if (isChambreHote && tabKey === 'tab3') continue;
+      
       let tabHasErrors = false;
       
       // Parcourir tous les champs de la tab
       for (const [fieldId, fieldConfig] of Object.entries(tabConfig.fields)) {
+        // Ignorer le champ voyageurs pour les logements parent chambre d'hôtes
+        if (isChambreHote && fieldId === 'voyageurs-input') continue;
+        
         const error = this.validateField(fieldId, fieldConfig);
         
         if (error) {
@@ -434,24 +573,25 @@ class ValidationManager {
       isValid = false;
     }
     
-    // Validation spéciale prix plateformes
-    if (!this.validatePlatformPrices()) {
+    // Validation spéciale prix plateformes (seulement logement entier)
+    if (!isChambreHote && !this.validatePlatformPrices()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
 
-    if (!this.validateCoherencePrixLien()) {
+    if (!isChambreHote && !this.validateCoherencePrixLien()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
     
-    // Validation des réductions
-    if (!this.validateDiscounts()) {
+    // Validation des réductions (seulement logement entier)
+    if (!isChambreHote && !this.validateDiscounts()) {
       isValid = false;
       this.showTabError('error-indicator-tab3');
     }
 
-    // NOUVEAU : Validation du prix week-end
+    // Validation du prix week-end (seulement logement entier)
+    if (!isChambreHote) {
     const weekendOui = document.getElementById('weekend-oui');
     const weekendPriceInput = document.getElementById('weekend-price-input');
     
@@ -466,17 +606,29 @@ class ValidationManager {
     } else {
       this.hideFieldError('weekend-price-input');
     }
-
-    // 🆕 NOUVEAU : Validation du supplément voyageurs
+    }
+    // Validation créneau arrivée : début < fin
+    const creneauRadio = document.getElementById('arrivee-creneau');
+    if (creneauRadio && creneauRadio.checked) {
+      const debut = document.getElementById('heure-arrivee-debut-input')?.value || '';
+      const fin = document.getElementById('heure-arrivee-fin-input')?.value || '';
+      
+      if (debut && fin && debut >= fin) {
+        this.showFieldError('heure-arrivee-debut-input', "L'heure de début doit être avant l'heure de fin");
+        isValid = false;
+        this.showTabError('error-indicator-tab4');
+      }
+    }
+    
+    // Validation du supplément voyageurs (seulement logement entier)
+    if (!isChambreHote) {
     const extraGuestsOui = document.getElementById('extra-guests-oui');
     const extraGuestsThresholdInput = document.getElementById('extra-guests-threshold-input');
     const extraGuestsPriceInput = document.getElementById('extra-guests-price-input');
-
     if (extraGuestsOui && extraGuestsOui.checked) {
       const threshold = parseInt(extraGuestsThresholdInput?.value) || 0;
       const price = parseInt(this.editor.getRawValue(extraGuestsPriceInput)) || 0;
       const maxCapacity = (this.editor.pricingData?.capacity || 8) - 1;
-
       if (threshold < 1 || threshold > maxCapacity) {
         this.showFieldError('extra-guests-threshold-input', `Le seuil doit être entre 1 et ${maxCapacity}`);
         isValid = false;
@@ -484,7 +636,6 @@ class ValidationManager {
       } else {
         this.hideFieldError('extra-guests-threshold-input');
       }
-
       if (price < 1) {
         this.showFieldError('extra-guests-price-input', "Le prix par personne doit être d'au moins 1€");
         isValid = false;
@@ -496,11 +647,404 @@ class ValidationManager {
       this.hideFieldError('extra-guests-threshold-input');
       this.hideFieldError('extra-guests-price-input');
     }
+    } // ← fermeture du if (!isChambreHote)
+    
+    // Validation des liens plateformes pour logement parent chambre d'hôtes
+    if (isChambreHote) {
+      ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && input.value.trim()) {
+          if (!this.validateLienPlateforme(id)) {
+            isValid = false;
+            this.showTabError('error-indicator-tab1');
+          }
+        }
+      });
+    }
+
+    // Validation des liens plateformes pour logement parent chambre d'hôtes
+    if (isChambreHote) {
+      ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && input.value.trim()) {
+          if (!this.validateLienPlateforme(id)) {
+            isValid = false;
+            this.showTabError('error-indicator-tab1');
+          }
+        }
+      });
+    }
     
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
     return isValid;
   }
 
+validateRoomFields() {
+    this.errors.clear();
+    let isValid = true;
+    
+    for (const [tabKey, tabConfig] of Object.entries(this.roomValidationConfig)) {
+      let tabHasErrors = false;
+      
+      for (const [fieldId, fieldConfig] of Object.entries(tabConfig.fields)) {
+        const error = this.validateField(fieldId, fieldConfig);
+        
+        if (error) {
+          this.errors.set(fieldId, error);
+          this.showFieldError(fieldId, error);
+          tabHasErrors = true;
+          isValid = false;
+        } else {
+          this.hideFieldError(fieldId);
+        }
+      }
+      
+      if (tabHasErrors) {
+        this.showTabError(tabConfig.tabIndicatorId);
+      } else {
+        this.hideTabError(tabConfig.tabIndicatorId);
+      }
+    }
+
+    // Validation prix plateformes par défaut
+    const radioVoyageurCheck = document.getElementById('radio-prix-voyageur-chambre');
+    let roomDirectPrice = 0;
+    
+    if (radioVoyageurCheck && radioVoyageurCheck.checked) {
+      const guestPrices = this.editor.collectPricesPerGuest();
+      roomDirectPrice = guestPrices.length > 0 ? guestPrices[guestPrices.length - 1] : 0;
+    } else {
+      const fixePriceInput = document.getElementById('default-price-input-chambre');
+      roomDirectPrice = fixePriceInput ? parseInt(this.editor.getRawValue(fixePriceInput)) || 0 : 0;
+    }
+    
+    if (roomDirectPrice > 0) {
+      if (!this.validateRoomDefaultPlatformPrices(roomDirectPrice)) {
+        isValid = false;
+        this.showTabError('error-indicator-tab3-chambre');
+      }
+    }
+  
+    // Validation des tarifs chambre
+    const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+    const mode = (radioVoyageur && radioVoyageur.checked) ? 'per_guest' : 'fixed';
+    
+    if (mode === 'fixed') {
+      // Mode prix fixe : le prix est obligatoire et minimum 10€
+      const priceInput = document.getElementById('default-price-input-chambre');
+      const price = priceInput ? parseInt(this.editor.getRawValue(priceInput)) || 0 : 0;
+      
+      if (price < 10) {
+        this.showFieldError('default-price-input-chambre', "Le prix minimum est de 10€");
+        isValid = false;
+        this.showTabError('error-indicator-tab3-chambre');
+      } else {
+        this.hideFieldError('default-price-input-chambre');
+      }
+    } else {
+      // Mode prix par voyageur : chaque voyageur doit avoir un prix minimum 10€
+      const voyageursInput = document.getElementById('voyageurs-input-chambre');
+      const maxGuests = parseInt(voyageursInput?.value) || 1;
+      let hasPerGuestError = false;
+      
+      for (let i = 0; i < maxGuests; i++) {
+        const bloc = this.editor.getPrixVoyageurBloc(i);
+        if (!bloc || bloc.style.display === 'none') continue;
+        
+        const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+        if (priceInput) {
+          const rawValue = priceInput.getAttribute('data-raw-value');
+          const price = parseInt(rawValue) || 0;
+          
+          if (price < 10) {
+            this.showDiscountError(priceInput, "Le prix minimum est de 10€ par voyageur");
+            hasPerGuestError = true;
+          } else {
+            this.hideDiscountError(priceInput);
+          }
+        }
+      }
+      
+      // Masquer l'erreur du prix fixe si on est en mode voyageur
+      this.hideFieldError('default-price-input-chambre');
+      
+      if (hasPerGuestError) {
+        isValid = false;
+        this.showTabError('error-indicator-tab3-chambre');
+      }
+    }
+    
+    // Nuits minimum obligatoire
+    const minNightsInput = document.getElementById('default-min-nights-input-chambre');
+    const minNights = minNightsInput ? parseInt(minNightsInput.value) || 0 : 0;
+    if (minNights < 1) {
+      this.showFieldError('default-min-nights-input-chambre', "Minimum 1 nuit");
+      isValid = false;
+      this.showTabError('error-indicator-tab3-chambre');
+    } else {
+      this.hideFieldError('default-min-nights-input-chambre');
+    }
+    
+    console.log(isValid ? '✅ Validation chambre réussie' : '❌ Validation chambre échouée');
+    return isValid;
+  }
+
+  // Validation d'une saison chambre (ajout ou modification)
+  validateRoomSeason(isEdit = false) {
+    const suffix = isEdit ? '-edit-chambre' : '-chambre';
+    let hasError = false;
+    
+    // Nom
+    const nameInput = document.getElementById(`season-name-input${suffix}`);
+    if (!nameInput || !nameInput.value.trim()) {
+      this.showFieldError(`season-name-input${suffix}`, "Le nom de la saison est obligatoire");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-name-input${suffix}`);
+    }
+    
+    // Prix — dépend du mode fixe/voyageur
+    const radioVoyageur = document.getElementById('radio-prix-voyageur-chambre');
+    const isPerGuest = radioVoyageur && radioVoyageur.checked;
+    
+    if (isPerGuest) {
+      // Valider chaque prix voyageur
+      const voyageursInput = document.getElementById('voyageurs-input-chambre');
+      const maxGuests = parseInt(voyageursInput?.value) || 1;
+      
+      for (let i = 0; i < maxGuests; i++) {
+        const bloc = this.editor.getRoomSeasonPrixVoyageurBloc(i, isEdit);
+        if (!bloc || bloc.style.display === 'none') continue;
+        
+        const priceInput = bloc.querySelector('[data-prix-voyageur="price"]');
+        if (priceInput) {
+          const rawValue = priceInput.getAttribute('data-raw-value');
+          const price = parseInt(rawValue) || 0;
+          
+          if (price < 10) {
+            this.showDiscountError(priceInput, "Le prix minimum est de 10€ par voyageur");
+            hasError = true;
+          } else {
+            this.hideDiscountError(priceInput);
+          }
+        }
+      }
+    } else {
+      // Prix fixe
+      const priceInput = document.getElementById(`season-price-input${suffix}`);
+      const price = priceInput ? parseInt(this.editor.getRawValue(priceInput)) || 0 : 0;
+      if (price < 10) {
+        this.showFieldError(`season-price-input${suffix}`, "Le prix minimum est de 10€");
+        hasError = true;
+      } else {
+        this.hideFieldError(`season-price-input${suffix}`);
+      }
+    }
+    
+    // Nuits minimum
+    const minNightsInput = document.getElementById(`season-min-nights-input${suffix}`);
+    const minNights = minNightsInput ? parseInt(this.editor.getRawValue(minNightsInput)) || 0 : 0;
+    if (minNights < 1) {
+      this.showFieldError(`season-min-nights-input${suffix}`, "Minimum 1 nuit");
+      hasError = true;
+    } else {
+      this.hideFieldError(`season-min-nights-input${suffix}`);
+    }
+    
+    // Plages de dates
+    const allPeriods = [];
+    let hasAtLeastOnePeriod = false;
+    
+    for (let i = 1; i <= 5; i++) {
+      const block = document.getElementById(`bloc-plage-dates-${i}${suffix}`);
+      if (!block || block.style.display === 'none') continue;
+      
+      const startInput = document.getElementById(`season-date-start-input-${i}${suffix}`);
+      const endInput = document.getElementById(`season-date-end-input-${i}${suffix}`);
+      
+      const startDate = startInput ? this.editor.getDateValue(startInput) : null;
+      const endDate = endInput ? this.editor.getDateValue(endInput) : null;
+      
+      if (!startDate) {
+        this.showFieldError(`season-date-start-input-${i}${suffix}`, "La date de début est obligatoire");
+        hasError = true;
+      } else {
+        this.hideFieldError(`season-date-start-input-${i}${suffix}`);
+      }
+      
+      if (!endDate) {
+        this.showFieldError(`season-date-end-input-${i}${suffix}`, "La date de fin est obligatoire");
+        hasError = true;
+      } else {
+        this.hideFieldError(`season-date-end-input-${i}${suffix}`);
+      }
+      
+      if (startDate && endDate) {
+        allPeriods.push({ start: startDate, end: endDate, index: i });
+        hasAtLeastOnePeriod = true;
+      }
+    }
+    
+    if (!hasAtLeastOnePeriod) {
+      this.showFieldError(`season-date-start-input-1${suffix}`, "Au moins une période de dates est obligatoire");
+      hasError = true;
+    }
+    
+    // Chevauchements intra-saison
+    if (!hasError && allPeriods.length > 1) {
+      for (let a = 0; a < allPeriods.length; a++) {
+        for (let b = a + 1; b < allPeriods.length; b++) {
+          const [dayA1, monthA1] = allPeriods[a].start.split('-').map(Number);
+          const [dayA2, monthA2] = allPeriods[a].end.split('-').map(Number);
+          const [dayB1, monthB1] = allPeriods[b].start.split('-').map(Number);
+          const [dayB2, monthB2] = allPeriods[b].end.split('-').map(Number);
+          
+          if (this.datesOverlap(dayA1, monthA1, dayA2, monthA2, dayB1, monthB1, dayB2, monthB2)) {
+            this.showFieldError(`season-date-start-input-${allPeriods[b].index}${suffix}`, `Cette période chevauche la période n°${allPeriods[a].index}`);
+            hasError = true;
+          }
+        }
+      }
+    }
+    
+    // Chevauchements inter-saisons (avec les autres saisons de la chambre)
+    if (!hasError) {
+      for (const period of allPeriods) {
+        const overlap = this.checkRoomSeasonDateOverlap(period.start, period.end, isEdit);
+        if (overlap) {
+          this.showFieldError(`season-date-start-input-${period.index}${suffix}`, overlap);
+          hasError = true;
+        }
+      }
+    }
+    
+    // Validation prix plateformes
+    if (!hasError) {
+      const directPrice = isPerGuest 
+        ? (this.editor.collectRoomSeasonPricesPerGuest(isEdit).pop() || 0)
+        : (parseInt(this.editor.getRawValue(document.getElementById(`season-price-input${suffix}`))) || 0);
+      
+      if (directPrice > 0) {
+        hasError = !this.validateRoomSeasonPlatformPrices(directPrice, suffix);
+      }
+    }
+    
+    return !hasError;
+  }
+  
+  // Chevauchements entre saisons chambre
+  checkRoomSeasonDateOverlap(newStart, newEnd, isEdit) {
+    const seasons = this.editor.roomPricingData?.seasons || [];
+    const editingIndex = isEdit ? this.editor.editingRoomSeasonIndex : -1;
+    
+    const [newStartDay, newStartMonth] = newStart.split('-').map(n => parseInt(n));
+    const [newEndDay, newEndMonth] = newEnd.split('-').map(n => parseInt(n));
+    
+    for (let i = 0; i < seasons.length; i++) {
+      if (i === editingIndex) continue;
+      
+      const season = seasons[i];
+      if (!season.periods || season.periods.length === 0) continue;
+      
+      for (const period of season.periods) {
+        const [startDay, startMonth] = period.start.split('-').map(n => parseInt(n));
+        const [endDay, endMonth] = period.end.split('-').map(n => parseInt(n));
+        
+        if (this.datesOverlap(
+          newStartDay, newStartMonth, newEndDay, newEndMonth,
+          startDay, startMonth, endDay, endMonth
+        )) {
+          return `Ces dates chevauchent avec la saison "${season.name}"`;
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  // Validation prix plateformes saison chambre
+  validateRoomSeasonPlatformPrices(directPrice, suffix) {
+    const minPlatformPrice = directPrice * 1.10;
+    let hasError = false;
+    
+    ['airbnb', 'booking', 'other'].forEach(platform => {
+      const input = document.getElementById(`season-${platform}-price-input${suffix}`);
+      if (input) {
+        const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
+        
+        if (platformPrice > 0 && platformPrice < minPlatformPrice) {
+          this.showFieldError(
+            `season-${platform}-price-input${suffix}`,
+            `Le prix doit être au moins ${Math.ceil(minPlatformPrice)}€ (10% de plus que le prix direct)`
+          );
+          hasError = true;
+        } else {
+          this.hideFieldError(`season-${platform}-price-input${suffix}`);
+        }
+      }
+    });
+    
+    return !hasError;
+  }
+
+  // Validation prix plateformes par défaut chambre
+  validateRoomDefaultPlatformPrices(directPrice) {
+    const minPlatformPrice = directPrice * 1.10;
+    let hasError = false;
+    
+    ['airbnb', 'booking', 'other'].forEach(platform => {
+      const input = document.getElementById(`default-${platform}-price-input-chambre`);
+      if (input) {
+        const platformPrice = parseFloat(this.editor.getRawValue(input)) || 0;
+        
+        if (platformPrice > 0 && platformPrice < minPlatformPrice) {
+          this.showFieldError(
+            `default-${platform}-price-input-chambre`,
+            `Le prix doit être au moins ${Math.ceil(minPlatformPrice)}€ (10% de plus que le prix direct)`
+          );
+          hasError = true;
+        } else {
+          this.hideFieldError(`default-${platform}-price-input-chambre`);
+        }
+      }
+    });
+    
+    return !hasError;
+  }
+
+  validateLienPlateforme(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return true;
+    
+    const value = input.value.trim();
+    
+    if (!value) {
+      this.hideFieldError(fieldId);
+      return true;
+    }
+    
+    const urlPattern = /^https?:\/\/.+/i;
+    if (!urlPattern.test(value)) {
+      this.showFieldError(fieldId, "Le lien doit être une URL valide (commençant par https://)");
+      return false;
+    }
+    
+    if (fieldId === 'lien-airbnb-input') {
+      if (!/airbnb/i.test(value)) {
+        this.showFieldError(fieldId, "L'URL doit être un lien Airbnb");
+        return false;
+      }
+    } else if (fieldId === 'lien-booking-input') {
+      if (!/booking/i.test(value)) {
+        this.showFieldError(fieldId, "L'URL doit être un lien Booking");
+        return false;
+      }
+    }
+    
+    this.hideFieldError(fieldId);
+    return true;
+  }
+  
   // Valider un champ spécifique
   validateField(fieldId, fieldConfig) {
     const value = this.getFieldValue(fieldId, fieldConfig.type);
@@ -519,10 +1063,16 @@ class ValidationManager {
     
     // Validation conditionnelle (textarea requis seulement si radio "custom" sélectionné)
     if (fieldConfig.conditionalRequired) {
-      const customRadio = document.getElementById('radio-custom');
-      if (customRadio && customRadio.checked) {
-        if (value === '' || value === null || value === undefined) {
+      if (fieldConfig.conditionalCheck) {
+        if (fieldConfig.conditionalCheck() && (value === '' || value === null || value === undefined)) {
           return fieldConfig.messages.empty;
+        }
+      } else {
+        const customRadio = document.getElementById('radio-custom');
+        if (customRadio && customRadio.checked) {
+          if (value === '' || value === null || value === undefined) {
+            return fieldConfig.messages.empty;
+          }
         }
       }
     }
@@ -1065,11 +1615,84 @@ class ValidationManager {
     }
   }
 
+  // Afficher un avertissement (style warning, non bloquant)
+  showFieldWarning(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    field.style.borderColor = '#F67F1D';
+    
+    let errorDiv = field.nextElementSibling;
+    
+    if (errorDiv?.classList.contains('character-counter')) {
+      errorDiv = errorDiv.nextElementSibling;
+    }
+    
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = field.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.querySelector('.error');
+      }
+    }
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = message;
+      errorDiv.style.color = '#F67F1D';
+      errorDiv.classList.add('show');
+    }
+  }
+
+  // Masquer un avertissement
+  hideFieldWarning(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    field.style.borderColor = '';
+    
+    let errorDiv = field.nextElementSibling;
+    
+    if (errorDiv?.classList.contains('character-counter')) {
+      errorDiv = errorDiv.nextElementSibling;
+    }
+    
+    if (!errorDiv?.classList.contains('error')) {
+      const flexErrorParent = field.closest('.flex-error');
+      if (flexErrorParent) {
+        errorDiv = flexErrorParent.querySelector('.error');
+      }
+    }
+    
+    if (errorDiv && errorDiv.classList.contains('error')) {
+      errorDiv.textContent = '';
+      errorDiv.style.color = '';
+      errorDiv.classList.remove('show');
+    }
+  }
+
+  // Afficher la pastille warning sur un tab
+  showTabWarning(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    if (indicator) {
+      indicator.style.display = 'block';
+      indicator.style.backgroundColor = '#F67F1D';
+    }
+  }
+
+  // Masquer la pastille warning sur un tab
+  hideTabWarning(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    if (indicator) {
+      indicator.style.display = 'none';
+      indicator.style.backgroundColor = '';
+    }
+  }
+  
   // Afficher l'indicateur d'erreur sur une tab
   showTabError(indicatorId) {
     const indicator = document.getElementById(indicatorId);
     if (indicator) {
       indicator.style.display = 'block';
+      indicator.style.backgroundColor = '';
     }
   }
 
@@ -1095,7 +1718,8 @@ class ValidationManager {
     });
     
     // Masquer les indicateurs de tabs
-    ['error-indicator-tab1', 'error-indicator-tab3', 'error-indicator-tab4', 'error-indicator-tab5'].forEach(id => {
+    ['error-indicator-tab1', 'error-indicator-tab3', 'error-indicator-tab4', 'error-indicator-tab5',
+     'error-indicator-tab1-chambre', 'error-indicator-tab3-chambre'].forEach(id => {
       this.hideTabError(id);
     });
     
