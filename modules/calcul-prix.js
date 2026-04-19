@@ -145,8 +145,14 @@ class PriceCalculator {
     });
 
     // 🆕 Masquer la ligne supplément voyageurs (desktop + mobile)
-      const ligneSupplementEls = Utils.getAllElementsById('ligne-supplement-voyageurs');
-      ligneSupplementEls.forEach(el => el.style.display = 'none');
+    const ligneSupplementEls = Utils.getAllElementsById('ligne-supplement-voyageurs');
+    ligneSupplementEls.forEach(el => el.style.display = 'none');
+  
+    // Vider le contenu texte du supplément (évite les placeholders Webflow)
+    const calculSupplementEls = Utils.getAllElementsById('calcul-supplement');
+    calculSupplementEls.forEach(el => el.textContent = '');
+    const prixSupplementEls = Utils.getAllElementsById('prix-supplement');
+    prixSupplementEls.forEach(el => el.textContent = '');
     
     // ===== RÉINITIALISER LES RÉDUCTIONS (SIMPLIFIÉ) =====
     this.elements.prixReduction.forEach(element => {
@@ -595,6 +601,8 @@ class PriceCalculator {
           });
         } else {
           ligneSupplementEls.forEach(el => el.style.display = 'none');
+          calculSupplementEls.forEach(el => el.textContent = '');
+          prixSupplementEls.forEach(el => el.textContent = '');
         }
       } 
     
