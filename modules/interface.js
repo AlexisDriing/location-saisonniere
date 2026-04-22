@@ -1,4 +1,4 @@
-// LOG production V1.38.24
+// LOG production V1.38.25
 // Page google
 class InterfaceManager {
   constructor() {
@@ -956,8 +956,12 @@ setupConditionsAnnulation() {
     const activeSeasonForPlatform = findActiveSeason(lowestPricingData);
     const basePricePlein = activeSeasonForPlatform.price || dp.price || lowestPrice;
     let platformPrice = basePricePlein;
-    if (dp.platformPrices) {
-      const prices = Object.values(dp.platformPrices).filter(p => p > 0);
+    // Priorité : platformPrices de la saison active → fallback defaultPricing → fallback 17%
+    const platformSource = (activeSeasonForPlatform.platformPrices && Object.values(activeSeasonForPlatform.platformPrices).some(p => p > 0))
+      ? activeSeasonForPlatform.platformPrices
+      : dp.platformPrices;
+    if (platformSource) {
+      const prices = Object.values(platformSource).filter(p => p > 0);
       if (prices.length > 0) {
         platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
       }
@@ -1259,8 +1263,12 @@ setupConditionsAnnulation() {
     // Pourcentage (toujours basé sur le prix max de la saison)
     const baseForPlatform = activeSeason.price || defaultPricing.price || displayPrice;
     let platformPrice = baseForPlatform;
-    if (defaultPricing.platformPrices) {
-      const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
+    // Priorité : platformPrices de la saison active → fallback defaultPricing → fallback 17%
+    const platformSource = (activeSeason.platformPrices && Object.values(activeSeason.platformPrices).some(p => p > 0))
+      ? activeSeason.platformPrices
+      : defaultPricing.platformPrices;
+    if (platformSource) {
+      const prices = Object.values(platformSource).filter(p => p > 0);
       if (prices.length > 0) {
         platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
       }
@@ -1330,6 +1338,11 @@ setupConditionsAnnulation() {
 
       const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
       if (!prixEl) return;
+
+      // Pré-calculer le pourcentage via displayRoomPrice (qui gère saison active
+      // et ses platformPrices). Le prix qu'il écrit sera écrasé plus bas par avgPrice.
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+      this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
 
       // Calculer le prix moyen par nuit pour cette chambre avec les dates actuelles
       let totalPrice = 0;
@@ -1431,12 +1444,6 @@ setupConditionsAnnulation() {
       suffix.style.setProperty('font-weight', '400', 'important');
       suffix.style.setProperty('font-size', '16px', 'important');
       prixEl.appendChild(suffix);
-
-      // Remettre le pourcentage visible
-      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
-      if (pourcentageEl && pourcentageEl.textContent && pourcentageEl.textContent.trim() !== '') {
-        pourcentageEl.style.display = 'block';
-      }
     });
   }
 
