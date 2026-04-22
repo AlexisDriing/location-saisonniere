@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.128
+// Calculateur de prix principal - LOG production V1.129
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -104,6 +104,11 @@ class PriceCalculator {
           }
           if (interfaceManager?.updateRoomAvailability) {
             interfaceManager.updateRoomAvailability();
+          }
+
+          // Mode B&B sans chambre sélectionnée : rafraîchir aussi le "À partir de"
+          if (interfaceManager?._bnbMode && !interfaceManager?._selectedRoomIndex && interfaceManager?.refreshBnbDirectPrice) {
+            interfaceManager.refreshBnbDirectPrice();
           }
 
         } else {
