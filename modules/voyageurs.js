@@ -1,4 +1,4 @@
-// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.06
+// Gestion des voyageurs (adultes, enfants, bébés) - LOGs production V1.07
 class TravelersManager {
   constructor() {
     this.adults = 1;
@@ -165,27 +165,30 @@ class TravelersManager {
     }
   }
 
-  notifyPriceCalculator() {
-    if (window.priceCalculator && window.priceCalculator.calculateAndDisplayPrices) {
-      if (window.priceCalculator.pricingData) {
-        window.priceCalculator.pricingData.capacity = this.adults + this.children;
+    notifyPriceCalculator() {
+    const pc = window.priceCalculator;
+    if (pc && pc.calculateAndDisplayPrices) {
+      if (pc.pricingData) {
+        pc.pricingData.capacity = this.adults + this.children;
       }
-      if (window.priceCalculator.startDate && window.priceCalculator.endDate) {
-        window.priceCalculator.calculateAndDisplayPrices();
+      if (pc.startDate && pc.endDate) {
+        pc.calculateAndDisplayPrices();
       }
       // Per_guest : rafraîchir le "À partir de" même sans dates
-      if (window.priceCalculator.pricingData?.defaultPricing?.mode === 'per_guest') {
-        if (!window.priceCalculator.startDate) {
-          window.priceCalculator.resetPrices();
+      if (pc.pricingData?.defaultPricing?.mode === 'per_guest') {
+        if (!pc.startDate) {
+          pc.resetPrices();
         }
       }
     }
-        // Mettre à jour les prix et la disponibilité des blocs chambres
+
+    // Mettre à jour les prix et la disponibilité des blocs chambres
     const interfaceManager = window.detailLogementPage?.managers?.interface;
-    const hasPickerDates = window.detailLogementPage?.managers?.calendar?.picker?.startDate && 
-                           window.detailLogementPage?.managers?.calendar?.picker?.endDate;
-    
-    if (hasPickerDates && interfaceManager?.syncSelectedRoomPrice) {
+    // ⚠️ Se baser sur pc.startDate (vraies dates choisies) et pas sur picker.startDate
+    // (qui contient une valeur par défaut dès la création du picker)
+    const hasRealDates = !!(pc?.startDate && pc?.endDate);
+
+    if (hasRealDates && interfaceManager?.syncSelectedRoomPrice) {
       interfaceManager.syncSelectedRoomPrice();
     } else if (interfaceManager?.updateAllRoomBlockPrices) {
       interfaceManager.updateAllRoomBlockPrices();
@@ -194,6 +197,10 @@ class TravelersManager {
       interfaceManager.updateRoomAvailability();
     }
 
+    // Mode B&B : rafraîchir le prix "À partir de" du logement (utilise voyageurs + dates)
+    if (interfaceManager?._bnbMode && interfaceManager?.refreshBnbDirectPrice && !interfaceManager?._selectedRoomIndex) {
+      interfaceManager.refreshBnbDirectPrice();
+    }
   }
 
 
