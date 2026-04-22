@@ -1,4 +1,4 @@
-// LOG production V1.38.22
+// LOG production V1.38.25
 // Page google
 class InterfaceManager {
   constructor() {
@@ -823,61 +823,8 @@ setupConditionsAnnulation() {
     this._bnbMode = true;
     this._selectedRoomIndex = null;
 
-    // Trouver le prix le plus bas parmi toutes les chambres
-    let lowestPrice = Infinity;
-    let lowestPricingData = null;
-
-    rooms.forEach(room => {
-      if (!room.pricing_data?.defaultPricing) return;
-      const dp = room.pricing_data.defaultPricing;
-      // dp.price = prix chambre pleine (même en mode per_guest)
-      let price = dp.price || Infinity;
-
-      if (price < lowestPrice) {
-
-        lowestPrice = price;
-        lowestPricingData = room.pricing_data;
-      }
-    });
-
-    // Afficher "À partir de" avec le prix le plus bas
-    if (isFinite(lowestPrice) && lowestPricingData) {
-      const prixDirectEls = Utils.getAllElementsById("prix-direct");
-      const pourcentageEls = Utils.getAllElementsById("text-pourcentage");
-
-      // Calculer le prix plateforme
-      let platformPrice = lowestPrice;
-      const dp = lowestPricingData.defaultPricing;
-      if (dp.platformPrices) {
-        const prices = Object.values(dp.platformPrices).filter(p => p > 0);
-        if (prices.length > 0) {
-          platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-        }
-      }
-      if (platformPrice === lowestPrice) {
-        const defaultDiscount = lowestPricingData.platformPricing?.defaultDiscount || 17;
-        platformPrice = Math.round(lowestPrice * (100 / (100 - defaultDiscount)));
-      }
-
-      prixDirectEls.forEach(element => {
-        element.textContent = '';
-        element.appendChild(document.createTextNode('À partir de'));
-        element.appendChild(document.createElement('br'));
-        const strong = document.createElement('strong');
-        strong.style.fontWeight = 'bold';
-        strong.style.fontFamily = 'Inter';
-        strong.style.fontSize = '24px';
-        strong.textContent = `${Math.round(lowestPrice)}€ / nuit`;
-        element.appendChild(strong);
-      });
-
-      if (platformPrice > lowestPrice) {
-        const discount = Math.round(100 * (platformPrice - lowestPrice) / platformPrice);
-        pourcentageEls.forEach(el => {
-          el.textContent = discount > 0 ? `-${discount}%` : '';
-        });
-      }
-    }
+  // Calcul + affichage du prix "À partir de" (extrait dans refreshBnbDirectPrice)
+    this.refreshBnbDirectPrice();
 
     // Bouton réserver désactivé tant qu'aucune chambre n'est sélectionnée
     const reserverButtons = document.querySelectorAll('.button.homepage.site-internet[class*="button-reserver"]:not(.chambre)');
@@ -921,6 +868,132 @@ setupConditionsAnnulation() {
   }
 
 
+    // Recalcule et écrit "À partir de X€" dans #prix-direct selon
+  // - le nombre de voyageurs actuel (filtrage des chambres trop petites)
+  // - la saison active si dates choisies
+  // - le mode per_guest (utilise pricesPerGuest, pas dp.price)
+  refreshBnbDirectPrice() {
+    if (!this._bnbMode || !this._roomsData) return;
+
+    const rooms = Object.values(this._roomsData).filter(Boolean);
+    if (!rooms.length) return;
+
+    const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1', 10);
+    const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0', 10);
+    const totalGuests = Math.max(1, adultsCount + childrenCount);
+
+    const pc = window.priceCalculator;
+    const hasRealDates = !!(pc?.startDate && pc?.endDate);
+
+    const findActiveSeason = (pricingData) => {
+      if (!hasRealDates || !pricingData.seasons?.length) return pricingData.defaultPricing;
+      const month = pc.startDate.month() + 1;
+      const day = pc.startDate.date();
+      let active = pricingData.defaultPricing;
+      for (const season of pricingData.seasons) {
+        if (!season.periods) continue;
+        for (const period of season.periods) {
+          const [startDay, startMonth] = period.start.split('-').map(Number);
+          const [endDay, endMonth] = period.end.split('-').map(Number);
+          let inSeason = false;
+          if (startMonth < endMonth || (startMonth === endMonth && startDay <= endDay)) {
+            inSeason = (month > startMonth || (month === startMonth && day >= startDay)) &&
+                       (month < endMonth || (month === endMonth && day <= endDay));
+          } else {
+            inSeason = (month > startMonth || (month === startMonth && day >= startDay)) ||
+                       (month < endMonth || (month === endMonth && day <= endDay));
+          }
+          if (inSeason) active = season;
+        }
+      }
+      return active;
+    };
+
+    let lowestPrice = Infinity;
+    let lowestPricingData = null;
+
+    rooms.forEach(room => {
+      const pricingData = room.pricing_data;
+      if (!pricingData?.defaultPricing) return;
+
+      // Filtrer les chambres trop petites pour le nb de voyageurs
+      const match = (room.taille_chambre || '').match(/^(\d+)/);
+      const capacity = match ? parseInt(match[1], 10) : Infinity;
+      if (capacity < totalGuests) return;
+
+      const dp = pricingData.defaultPricing;
+      const activeSeason = findActiveSeason(pricingData);
+
+      let price;
+      if (dp.mode === 'per_guest') {
+        const prices = activeSeason.pricesPerGuest?.length ? activeSeason.pricesPerGuest : (dp.pricesPerGuest || []);
+        if (prices.length) {
+          const index = Math.min(totalGuests - 1, prices.length - 1);
+          price = prices[Math.max(0, index)];
+        } else {
+          price = activeSeason.price || dp.price;
+        }
+      } else {
+        price = activeSeason.price || dp.price;
+      }
+
+      if (typeof price !== 'number' || !isFinite(price)) return;
+      if (price < lowestPrice) {
+        lowestPrice = price;
+        lowestPricingData = pricingData;
+      }
+    });
+
+        if (!isFinite(lowestPrice) || !lowestPricingData) return;
+
+    const prixDirectEls = Utils.getAllElementsById('prix-direct');
+    const pourcentageEls = Utils.getAllElementsById('text-pourcentage');
+
+    // Pourcentage basé sur le prix PLEIN (comme displayRoomPrice), pour une
+    // comparaison honnête plein vs plein — sinon on comparerait prix 1 voy. direct
+    // à prix plein plateforme, ce qui donne un % gonflé et trompeur.
+    const dp = lowestPricingData.defaultPricing;
+    const activeSeasonForPlatform = findActiveSeason(lowestPricingData);
+    const basePricePlein = activeSeasonForPlatform.price || dp.price || lowestPrice;
+    let platformPrice = basePricePlein;
+    // Priorité : platformPrices de la saison active → fallback defaultPricing → fallback 17%
+    const platformSource = (activeSeasonForPlatform.platformPrices && Object.values(activeSeasonForPlatform.platformPrices).some(p => p > 0))
+      ? activeSeasonForPlatform.platformPrices
+      : dp.platformPrices;
+    if (platformSource) {
+      const prices = Object.values(platformSource).filter(p => p > 0);
+      if (prices.length > 0) {
+        platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+      }
+    }
+    if (platformPrice === basePricePlein) {
+      const defaultDiscount = lowestPricingData.platformPricing?.defaultDiscount || 17;
+      platformPrice = Math.round(basePricePlein * (100 / (100 - defaultDiscount)));
+    }
+
+    prixDirectEls.forEach(element => {
+      element.textContent = '';
+      element.appendChild(document.createTextNode('À partir de'));
+      element.appendChild(document.createElement('br'));
+      const strong = document.createElement('strong');
+      strong.style.fontWeight = 'bold';
+      strong.style.fontFamily = 'Inter';
+      strong.style.fontSize = '24px';
+      strong.textContent = `${Math.round(lowestPrice)}€ / nuit`;
+      element.appendChild(strong);
+    });
+
+    if (platformPrice > basePricePlein) {
+      const discount = Math.round(100 * (platformPrice - basePricePlein) / platformPrice);
+      pourcentageEls.forEach(el => {
+        el.textContent = discount > 0 ? `-${discount}%` : '';
+      });
+    } else {
+      pourcentageEls.forEach(el => { el.textContent = ''; });
+    }
+  }
+  
+  
   // Sélectionner une chambre
   selectRoom(slotIndex) {
     const room = this._roomsData[slotIndex];
@@ -1190,8 +1263,12 @@ setupConditionsAnnulation() {
     // Pourcentage (toujours basé sur le prix max de la saison)
     const baseForPlatform = activeSeason.price || defaultPricing.price || displayPrice;
     let platformPrice = baseForPlatform;
-    if (defaultPricing.platformPrices) {
-      const prices = Object.values(defaultPricing.platformPrices).filter(p => p > 0);
+    // Priorité : platformPrices de la saison active → fallback defaultPricing → fallback 17%
+    const platformSource = (activeSeason.platformPrices && Object.values(activeSeason.platformPrices).some(p => p > 0))
+      ? activeSeason.platformPrices
+      : defaultPricing.platformPrices;
+    if (platformSource) {
+      const prices = Object.values(platformSource).filter(p => p > 0);
       if (prices.length > 0) {
         platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
       }
@@ -1261,6 +1338,11 @@ setupConditionsAnnulation() {
 
       const prixEl = document.getElementById(`prix-chambre-${slotIndex}`);
       if (!prixEl) return;
+
+      // Pré-calculer le pourcentage via displayRoomPrice (qui gère saison active
+      // et ses platformPrices). Le prix qu'il écrit sera écrasé plus bas par avgPrice.
+      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
+      this.displayRoomPrice(prixEl, pourcentageEl, room.pricing_data);
 
       // Calculer le prix moyen par nuit pour cette chambre avec les dates actuelles
       let totalPrice = 0;
@@ -1362,12 +1444,6 @@ setupConditionsAnnulation() {
       suffix.style.setProperty('font-weight', '400', 'important');
       suffix.style.setProperty('font-size', '16px', 'important');
       prixEl.appendChild(suffix);
-
-      // Remettre le pourcentage visible
-      const pourcentageEl = document.getElementById(`pourcentage-chambre-${slotIndex}`);
-      if (pourcentageEl && pourcentageEl.textContent && pourcentageEl.textContent.trim() !== '') {
-        pourcentageEl.style.display = 'block';
-      }
     });
   }
 

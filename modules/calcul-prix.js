@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.127
+// Calculateur de prix principal - LOG production V1.129
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -104,6 +104,11 @@ class PriceCalculator {
           }
           if (interfaceManager?.updateRoomAvailability) {
             interfaceManager.updateRoomAvailability();
+          }
+
+          // Mode B&B sans chambre sélectionnée : rafraîchir aussi le "À partir de"
+          if (interfaceManager?._bnbMode && !interfaceManager?._selectedRoomIndex && interfaceManager?.refreshBnbDirectPrice) {
+            interfaceManager.refreshBnbDirectPrice();
           }
 
         } else {
@@ -255,16 +260,21 @@ class PriceCalculator {
     }
     
         // Mettre à jour les prix et la disponibilité des chambres
-        const interfaceManager = window.detailLogementPage?.managers?.interface;
-    const hasPickerDates = window.detailLogementPage?.managers?.calendar?.picker?.startDate && 
-                           window.detailLogementPage?.managers?.calendar?.picker?.endDate;
-    if (hasPickerDates && interfaceManager?.syncSelectedRoomPrice) {
+    const interfaceManager = window.detailLogementPage?.managers?.interface;
+    // resetPrices() vient de mettre this.startDate/endDate à null → on utilise updateAll
+    // (au lieu de se baser sur picker qui a des dates par défaut)
+    if (this.startDate && this.endDate && interfaceManager?.syncSelectedRoomPrice) {
       interfaceManager.syncSelectedRoomPrice();
     } else if (interfaceManager?.updateAllRoomBlockPrices) {
       interfaceManager.updateAllRoomBlockPrices();
     }
     if (interfaceManager?.updateRoomAvailability) {
       interfaceManager.updateRoomAvailability();
+    }
+
+    // Mode B&B sans chambre sélectionnée : rafraîchir aussi le prix "À partir de"
+    if (interfaceManager?._bnbMode && interfaceManager?.refreshBnbDirectPrice && !interfaceManager?._selectedRoomIndex) {
+      interfaceManager.refreshBnbDirectPrice();
     }
 
 
