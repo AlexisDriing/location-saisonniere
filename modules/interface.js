@@ -1,4 +1,4 @@
-// LOG production V1.38.23
+// LOG production V1.38.24
 // Page google
 class InterfaceManager {
   constructor() {
@@ -944,23 +944,27 @@ setupConditionsAnnulation() {
       }
     });
 
-    if (!isFinite(lowestPrice) || !lowestPricingData) return;
+        if (!isFinite(lowestPrice) || !lowestPricingData) return;
 
     const prixDirectEls = Utils.getAllElementsById('prix-direct');
     const pourcentageEls = Utils.getAllElementsById('text-pourcentage');
 
-    // Plateforme (même logique qu'avant)
-    let platformPrice = lowestPrice;
+    // Pourcentage basé sur le prix PLEIN (comme displayRoomPrice), pour une
+    // comparaison honnête plein vs plein — sinon on comparerait prix 1 voy. direct
+    // à prix plein plateforme, ce qui donne un % gonflé et trompeur.
     const dp = lowestPricingData.defaultPricing;
+    const activeSeasonForPlatform = findActiveSeason(lowestPricingData);
+    const basePricePlein = activeSeasonForPlatform.price || dp.price || lowestPrice;
+    let platformPrice = basePricePlein;
     if (dp.platformPrices) {
       const prices = Object.values(dp.platformPrices).filter(p => p > 0);
       if (prices.length > 0) {
         platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
       }
     }
-    if (platformPrice === lowestPrice) {
+    if (platformPrice === basePricePlein) {
       const defaultDiscount = lowestPricingData.platformPricing?.defaultDiscount || 17;
-      platformPrice = Math.round(lowestPrice * (100 / (100 - defaultDiscount)));
+      platformPrice = Math.round(basePricePlein * (100 / (100 - defaultDiscount)));
     }
 
     prixDirectEls.forEach(element => {
@@ -975,8 +979,8 @@ setupConditionsAnnulation() {
       element.appendChild(strong);
     });
 
-    if (platformPrice > lowestPrice) {
-      const discount = Math.round(100 * (platformPrice - lowestPrice) / platformPrice);
+    if (platformPrice > basePricePlein) {
+      const discount = Math.round(100 * (platformPrice - basePricePlein) / platformPrice);
       pourcentageEls.forEach(el => {
         el.textContent = discount > 0 ? `-${discount}%` : '';
       });
