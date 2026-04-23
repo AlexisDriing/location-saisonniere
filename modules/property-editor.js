@@ -1,4 +1,4 @@
-// LOG production V1.64 - chambres d'hôtes v1.065
+// LOG production V1.65 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -387,8 +387,10 @@ initRoomImageManagement() {
   
   this.displayRoomEditableGallery();
   
-  // SortableJS (desktop + mobile avec long-press)
-  setTimeout(() => this.initRoomSortable(), 100);
+    // SortableJS sur desktop
+  if (window.innerWidth > 768) {
+    setTimeout(() => this.initRoomSortable(), 100);
+  }
   
     // Bouton ajout photos (upload custom)
   const addPhotosButton = document.querySelector('.add-photos.chambre');
@@ -425,35 +427,15 @@ initRoomSortable() {
   if (this.roomSortableInstance) {
     this.roomSortableInstance.destroy();
   }
-
-  const isMobile = window.innerWidth <= 768;
   
   this.roomSortableInstance = new Sortable(container, {
     animation: 150,
     ghostClass: 'sortable-ghost',
     filter: '.button-delete-photo',
-
-    ...(isMobile ? {
-      delay: 300,
-      delayOnTouchOnly: true,
-      touchStartThreshold: 5,
-      forceFallback: true,
-      fallbackClass: 'sortable-drag',
-      fallbackTolerance: 5,
-    } : {}),
-
-    onStart: () => {
-      document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
-        btn.classList.remove('show-delete');
-      });
-      this._justDragged = true;
-    },
-
     onEnd: (evt) => {
       const movedItem = this.roomCurrentPhotos.splice(evt.oldIndex, 1)[0];
       this.roomCurrentPhotos.splice(evt.newIndex, 0, movedItem);
       this.enableButtons();
-      setTimeout(() => { this._justDragged = false; }, 200);
     }
   });
 }
@@ -6245,9 +6227,11 @@ initImageManagement() {
   this.displayEditableGallery();
   
     // Initialiser SortableJS après un court délai (DOM ready)
-  setTimeout(() => {
-    this.initSortable();
-  }, 100);
+  if (window.innerWidth > 768) {
+    setTimeout(() => {
+      this.initSortable();
+    }, 100);
+  }
 
     // Listener sur le bouton d'ajout de photos (upload custom)
   const addPhotosButton = document.querySelector('.add-photos');
@@ -6274,42 +6258,25 @@ initSortable() {
   const container = document.querySelector('.images-grid');
   if (!container || this.currentImagesGallery.length === 0) return;
   
+  // Détruire l'instance précédente si elle existe
   if (this.sortableInstance) {
     this.sortableInstance.destroy();
   }
-
-  const isMobile = window.innerWidth <= 768;
   
+  // 🎯 SIMPLE comme la démo : juste l'essentiel
   this.sortableInstance = new Sortable(container, {
     animation: 150,
     ghostClass: 'sortable-ghost',
-    filter: '.button-delete-photo',
-
-    // Config mobile : long-press 300ms + fallback drag plus fiable sur touch
-    ...(isMobile ? {
-      delay: 300,
-      delayOnTouchOnly: true,
-      touchStartThreshold: 5,
-      forceFallback: true,
-      fallbackClass: 'sortable-drag',
-      fallbackTolerance: 5,
-    } : {}),
-
-    onStart: () => {
-      // Cacher tout bouton delete ouvert quand on commence à drag
-      document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
-        btn.classList.remove('show-delete');
-      });
-      // Marqueur pour éviter le toggle delete juste après un drag
-      this._justDragged = true;
-    },
-
+    filter: '.button-delete-photo', 
+    
     onEnd: (evt) => {
+      // Réorganiser notre tableau de données
       const movedItem = this.currentImagesGallery.splice(evt.oldIndex, 1)[0];
       this.currentImagesGallery.splice(evt.newIndex, 0, movedItem);
+      
+      
+      // Juste activer le bouton save
       this.enableButtons();
-      // Maintenir le marqueur pendant 200ms pour absorber le click post-drag
-      setTimeout(() => { this._justDragged = false; }, 200);
     }
   });
 }
