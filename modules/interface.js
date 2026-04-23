@@ -446,10 +446,10 @@ setupConditionsAnnulation() {
   // Gestion de l'affichage conditionnel pour Chambre d'hôtes
   setupChambreHoteDisplay() {
     const typeElement = document.querySelector('[data-mode-location]');
-    
+
     if (typeElement) {
       const typeLogement = typeElement.getAttribute('data-mode-location');
-      
+
       // Afficher/masquer le tag chambre d'hôtes
       const chambreHoteElement = document.querySelector('.chambres-hote');
       if (chambreHoteElement) {
@@ -465,8 +465,22 @@ setupConditionsAnnulation() {
         const infoChambreHotes = document.getElementById('info-chambre-hotes');
         if (infoChambreHotes) infoChambreHotes.style.display = 'flex';
         this.loadAndDisplayRooms();
+        this.hideSallesBainFromTailleMaison();
       }
 
+    }
+  }
+
+  // Le nombre de salles de bain n'est pas saisi pour les chambres d'hôtes,
+  // on retire donc la portion " - X salle(s) de bain" du texte taille_maison.
+  hideSallesBainFromTailleMaison() {
+    const regex = /\s*[-–]\s*\d+\s*salle[s]?\s*de\s*bain/i;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => regex.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+    });
+    let node;
+    while ((node = walker.nextNode())) {
+      node.nodeValue = node.nodeValue.replace(regex, '');
     }
   }
 
