@@ -1,4 +1,4 @@
-// LOG production V1.61 - chambres d'hôtes v1.065
+// LOG production V1.62 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3061,9 +3061,19 @@ async saveRoomModifications() {
         this.initialValues.room_pricing_prices_per_guest = JSON.stringify(updates.pricing_data.defaultPricing?.pricesPerGuest || []);
       }
       if (updates['photos-de-la-chambre'] !== undefined) {
-        this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
-        this.roomData.photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
-        this.initialValues.room_photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
+        // Si le backend renvoie les vraies URLs Webflow (après re-hosting), les utiliser
+        const freshPhotos = Array.isArray(result.fieldData?.['photos-de-la-chambre'])
+          ? result.fieldData['photos-de-la-chambre']
+          : this.roomCurrentPhotos;
+
+        this.roomCurrentPhotos = JSON.parse(JSON.stringify(freshPhotos));
+        this.roomOriginalPhotos = JSON.parse(JSON.stringify(freshPhotos));
+        this.roomData.photos = JSON.parse(JSON.stringify(freshPhotos));
+        this.initialValues.room_photos = JSON.parse(JSON.stringify(freshPhotos));
+
+        // Re-render pour afficher les vraies URLs permanentes
+        this.displayRoomEditableGallery();
+        if (window.innerWidth > 768) this.initRoomSortable();
       }
       
       // Mettre à jour les valeurs iCal initiales
@@ -7725,11 +7735,21 @@ setBlockState(element, isActive) {
         this.propertyData.pricing_data = JSON.parse(JSON.stringify(this.pricingData));
       }
 
-      // 🆕 NOUVEAU : Mettre à jour les images d'origine après sauvegarde réussie
+      // 🆕 Mettre à jour les images d'origine après sauvegarde réussie
       if (updates['photos-du-logement']) {
-        this.originalImagesGallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
-        this.propertyData.images_gallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
-        this.initialValues.images_gallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
+        // Si le backend renvoie les vraies URLs Webflow (après re-hosting), les utiliser
+        const freshPhotos = Array.isArray(result.fieldData?.['photos-du-logement'])
+          ? result.fieldData['photos-du-logement']
+          : this.currentImagesGallery;
+
+        this.currentImagesGallery = JSON.parse(JSON.stringify(freshPhotos));
+        this.originalImagesGallery = JSON.parse(JSON.stringify(freshPhotos));
+        this.propertyData.images_gallery = JSON.parse(JSON.stringify(freshPhotos));
+        this.initialValues.images_gallery = JSON.parse(JSON.stringify(freshPhotos));
+
+        // Re-render pour afficher les vraies URLs permanentes
+        this.displayEditableGallery();
+        if (window.innerWidth > 768) this.initSortable();
       }
         
       // Désactiver les boutons
