@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.065
+// LOG production V1.6 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -392,7 +392,7 @@ initRoomImageManagement() {
     setTimeout(() => this.initRoomSortable(), 100);
   }
   
-  // Bouton ajout photos
+    // Bouton ajout photos (upload custom)
   const addPhotosButton = document.querySelector('.add-photos.chambre');
   if (addPhotosButton) {
     const newButton = addPhotosButton.cloneNode(true);
@@ -404,16 +404,7 @@ initRoomImageManagement() {
       if (this.roomCurrentPhotos.length >= 5) {
         this.showNotification('error', 'Limite de 5 photos maximum atteinte');
       } else {
-        const tallyUrl = newButton.dataset.tallyUrl;
-        if (tallyUrl) {
-          const params = new URLSearchParams({
-            property_id: this.roomId || '',
-            property_name: this.propertyData.name || '',
-            room_name: this.roomData.name || '',
-            email: this.propertyData.email || ''
-          });
-          window.open(`${tallyUrl}?${params.toString()}`, '_blank');
-        }
+        this.handlePhotoSelection('chambre');
       }
     });
   }
@@ -565,6 +556,182 @@ updateRoomAddPhotosButtonState() {
   } else {
     addPhotosButton.style.opacity = '1';
     addPhotosButton.style.cursor = 'pointer';
+  }
+}
+
+// ================================
+// 📸 UPLOAD PHOTOS CUSTOM (remplace Tally)
+// ================================
+
+async loadImageCompressionLib() {
+  if (window.imageCompression) return;
+  if (this._compressionLibPromise) return this._compressionLibPromise;
+  this._compressionLibPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js';
+    script.onload = resolve;
+    script.onerror = () => {
+      this._compressionLibPromise = null;
+      reject(new Error('Impossible de charger la librairie de compression'));
+    };
+    document.head.appendChild(script);
+  });
+  return this._compressionLibPromise;
+}
+
+async compressImage(file) {
+  const baseOptions = {
+    maxSizeMB: 0.08,
+    maxWidthOrHeight: 1920,
+    useWebWorker: true,
+    initialQuality: 0.8
+  };
+
+  // Tentative AVIF (navigateurs modernes)
+  try {
+    const avif = await window.imageCompression(file, { ...baseOptions, fileType: 'image/avif' });
+    if (avif && avif.type === 'image/avif') return avif;
+  } catch (e) {
+    console.warn('Encodage AVIF indisponible, bascule en WebP :', e.message);
+  }
+
+  // Fallback WebP (supporté partout en encodage)
+  return await window.imageCompression(file, { ...baseOptions, fileType: 'image/webp' });
+}
+
+fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async handlePhotoSelection(type) {
+  const isRoom = type === 'chambre';
+  const max = isRoom ? 5 : 20;
+  const gallery = isRoom ? this.roomCurrentPhotos : this.currentImagesGallery;
+  const available = max - gallery.length;
+
+  if (available <= 0) {
+    this.showNotification('error', `Limite de ${max} photos atteinte. Supprimez-en avant d'ajouter.`);
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/png,image/webp';
+  input.multiple = true;
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    document.body.removeChild(input);
+    if (files.length === 0) return;
+
+    if (files.length > available) {
+      this.showNotification('error',
+        `Vous pouvez ajouter ${available} photo(s) maximum. Vous en avez sélectionné ${files.length}. Veuillez réessayer.`);
+      return;
+    }
+
+    try {
+      // Charger la lib AVANT de notifier (évite le "compression en cours" si la lib échoue)
+      await this.loadImageCompressionLib();
+      this.showNotification('success', `Compression de ${files.length} photo(s)...`);
+
+      for (const file of files) {
+        const compressed = await this.compressImage(file);
+        const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+        const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
+        const stagedEntry = {
+          url: URL.createObjectURL(compressed),
+          _staged: true,
+          _file: compressed,
+          _fileName: `${baseName}.${ext}`
+        };
+        gallery.push(stagedEntry);
+      }
+
+      if (isRoom) {
+        this.displayRoomEditableGallery();
+        if (window.innerWidth > 768) this.initRoomSortable();
+        this.updateRoomAddPhotosButtonState();
+      } else {
+        this.displayEditableGallery();
+        if (window.innerWidth > 768) this.initSortable();
+        this.updateAddPhotosButtonState();
+      }
+
+      this.enableButtons();
+      this.showNotification('success', `${files.length} photo(s) ajoutée(s). Cliquez sur Enregistrer pour valider.`);
+    } catch (err) {
+      console.error('Erreur sélection photos :', err);
+      this.showNotification('error', 'Erreur : ' + err.message);
+    }
+  });
+
+  input.click();
+}
+
+async uploadStagedPhotos(gallery) {
+  const stagedIndices = [];
+  const stagedFiles = [];
+  for (let i = 0; i < gallery.length; i++) {
+    if (gallery[i]._staged) {
+      stagedIndices.push(i);
+      stagedFiles.push(gallery[i]);
+    }
+  }
+  if (stagedIndices.length === 0) return;
+
+  const payload = {
+    photos: await Promise.all(stagedFiles.map(async entry => ({
+      fileName: entry._fileName,
+      dataBase64: await this.fileToBase64(entry._file),
+      mimeType: entry._file.type || 'image/avif'
+    })))
+  };
+
+  // Fetch avec timeout 2 minutes
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+  let result;
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/stage-photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Erreur serveur lors du staging');
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Upload trop long (timeout 2 min). Vérifiez votre connexion.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  // Contrôle de cohérence
+  if (!Array.isArray(result.tempUrls) || result.tempUrls.length !== stagedIndices.length) {
+    throw new Error('Réponse serveur incohérente (nombre d\'URLs incorrect)');
+  }
+
+  // Remplacement des entrées staged par les URLs temp
+  for (let i = 0; i < stagedIndices.length; i++) {
+    const idx = stagedIndices[i];
+    if (gallery[idx].url?.startsWith('blob:')) {
+      URL.revokeObjectURL(gallery[idx].url);
+    }
+    gallery[idx] = { url: result.tempUrls[i] };
   }
 }
 
@@ -2750,7 +2917,7 @@ async saveRoomModifications() {
   // Collecter les iCals modifiés
   const currentIcalValues = this.collectRoomIcalValues();
   
-  this.roomIcalFieldMapping.forEach((fieldName, index) => {
+    this.roomIcalFieldMapping.forEach((fieldName, index) => {
     const currentValue = currentIcalValues[index] || '';
     const initialValue = this.initialValues[`room_${fieldName}`] || '';
     
@@ -2758,6 +2925,18 @@ async saveRoomModifications() {
       updates[fieldName] = currentValue;
     }
   });
+  
+  // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+  try {
+    if (this.roomCurrentPhotos.some(p => p._staged)) {
+      this.showNotification('success', 'Envoi des photos en cours...');
+      await this.uploadStagedPhotos(this.roomCurrentPhotos);
+    }
+  } catch (err) {
+    console.error('❌ Erreur upload photos chambre :', err);
+    this.showNotification('error', 'Échec de l\'envoi des photos : ' + err.message);
+    return;
+  }
   
   // Photos
   const originalPhotosJson = JSON.stringify(this.roomOriginalPhotos);
@@ -5981,7 +6160,7 @@ initImageManagement() {
     }, 100);
   }
 
-  // Listener sur le bouton d'ajout de photos (cloner pour supprimer le listener Tally)
+    // Listener sur le bouton d'ajout de photos (upload custom)
   const addPhotosButton = document.querySelector('.add-photos');
   if (addPhotosButton) {
     const newButton = addPhotosButton.cloneNode(true);
@@ -5993,15 +6172,7 @@ initImageManagement() {
       if (this.currentImagesGallery.length >= 20) {
         this.showNotification('error', 'Limite de 20 photos maximum atteinte');
       } else {
-        const tallyUrl = newButton.dataset.tallyUrl;
-        if (tallyUrl) {
-          const params = new URLSearchParams({
-            property_id: this.propertyId || '',
-            property_name: this.propertyData.name || '',
-            email: this.propertyData.email || ''
-          });
-          window.open(`${tallyUrl}?${params.toString()}`, '_blank');
-        }
+        this.handlePhotoSelection('logement');
       }
     });
   }
@@ -7373,10 +7544,22 @@ setBlockState(element, isActive) {
   const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
   const currentPricingJson = JSON.stringify(this.pricingData);
   
-  if (originalPricingJson !== currentPricingJson) {
+    if (originalPricingJson !== currentPricingJson) {
     updates.pricing_data = this.pricingData;
   } else {
     console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
+  }
+
+  // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+  try {
+    if (this.currentImagesGallery.some(p => p._staged)) {
+      this.showNotification('success', 'Envoi des photos en cours...');
+      await this.uploadStagedPhotos(this.currentImagesGallery);
+    }
+  } catch (err) {
+    console.error('❌ Erreur upload photos :', err);
+    this.showNotification('error', 'Échec de l\'envoi des photos : ' + err.message);
+    return;
   }
 
   // 🆕 NOUVEAU : Vérifier si les images ont changé
