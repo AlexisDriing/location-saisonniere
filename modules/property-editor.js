@@ -1,4 +1,4 @@
-// LOG production V1.6 - chambres d'hôtes v1.065
+// LOG production V1.61 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -563,6 +563,39 @@ updateRoomAddPhotosButtonState() {
 // 📸 UPLOAD PHOTOS CUSTOM (remplace Tally)
 // ================================
 
+ensureSkeletonStyles() {
+  if (document.getElementById('photo-upload-skeleton-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'photo-upload-skeleton-styles';
+  style.textContent = `
+    @keyframes photoSkeletonPulse {
+      0%, 100% { background-color: #d0d0d0; }
+      50%     { background-color: #eaeaea; }
+    }
+    .image-block.is-loading-photo {
+      animation: photoSkeletonPulse 1.3s infinite ease-in-out;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .image-block.is-loading-photo img {
+      opacity: 0 !important;
+    }
+    .image-block.is-loading-photo .button-delete-photo {
+      display: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+applyLoadingStateToBlocks(isRoom, startIdx, count) {
+  for (let i = 0; i < count; i++) {
+    const idx = startIdx + i + 1;
+    const selector = isRoom ? `#image-block-${idx}-chambre` : `#image-block-${idx}`;
+    const block = document.querySelector(selector);
+    if (block) block.classList.add('is-loading-photo');
+  }
+}
+
 async loadImageCompressionLib() {
   if (window.imageCompression) return;
   if (this._compressionLibPromise) return this._compressionLibPromise;
@@ -586,16 +619,12 @@ async compressImage(file) {
     useWebWorker: true,
     initialQuality: 0.8
   };
-
-  // Tentative AVIF (navigateurs modernes)
   try {
     const avif = await window.imageCompression(file, { ...baseOptions, fileType: 'image/avif' });
     if (avif && avif.type === 'image/avif') return avif;
   } catch (e) {
     console.warn('Encodage AVIF indisponible, bascule en WebP :', e.message);
   }
-
-  // Fallback WebP (supporté partout en encodage)
   return await window.imageCompression(file, { ...baseOptions, fileType: 'image/webp' });
 }
 
@@ -638,23 +667,22 @@ async handlePhotoSelection(type) {
     }
 
     try {
-      // Charger la lib AVANT de notifier (évite le "compression en cours" si la lib échoue)
+      this.ensureSkeletonStyles();
       await this.loadImageCompressionLib();
-      this.showNotification('success', `Compression de ${files.length} photo(s)...`);
 
-      for (const file of files) {
-        const compressed = await this.compressImage(file);
-        const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
-        const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
-        const stagedEntry = {
-          url: URL.createObjectURL(compressed),
+      // Phase 1 — Insérer N squelettes dans la galerie
+      const SKELETON_SRC = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+      const startIdx = gallery.length;
+      for (let i = 0; i < files.length; i++) {
+        gallery.push({
+          url: SKELETON_SRC,
           _staged: true,
-          _file: compressed,
-          _fileName: `${baseName}.${ext}`
-        };
-        gallery.push(stagedEntry);
+          _loading: true,
+          _fileName: files[i].name
+        });
       }
 
+      // Rendu initial avec squelettes
       if (isRoom) {
         this.displayRoomEditableGallery();
         if (window.innerWidth > 768) this.initRoomSortable();
@@ -663,6 +691,34 @@ async handlePhotoSelection(type) {
         this.displayEditableGallery();
         if (window.innerWidth > 768) this.initSortable();
         this.updateAddPhotosButtonState();
+      }
+      this.applyLoadingStateToBlocks(isRoom, startIdx, files.length);
+
+      // Phase 2 — Compresser chaque fichier et remplacer le squelette correspondant
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const compressed = await this.compressImage(file);
+        const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+        const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
+        const blobUrl = URL.createObjectURL(compressed);
+
+        gallery[startIdx + i] = {
+          url: blobUrl,
+          _staged: true,
+          _file: compressed,
+          _fileName: `${baseName}.${ext}`
+        };
+
+        // Mise à jour directe du DOM pour un feedback immédiat
+        const selector = isRoom
+          ? `#image-block-${startIdx + i + 1}-chambre`
+          : `#image-block-${startIdx + i + 1}`;
+        const block = document.querySelector(selector);
+        if (block) {
+          const imgEl = block.querySelector('img');
+          if (imgEl) imgEl.src = blobUrl;
+          block.classList.remove('is-loading-photo');
+        }
       }
 
       this.enableButtons();
@@ -676,7 +732,7 @@ async handlePhotoSelection(type) {
   input.click();
 }
 
-async uploadStagedPhotos(gallery) {
+async uploadStagedPhotos(gallery, type) {
   const stagedIndices = [];
   const stagedFiles = [];
   for (let i = 0; i < gallery.length; i++) {
@@ -695,7 +751,6 @@ async uploadStagedPhotos(gallery) {
     })))
   };
 
-  // Fetch avec timeout 2 minutes
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000);
 
@@ -720,18 +775,26 @@ async uploadStagedPhotos(gallery) {
     clearTimeout(timeoutId);
   }
 
-  // Contrôle de cohérence
   if (!Array.isArray(result.tempUrls) || result.tempUrls.length !== stagedIndices.length) {
     throw new Error('Réponse serveur incohérente (nombre d\'URLs incorrect)');
   }
 
-  // Remplacement des entrées staged par les URLs temp
+  // Remplacer les entrées staged par les URLs temp et révoquer les blob URLs
   for (let i = 0; i < stagedIndices.length; i++) {
     const idx = stagedIndices[i];
     if (gallery[idx].url?.startsWith('blob:')) {
       URL.revokeObjectURL(gallery[idx].url);
     }
     gallery[idx] = { url: result.tempUrls[i] };
+  }
+
+  // 🔧 Fix du bug delete : re-render pour synchroniser DOM et tableau
+  if (type === 'chambre') {
+    this.displayRoomEditableGallery();
+    if (window.innerWidth > 768) this.initRoomSortable();
+  } else {
+    this.displayEditableGallery();
+    if (window.innerWidth > 768) this.initSortable();
   }
 }
 
@@ -2926,11 +2989,11 @@ async saveRoomModifications() {
     }
   });
   
-  // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+    // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
   try {
     if (this.roomCurrentPhotos.some(p => p._staged)) {
       this.showNotification('success', 'Envoi des photos en cours...');
-      await this.uploadStagedPhotos(this.roomCurrentPhotos);
+      await this.uploadStagedPhotos(this.roomCurrentPhotos, 'chambre');
     }
   } catch (err) {
     console.error('❌ Erreur upload photos chambre :', err);
@@ -7550,11 +7613,11 @@ setBlockState(element, isActive) {
     console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
   }
 
-  // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+    // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
   try {
     if (this.currentImagesGallery.some(p => p._staged)) {
       this.showNotification('success', 'Envoi des photos en cours...');
-      await this.uploadStagedPhotos(this.currentImagesGallery);
+      await this.uploadStagedPhotos(this.currentImagesGallery, 'logement');
     }
   } catch (err) {
     console.error('❌ Erreur upload photos :', err);
