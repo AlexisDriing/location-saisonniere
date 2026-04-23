@@ -1,4 +1,4 @@
-// LOG production V1.63 - chambres d'hôtes v1.065
+// LOG production V1.64 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -425,30 +425,35 @@ initRoomSortable() {
   if (this.roomSortableInstance) {
     this.roomSortableInstance.destroy();
   }
+
+  const isMobile = window.innerWidth <= 768;
   
   this.roomSortableInstance = new Sortable(container, {
     animation: 150,
     ghostClass: 'sortable-ghost',
     filter: '.button-delete-photo',
 
-    // 📱 Config mobile : long-press 300ms pour activer le drag
-    delay: 300,
-    delayOnTouchOnly: true,
-    touchStartThreshold: 5,
-    forceFallback: true,
-    fallbackClass: 'sortable-drag',
-    fallbackTolerance: 5,
+    ...(isMobile ? {
+      delay: 300,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
+      forceFallback: true,
+      fallbackClass: 'sortable-drag',
+      fallbackTolerance: 5,
+    } : {}),
 
     onStart: () => {
       document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
         btn.classList.remove('show-delete');
       });
+      this._justDragged = true;
     },
 
     onEnd: (evt) => {
       const movedItem = this.roomCurrentPhotos.splice(evt.oldIndex, 1)[0];
       this.roomCurrentPhotos.splice(evt.newIndex, 0, movedItem);
       this.enableButtons();
+      setTimeout(() => { this._justDragged = false; }, 200);
     }
   });
 }
@@ -6269,38 +6274,42 @@ initSortable() {
   const container = document.querySelector('.images-grid');
   if (!container || this.currentImagesGallery.length === 0) return;
   
-  // Détruire l'instance précédente si elle existe
   if (this.sortableInstance) {
     this.sortableInstance.destroy();
   }
+
+  const isMobile = window.innerWidth <= 768;
   
   this.sortableInstance = new Sortable(container, {
     animation: 150,
     ghostClass: 'sortable-ghost',
     filter: '.button-delete-photo',
 
-    // 📱 Config mobile : long-press 300ms pour activer le drag
-    // (évite de confondre scroll/tap et drag)
-    delay: 300,
-    delayOnTouchOnly: true,     // délai uniquement sur touch, pas sur souris
-    touchStartThreshold: 5,      // tolérance de 5px avant de déclencher le drag
-    forceFallback: true,         // utilise l'implémentation Sortable (+ fiable sur mobile)
-    fallbackClass: 'sortable-drag',
-    fallbackTolerance: 5,
+    // Config mobile : long-press 300ms + fallback drag plus fiable sur touch
+    ...(isMobile ? {
+      delay: 300,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
+      forceFallback: true,
+      fallbackClass: 'sortable-drag',
+      fallbackTolerance: 5,
+    } : {}),
 
     onStart: () => {
-      // Cacher les éventuels boutons delete ouverts pendant le drag
+      // Cacher tout bouton delete ouvert quand on commence à drag
       document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
         btn.classList.remove('show-delete');
       });
+      // Marqueur pour éviter le toggle delete juste après un drag
+      this._justDragged = true;
     },
 
     onEnd: (evt) => {
-      // Réorganiser notre tableau de données
       const movedItem = this.currentImagesGallery.splice(evt.oldIndex, 1)[0];
       this.currentImagesGallery.splice(evt.newIndex, 0, movedItem);
-      
       this.enableButtons();
+      // Maintenir le marqueur pendant 200ms pour absorber le click post-drag
+      setTimeout(() => { this._justDragged = false; }, 200);
     }
   });
 }
@@ -6406,47 +6415,38 @@ addDeleteButtonFromTemplate(imageBlock, index) {
     }
   }
   
-  // 🆕 NOUVEAU : Détecter si on est sur mobile
-  const isMobile = window.matchMedia('(max-width: 768px)').matches || 
-                   'ontouchstart' in window;
+    // 📱 MOBILE : Tap simple pour afficher/masquer le bouton delete
+  // (Sortable gère le long-press pour le drag via _justDragged)
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
   
   if (isMobile) {
-    // 📱 MOBILE : Système de clic
-    let clickTimeout;
-    let isDragging = false;
-    
     imageBlock.onclick = (e) => {
       if (e.target.closest('.button-delete-photo')) return;
-      if (isDragging) {
-        isDragging = false;
-        return;
-      }
+      // Si on vient de finir un drag, on ignore le click
+      if (this._justDragged) return;
       
-      // Toggle le bouton delete de cette image
-      deleteBtn.classList.toggle('show-delete');
-      
-      // Masquer les autres boutons
-      document.querySelectorAll('.button-delete-photo').forEach(btn => {
-        if (btn !== deleteBtn) {
-          btn.classList.remove('show-delete');
-        }
+      // Masquer tous les autres boutons delete ouverts
+      document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
+        if (btn !== deleteBtn) btn.classList.remove('show-delete');
       });
+      
+      // Toggle sur celui-ci
+      deleteBtn.classList.toggle('show-delete');
     };
-    
-    // Détecter le drag
-    imageBlock.addEventListener('touchstart', () => {
-      clickTimeout = setTimeout(() => {
-        isDragging = true;
-      }, 200);
+    }
+  
+  // Tap en dehors d'une photo → fermer tous les boutons delete ouverts
+  if (!this._globalClickHandlerAdded) {
+    this._globalClickHandlerAdded = true;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.image-block') && !e.target.closest('.button-delete-photo')) {
+        document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
+          btn.classList.remove('show-delete');
+        });
+      }
     });
-    
-    imageBlock.addEventListener('touchend', () => {
-      clearTimeout(clickTimeout);
-      setTimeout(() => {
-        isDragging = false;
-      }, 100);
-    });
-  }  
+  }
+  
   // Handler pour le bouton delete (mobile + desktop)
   deleteBtn.onclick = (e) => {
     e.preventDefault();
