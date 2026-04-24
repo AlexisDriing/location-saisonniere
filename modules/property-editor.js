@@ -1,4 +1,4 @@
-// LOG production V1.65 - chambres d'hôtes v1.065
+// LOG production V1.66 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3060,7 +3060,7 @@ async saveRoomModifications() {
         this.initialValues.room_pricing_min_nights = updates.pricing_data.defaultPricing?.minNights || 1;
         this.initialValues.room_pricing_prices_per_guest = JSON.stringify(updates.pricing_data.defaultPricing?.pricesPerGuest || []);
       }
-      if (updates['photos-de-la-chambre'] !== undefined) {
+            if (updates['photos-de-la-chambre'] !== undefined) {
         // Si le backend renvoie les vraies URLs Webflow (après re-hosting), les utiliser
         const freshPhotos = Array.isArray(result.fieldData?.['photos-de-la-chambre'])
           ? result.fieldData['photos-de-la-chambre']
@@ -3071,9 +3071,24 @@ async saveRoomModifications() {
         this.roomData.photos = JSON.parse(JSON.stringify(freshPhotos));
         this.initialValues.room_photos = JSON.parse(JSON.stringify(freshPhotos));
 
-        // Re-render pour afficher les vraies URLs permanentes
+        // 🔧 Détruire Sortable et réinitialiser l'ordre DOM des blocs chambre
+        if (this.roomSortableInstance) {
+          this.roomSortableInstance.destroy();
+          this.roomSortableInstance = null;
+        }
+        const container = document.querySelector('.images-grid.chambre');
+        if (container) {
+          for (let i = 1; i <= 5; i++) {
+            const block = document.getElementById(`image-block-${i}-chambre`);
+            if (block) container.appendChild(block);
+          }
+        }
+
+        // Re-render avec les vraies URLs et l'ordre DOM remis à zéro
         this.displayRoomEditableGallery();
-        if (window.innerWidth > 768) this.initRoomSortable();
+        if (window.innerWidth > 768) {
+          setTimeout(() => this.initRoomSortable(), 100);
+        }
       }
       
       // Mettre à jour les valeurs iCal initiales
@@ -7738,9 +7753,25 @@ setBlockState(element, isActive) {
         this.propertyData.images_gallery = JSON.parse(JSON.stringify(freshPhotos));
         this.initialValues.images_gallery = JSON.parse(JSON.stringify(freshPhotos));
 
-        // Re-render pour afficher les vraies URLs permanentes
+        // 🔧 Détruire Sortable et réinitialiser l'ordre DOM
+        // (sinon displayEditableGallery remplit les blocs par ID alors que le DOM a été réordonné par Sortable)
+        if (this.sortableInstance) {
+          this.sortableInstance.destroy();
+          this.sortableInstance = null;
+        }
+        const container = document.querySelector('.images-grid');
+        if (container) {
+          for (let i = 1; i <= 20; i++) {
+            const block = document.getElementById(`image-block-${i}`);
+            if (block) container.appendChild(block);
+          }
+        }
+
+        // Re-render avec les vraies URLs et l'ordre DOM remis à zéro
         this.displayEditableGallery();
-        if (window.innerWidth > 768) this.initSortable();
+        if (window.innerWidth > 768) {
+          setTimeout(() => this.initSortable(), 100);
+        }
       }
         
       // Désactiver les boutons
