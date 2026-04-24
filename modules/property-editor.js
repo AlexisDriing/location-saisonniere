@@ -1,4 +1,4 @@
-// LOG production V1.66 - chambres d'hôtes v1.065
+// LOG production V1.67 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -788,7 +788,7 @@ async uploadStagedPhotos(gallery, type) {
     gallery[idx] = { url: result.tempUrls[i] };
   }
 
-  // 🔧 Fix du bug delete : re-render pour synchroniser DOM et tableau
+    // 🔧 Fix du bug delete : re-render pour synchroniser DOM et tableau
   if (type === 'chambre') {
     this.displayRoomEditableGallery();
     if (window.innerWidth > 768) this.initRoomSortable();
@@ -796,6 +796,125 @@ async uploadStagedPhotos(gallery, type) {
     this.displayEditableGallery();
     if (window.innerWidth > 768) this.initSortable();
   }
+}
+
+// ================================
+// 👤 UPLOAD PHOTO DE PROFIL (une seule photo)
+// ================================
+
+setupHostPhotoButton() {
+  const button = document.getElementById('button-change-host-photo');
+  if (!button) return;
+  
+  // Cloner pour retirer tout ancien listener (Tally)
+  const newButton = button.cloneNode(true);
+  button.parentNode.replaceChild(newButton, button);
+  
+  newButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    this.handleProfilePhotoSelection();
+  });
+}
+
+async handleProfilePhotoSelection() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/png,image/webp';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    document.body.removeChild(input);
+    if (!file) return;
+    
+    try {
+      await this.loadImageCompressionLib();
+      this.showNotification('success', 'Compression de la photo...');
+      
+      const compressed = await this.compressImage(file);
+      const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+      const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo-profil';
+      const blobUrl = URL.createObjectURL(compressed);
+      
+      // Révoquer l'ancien blob URL éventuel
+      if (this.stagedHostImage?.url?.startsWith('blob:')) {
+        URL.revokeObjectURL(this.stagedHostImage.url);
+      }
+      
+      // Stage la nouvelle photo
+      this.stagedHostImage = {
+        url: blobUrl,
+        _staged: true,
+        _file: compressed,
+        _fileName: `${baseName}.${ext}`
+      };
+      
+      // Mise à jour immédiate de l'aperçu dans le DOM
+      const imageHoteElement = document.getElementById('image-hote');
+      if (imageHoteElement) {
+        if (imageHoteElement.tagName === 'IMG') {
+          imageHoteElement.src = blobUrl;
+        } else {
+          const imgEl = imageHoteElement.querySelector('img');
+          if (imgEl) imgEl.src = blobUrl;
+        }
+      }
+      
+      this.enableButtons();
+      this.showNotification('success', 'Photo de profil prête. Cliquez sur Enregistrer pour valider.');
+    } catch (err) {
+      console.error('Erreur photo profil :', err);
+      this.showNotification('error', 'Erreur : ' + err.message);
+    }
+  });
+  
+  input.click();
+}
+
+async uploadStagedHostImage() {
+  if (!this.stagedHostImage?._staged || !this.stagedHostImage._file) return null;
+  
+  const payload = {
+    photos: [{
+      fileName: this.stagedHostImage._fileName,
+      dataBase64: await this.fileToBase64(this.stagedHostImage._file),
+      mimeType: this.stagedHostImage._file.type || 'image/avif'
+    }]
+  };
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
+  
+  let result;
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/stage-photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Erreur serveur');
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Upload trop long (timeout 2 min)');
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  
+  if (!Array.isArray(result.tempUrls) || result.tempUrls.length !== 1) {
+    throw new Error('Réponse serveur incohérente (photo profil)');
+  }
+  
+  if (this.stagedHostImage.url?.startsWith('blob:')) {
+    URL.revokeObjectURL(this.stagedHostImage.url);
+  }
+  
+  return result.tempUrls[0];
 }
 
 // ================================
@@ -3569,6 +3688,7 @@ setupTimeFormatters() {
     this.setupFieldListeners();
     this.displayImageGallery();
     this.displayHostImage();
+    this.setupHostPhotoButton();
 
     // 🆕 Appliquer l'opacité initiale après un court délai
     setTimeout(() => {
@@ -4018,39 +4138,29 @@ countVisiblePlages(isEdit = false) {
   return count;
 }
 
-  displayHostImage() {    
-    // Récupérer l'URL de l'image hôte
+   displayHostImage() {    
     const hostImageUrl = this.propertyData.host_image || '';
-    
-    // Récupérer les blocs
     const blocEmptyHote = document.getElementById('bloc-empty-hote');
     const blocHote = document.getElementById('bloc-hote');
     
-    if (!hostImageUrl || hostImageUrl.trim() === '') {
-      // Pas d'image hôte : afficher empty, masquer bloc hôte
-      if (blocEmptyHote) blocEmptyHote.style.display = 'flex';
-      if (blocHote) blocHote.style.display = 'none';
-    } else {
-      // Il y a une image : masquer empty, afficher bloc hôte
-      if (blocEmptyHote) blocEmptyHote.style.display = 'none';
-      if (blocHote) {
-        blocHote.style.display = 'flex';
-        
-        // NOUVEAU : Mettre à jour l'image dans le bloc avec l'ID "image-hote"
-        const imageHoteElement = document.getElementById('image-hote');
-        if (imageHoteElement) {
-          // Si c'est directement une image
-          if (imageHoteElement.tagName === 'IMG') {
-            imageHoteElement.src = hostImageUrl;
-            imageHoteElement.alt = 'Photo de l\'hôte';
-          } 
-          // Si c'est un conteneur avec une image dedans
-          else {
-            const imgElement = imageHoteElement.querySelector('img');
-            if (imgElement) {
-              imgElement.src = hostImageUrl;
-              imgElement.alt = 'Photo de l\'hôte';
-            }
+    // bloc-empty-hote est obsolète : on le cache s'il existe encore
+    if (blocEmptyHote) blocEmptyHote.style.display = 'none';
+    
+    // bloc-hote toujours visible (pour que le bouton d'ajout reste accessible)
+    if (blocHote) blocHote.style.display = 'flex';
+    
+    // Mettre à jour l'image si présente
+    if (hostImageUrl) {
+      const imageHoteElement = document.getElementById('image-hote');
+      if (imageHoteElement) {
+        if (imageHoteElement.tagName === 'IMG') {
+          imageHoteElement.src = hostImageUrl;
+          imageHoteElement.alt = 'Photo de l\'hôte';
+        } else {
+          const imgElement = imageHoteElement.querySelector('img');
+          if (imgElement) {
+            imgElement.src = hostImageUrl;
+            imgElement.alt = 'Photo de l\'hôte';
           }
         }
       }
@@ -4058,23 +4168,17 @@ countVisiblePlages(isEdit = false) {
   }
 
   
-  displayImageGallery() { 
-  // Récupérer les images depuis propertyData
+    displayImageGallery() { 
   const imagesGallery = this.propertyData.images_gallery || [];
 
-  // Gérer l'affichage du bloc empty ET du bloc photos
   const blocEmpty = document.getElementById('bloc-empty-photos');
   const blocPhotos = document.getElementById('bloc-photos-logement');
   
-  if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
-    // Pas d'images : afficher empty, masquer photos
-    if (blocEmpty) blocEmpty.style.display = 'flex';
-    if (blocPhotos) blocPhotos.style.display = 'none';
-  } else {
-    // Il y a des images : masquer empty, afficher photos
-    if (blocEmpty) blocEmpty.style.display = 'none';
-    if (blocPhotos) blocPhotos.style.display = 'block';
-  }
+  // bloc-empty-photos est obsolète : on le cache s'il existe encore
+  if (blocEmpty) blocEmpty.style.display = 'none';
+  
+  // bloc-photos-logement toujours visible (bouton d'ajout accessible même sans photos)
+  if (blocPhotos) blocPhotos.style.display = 'block';
   // Masquer tous les blocs image par défaut
   for (let i = 1; i <= 20; i++) {
     const imageBlock = document.getElementById(`image-block-${i}`);
@@ -6300,14 +6404,17 @@ displayEditableGallery() {
   const blocEmpty = document.getElementById('bloc-empty-photos');
   const blocPhotos = document.getElementById('bloc-photos-logement');
   
-  // Gérer l'affichage empty/photos
+  // bloc-empty-photos obsolète, bloc-photos toujours visible
+  if (blocEmpty) blocEmpty.style.display = 'none';
+  if (blocPhotos) blocPhotos.style.display = 'block';
+  
+  // Si pas de photos, on ne fait que masquer les blocs image — mais on reste dans la fonction
   if (!Array.isArray(this.currentImagesGallery) || this.currentImagesGallery.length === 0) {
-    if (blocEmpty) blocEmpty.style.display = 'flex';
-    if (blocPhotos) blocPhotos.style.display = 'none';
+    for (let i = 1; i <= 20; i++) {
+      const imageBlock = document.getElementById(`image-block-${i}`);
+      if (imageBlock) imageBlock.style.display = 'none';
+    }
     return;
-  } else {
-    if (blocEmpty) blocEmpty.style.display = 'none';
-    if (blocPhotos) blocPhotos.style.display = 'block';
   }
   
   // Masquer tous les blocs d'abord
@@ -7273,8 +7380,17 @@ setBlockState(element, isActive) {
       this.initSortable();
     }, 100);
 
-    // Mettre à jour l'état du bouton d'ajout de photos
+        // Mettre à jour l'état du bouton d'ajout de photos
     this.updateAddPhotosButtonState();
+    
+    // 🆕 Annuler la photo de profil staged si existante
+    if (this.stagedHostImage?.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.stagedHostImage.url);
+    }
+    this.stagedHostImage = null;
+    // Re-afficher la photo de profil originale
+    this.displayHostImage();
+    
     // Désactiver les boutons
     this.disableButtons();
   }
@@ -7629,7 +7745,7 @@ setBlockState(element, isActive) {
     console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
   }
 
-    // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+  // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
   try {
     if (this.currentImagesGallery.some(p => p._staged)) {
       this.showNotification('success', 'Envoi des photos en cours...');
@@ -7639,6 +7755,22 @@ setBlockState(element, isActive) {
     console.error('❌ Erreur upload photos :', err);
     this.showNotification('error', 'Échec de l\'envoi des photos : ' + err.message);
     return;
+  }
+  
+  // 🆕 Upload de la photo de profil si staged
+  let stagedHostUrl = null;
+  try {
+    if (this.stagedHostImage?._staged) {
+      this.showNotification('success', 'Envoi de la photo de profil...');
+      stagedHostUrl = await this.uploadStagedHostImage();
+    }
+  } catch (err) {
+    console.error('❌ Erreur upload photo profil :', err);
+    this.showNotification('error', 'Échec photo de profil : ' + err.message);
+    return;
+  }
+  if (stagedHostUrl) {
+    updates['image-hote'] = { url: stagedHostUrl };
   }
 
   // 🆕 NOUVEAU : Vérifier si les images ont changé
@@ -7773,6 +7905,19 @@ setBlockState(element, isActive) {
           setTimeout(() => this.initSortable(), 100);
         }
       }
+
+      // 🆕 Mettre à jour la photo de profil après save réussi
+            if (updates['image-hote']) {
+              const freshHostUrl = result.fieldData?.['image-hote']?.url 
+                || (typeof result.fieldData?.['image-hote'] === 'string' ? result.fieldData['image-hote'] : null)
+                || stagedHostUrl; // fallback sur l'URL temp
+              
+              if (freshHostUrl) {
+                this.propertyData.host_image = freshHostUrl;
+              }
+              this.stagedHostImage = null;
+              this.displayHostImage();
+            }
         
       // Désactiver les boutons
       this.disableButtons();
