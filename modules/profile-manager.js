@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.049 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.050 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -203,17 +203,48 @@ setupModifyButton(property, targetElement = document) {  // AJOUT du paramètre
   }
 }
 
-// 🆕 NOUVELLE MÉTHODE : Désactiver le bouton dans pending-none
-setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
+// 🆕 Désactiver le bouton de vérification selon deux critères :
+// 1. Champs obligatoires non remplis (status === 'pending-none')
+// 2. Photos incomplètes (< 3 photos logement OU pas de photo profil)
+setupDisableButton(property, targetElement = document) {
   const status = this.getPropertyStatus(property);
+  const disableButton = targetElement.querySelector('#button-disable');
+  const textInfoVerif = targetElement.querySelector('#texte-info-verif');
   
+  if (!disableButton) return;
+  
+  // Reset à l'état actif (au cas où setupDisableButton est rappelé après changement)
+  disableButton.style.pointerEvents = '';
+  disableButton.style.cursor = '';
+  disableButton.style.opacity = '';
+  
+  // Déterminer la raison du blocage éventuel
+  let blockReason = null;
   if (status === 'pending-none') {
-    const disableButton = targetElement.querySelector('#button-disable');
+    blockReason = 'fields';
+  } else if (property.photos_complete === false) {
+    blockReason = 'photos';
+  }
+  
+  if (blockReason) {
+    // Bouton désactivé
+    disableButton.style.pointerEvents = 'none';
+    disableButton.style.cursor = 'not-allowed';
+    disableButton.style.opacity = '0.5';
     
-    if (disableButton) {
-      // Désactiver le clic sans changer l'apparence
-      disableButton.style.pointerEvents = 'none';
-      disableButton.style.cursor = 'not-allowed';
+    // Message adapté
+    if (textInfoVerif) {
+      if (blockReason === 'fields') {
+        textInfoVerif.textContent = "Remplissez d'abord les champs obligatoires de votre logement avant d'accéder à la vérification.";
+      } else {
+        textInfoVerif.textContent = "Ajoutez au moins 3 photos de votre logement et une photo de profil avant d'accéder à la vérification.";
+      }
+      textInfoVerif.style.display = '';
+    }
+  } else {
+    // Bouton actif, pas de message bloquant
+    if (textInfoVerif) {
+      textInfoVerif.style.display = 'none';
     }
   }
 }
