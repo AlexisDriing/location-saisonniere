@@ -1,4 +1,4 @@
-// LOG production V1.51
+// LOG production V1.52
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1159,7 +1159,7 @@ validateRoomFields() {
    * 
    * À appeler après validateAllFields() ou validateRoomFields().
    */
-  categorizeErrors(configKey = 'validationConfig') {
+    categorizeErrors(configKey = 'validationConfig') {
     const empty = [];
     const format = [];
     const config = this[configKey];
@@ -1176,11 +1176,18 @@ validateRoomFields() {
       
       const fieldType = fieldConfig?.type;
       const value = this.getFieldValue(fieldId, fieldType);
-      const isEmpty = !value || 
-                     (Array.isArray(value) && value.length === 0) || 
-                     (typeof value === 'string' && value.trim() === '');
       
-      if (isEmpty) {
+      // 🆕 Considéré comme "non rempli" (équivalent à un état par défaut) :
+      // - chaîne vide, null, undefined
+      // - tableau vide
+      // - "0" ou 0 (placeholder numérique non encore édité par l'hôte)
+      const isUnfilled = !value || 
+                         value === 0 ||
+                         value === '0' ||
+                         (typeof value === 'string' && value.trim() === '') ||
+                         (Array.isArray(value) && value.length === 0);
+      
+      if (isUnfilled) {
         empty.push(fieldId);
       } else {
         format.push(fieldId);
