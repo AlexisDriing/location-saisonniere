@@ -1,4 +1,4 @@
-// LOG production V1.67 - chambres d'hôtes v1.065
+// LOG production V1.68 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -7659,16 +7659,25 @@ setBlockState(element, isActive) {
     }
   });
 
-    const currentStatus = this.propertyData.verification_status || 'pending-none';
+      const currentStatus = this.propertyData.verification_status || 'pending-none';
   if (currentStatus === 'pending-none') {
+    // 🆕 Vérifier que les photos sont complètes (3 logement + 1 profil)
+    // On compte aussi les photos staged qui seront uploadées juste avant le PATCH
+    const galleryCount = Array.isArray(this.currentImagesGallery) ? this.currentImagesGallery.length : 0;
+    const hasHostImage = !!(this.propertyData.host_image && String(this.propertyData.host_image).trim())
+                        || !!this.stagedHostImage?._staged;
+    const photosComplete = galleryCount >= 3 && hasHostImage;
+    
     if (isChambreHote) {
-      // Chambre d'hôtes : basculer seulement si au moins 1 chambre existe
-      if (this.roomsCount >= 1) {
+      // Chambre d'hôtes : basculer seulement si au moins 1 chambre existe ET photos OK
+      if (this.roomsCount >= 1 && photosComplete) {
         updates['verification_status'] = 'pending-verif';
       }
     } else {
-      // Logement entier : basculer directement
-      updates['verification_status'] = 'pending-verif';
+      // Logement entier : basculer si photos OK
+      if (photosComplete) {
+        updates['verification_status'] = 'pending-verif';
+      }
     }
   }
 
