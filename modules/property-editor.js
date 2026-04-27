@@ -1,4 +1,4 @@
-// LOG production V1.74 - chambres d'hôtes v1.065
+// LOG production V1.75 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3023,13 +3023,40 @@ setupRoomSaveButton() {
 }
 
 async saveRoomModifications() {
-  // Validation
-  if (this.validationManager && !this.validationManager.validateRoomFields()) {
-    this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+  // 🆕 Validation : 
+  // - champ vide → on laisse passer le save (sera complété plus tard)
+  // - valeur invalide → on bloque le save (data integrity)
+  let fieldsValid = true;
+  let hasFormatErrors = false;
+  let hasEmptyErrors = false;
+  
+  if (this.validationManager) {
+    fieldsValid = this.validationManager.validateRoomFields();
+    
+    if (!fieldsValid) {
+      const { empty, format } = this.validationManager.categorizeErrors('roomValidationConfig');
+      hasEmptyErrors = empty.length > 0;
+      hasFormatErrors = format.length > 0;
+    }
+  }
+  
+  // Si VALEURS INVALIDES : BLOQUER le save
+  if (hasFormatErrors) {
+    console.log('❌ Valeurs invalides détectées chambre - sauvegarde annulée');
+    this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+    
+    const { format } = this.validationManager.categorizeErrors('roomValidationConfig');
     setTimeout(() => {
-      this.validationManager.navigateToFirstError();
+      if (format[0]) {
+        this.validationManager.navigateToField(format[0]);
+      }
     }, 100);
     return;
+  }
+  
+  // Si seulement CHAMPS VIDES : on continue le save (mode brouillon)
+  if (hasEmptyErrors) {
+    console.log('⚠️ Champs vides chambre - sauvegarde en mode brouillon');
   }
   
   const updates = {};
@@ -3238,7 +3265,13 @@ async saveRoomModifications() {
       this.roomData.ical_urls = updatedIcalUrls;
       
       this.disableButtons();
-      this.showNotification('success', 'Modifications enregistrées avec succès !');
+      
+      // 🆕 Message de succès combiné (informe sur les champs restants si applicable)
+      if (hasEmptyErrors) {
+        this.showNotification('success', "Modifications enregistrées, il reste des champs à remplir pour activer la vérification.");
+      } else {
+        this.showNotification('success', 'Modifications enregistrées avec succès !');
+      }
     } else {
       throw new Error(result.error || 'Erreur lors de la sauvegarde');
     }
