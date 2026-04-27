@@ -1,4 +1,4 @@
-// LOG production V1.50
+// LOG production V1.51
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1139,7 +1139,7 @@ validateRoomFields() {
         }
         return [];
         
-      default:
+            default:
         const field = document.getElementById(fieldId);
         if (!field) return '';
         
@@ -1150,6 +1150,44 @@ validateRoomFields() {
         
         return field.value;
     }
+  }
+
+  /**
+   * Catégorise les erreurs présentes dans this.errors :
+   * - empty  : champ simplement vide (autorisé au save)
+   * - format : champ rempli mais valeur invalide (bloque le save)
+   * 
+   * À appeler après validateAllFields() ou validateRoomFields().
+   */
+  categorizeErrors(configKey = 'validationConfig') {
+    const empty = [];
+    const format = [];
+    const config = this[configKey];
+    
+    for (const [fieldId, _errorMsg] of this.errors.entries()) {
+      // Trouver la config du champ dans le bon tab
+      let fieldConfig = null;
+      for (const tabKey in config) {
+        if (config[tabKey]?.fields && config[tabKey].fields[fieldId]) {
+          fieldConfig = config[tabKey].fields[fieldId];
+          break;
+        }
+      }
+      
+      const fieldType = fieldConfig?.type;
+      const value = this.getFieldValue(fieldId, fieldType);
+      const isEmpty = !value || 
+                     (Array.isArray(value) && value.length === 0) || 
+                     (typeof value === 'string' && value.trim() === '');
+      
+      if (isEmpty) {
+        empty.push(fieldId);
+      } else {
+        format.push(fieldId);
+      }
+    }
+    
+    return { empty, format };
   }
 
   // Validation spéciale des prix plateformes
