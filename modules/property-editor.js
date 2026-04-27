@@ -1,4 +1,4 @@
-// LOG production V1.73 - chambres d'hôtes v1.065
+// LOG production V1.74 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -809,17 +809,20 @@ async uploadStagedPhotos(gallery, type) {
 // ================================
 
 setupHostPhotoButton() {
-  const button = document.getElementById('button-change-host-photo');
-  if (!button) return;
-  
-  // Cloner pour retirer tout ancien listener (Tally)
-  const newButton = button.cloneNode(true);
-  button.parentNode.replaceChild(newButton, button);
-  
-  newButton.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    this.handleProfilePhotoSelection();
+  // 2 boutons possibles : "Ajouter" (si pas de photo) et "Modifier" (si photo présente)
+  ['button-add-host-photo', 'button-change-host-photo'].forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    
+    // Cloner pour retirer tout ancien listener
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+    
+    newButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleProfilePhotoSelection();
+    });
   });
 }
 
@@ -4143,7 +4146,7 @@ countVisiblePlages(isEdit = false) {
   return count;
 }
 
-   displayHostImage() {    
+  displayHostImage() {    
     const hostImageUrl = this.propertyData.host_image || '';
     const blocEmptyHote = document.getElementById('bloc-empty-hote');
     const blocHote = document.getElementById('bloc-hote');
@@ -4151,11 +4154,19 @@ countVisiblePlages(isEdit = false) {
     // bloc-empty-hote est obsolète : on le cache s'il existe encore
     if (blocEmptyHote) blocEmptyHote.style.display = 'none';
     
-    // bloc-hote toujours visible (pour que le bouton d'ajout reste accessible)
+    // bloc-hote toujours visible (pour que les boutons restent accessibles)
     if (blocHote) blocHote.style.display = 'flex';
     
+    const hasPhoto = !!(hostImageUrl && String(hostImageUrl).trim());
+    
+    // 🆕 Afficher le bon bouton selon l'état
+    const addButton = document.getElementById('button-add-host-photo');
+    const changeButton = document.getElementById('button-change-host-photo');
+    if (addButton) addButton.style.display = hasPhoto ? 'none' : '';
+    if (changeButton) changeButton.style.display = hasPhoto ? '' : 'none';
+    
     // Mettre à jour l'image si présente
-    if (hostImageUrl) {
+    if (hasPhoto) {
       const imageHoteElement = document.getElementById('image-hote');
       if (imageHoteElement) {
         if (imageHoteElement.tagName === 'IMG') {
@@ -4173,7 +4184,7 @@ countVisiblePlages(isEdit = false) {
   }
 
   
-    displayImageGallery() { 
+  displayImageGallery() { 
   const imagesGallery = this.propertyData.images_gallery || [];
 
   const blocEmpty = document.getElementById('bloc-empty-photos');
