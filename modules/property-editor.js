@@ -1,4 +1,4 @@
-// LOG production V1.72 - chambres d'hôtes v1.065
+// LOG production V1.73 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -144,6 +144,12 @@ class PropertyEditor {
     this.checkDefaultRoomIcalWarning();
   } else {
     this.checkDefaultIcalWarning();
+  }
+  
+  // 🆕 Validation silencieuse au chargement pour afficher les pastilles
+  // d'erreur sur les onglets et les champs (même timing que checkDefaultIcalWarning)
+  if (!this.isRoomEdit) {
+    this.validationManager.validateAllFields();
   }
     
   window.propertyEditor = this;
@@ -3688,24 +3694,6 @@ setupTimeFormatters() {
     this.displayImageGallery();
     this.displayHostImage();
     this.setupHostPhotoButton();
-
-    // 🆕 Validation silencieuse au chargement pour afficher les pastilles
-    // d'erreur sur les onglets. On attend que window.load soit déclenché
-    // pour s'assurer que tous les prefills/scripts sont terminés.
-    if (this.validationManager) {
-      const triggerValidation = () => {
-        // Petit délai supplémentaire pour les prefills async
-        setTimeout(() => {
-          this.validationManager.validateAllFields();
-        }, 300);
-      };
-      
-      if (document.readyState === 'complete') {
-        triggerValidation();
-      } else {
-        window.addEventListener('load', triggerValidation, { once: true });
-      }
-    }
 
     // 🆕 Appliquer l'opacité initiale après un court délai
     setTimeout(() => {
@@ -7437,6 +7425,15 @@ setBlockState(element, isActive) {
   if (hasFormatErrors) {
     console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
     this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+    
+    // Scroll vers le 1er champ avec valeur invalide (pas vers les champs vides)
+    const { format } = this.validationManager.categorizeErrors('validationConfig');
+    setTimeout(() => {
+      if (format[0]) {
+        this.validationManager.navigateToField(format[0]);
+      }
+    }, 100);
+    
     return; // BLOQUE le save
   }
   
