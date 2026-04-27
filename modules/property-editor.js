@@ -1,4 +1,4 @@
-// LOG production V1.69 - chambres d'hôtes v1.065
+// LOG production V1.70 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -7397,19 +7397,41 @@ setBlockState(element, isActive) {
 
     async saveModifications() {
 
-  // 🆕 Validation : on signale les erreurs mais on ne bloque PLUS le save
-  // (le passage en pending-verif sera bloqué plus bas si validation invalide)
+  // 🆕 Validation : 
+  // - champ vide  → on laisse passer le save (sera complété plus tard)
+  // - valeur invalide → on bloque le save (data integrity)
   let fieldsValid = true;
+  let hasFormatErrors = false;
+  let hasEmptyErrors = false;
+  
   if (this.validationManager) {
     fieldsValid = this.validationManager.validateAllFields();
+    
     if (!fieldsValid) {
-      console.log('⚠️ Validation : certains champs incomplets, sauvegarde en mode brouillon');
-      this.showNotification('error', "Certains champs sont incomplets, vous pourrez les compléter plus tard pour accéder à la vérification.");
-      // Naviguer vers la première erreur pour info (mais on ne return pas)
-      setTimeout(() => {
-        this.validationManager.navigateToFirstError();
-      }, 100);
+      const { empty, format } = this.validationManager.categorizeErrors('validationConfig');
+      hasEmptyErrors = empty.length > 0;
+      hasFormatErrors = format.length > 0;
     }
+  }
+  
+  // Si VALEURS INVALIDES (mauvais format, hors plage…) : BLOQUER le save comme avant
+  if (hasFormatErrors) {
+    console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
+    this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+    setTimeout(() => {
+      this.validationManager.navigateToFirstError();
+    }, 100);
+    return; // BLOQUE le save
+  }
+  
+  // Si seulement CHAMPS VIDES : on signale mais on continue (mode brouillon)
+  if (hasEmptyErrors) {
+    console.log('⚠️ Champs vides détectés - sauvegarde en mode brouillon');
+    this.showNotification('error', "Certains champs sont incomplets — vous pourrez les remplir plus tard pour accéder à la vérification.");
+    setTimeout(() => {
+      this.validationManager.navigateToFirstError();
+    }, 100);
+    // PAS de return : on continue le save
   }
     
  // 🆕 NOUVEAU : Sauvegarder la valeur brute AVANT le blur
