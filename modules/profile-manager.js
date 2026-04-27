@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.051 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.052 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -491,14 +491,18 @@ displayChambreHoteElements(property, targetElement = document) {
       if (property.parent_fields_complete !== true) {
         buttonAdd.style.opacity = '0.5';
         buttonAdd.style.cursor = 'not-allowed';
-        buttonAdd.style.pointerEvents = 'none';
+        // 🆕 On ne met PAS pointerEvents:none pour que le tooltip s'affiche au hover
+        buttonAdd.style.pointerEvents = '';
+        buttonAdd.setAttribute('title', "Remplissez d'abord les champs obligatoires de votre logement avant d'ajouter une chambre.");
       } else {
         buttonAdd.style.opacity = '';
         buttonAdd.style.cursor = '';
         buttonAdd.style.pointerEvents = '';
+        buttonAdd.removeAttribute('title');
       }
     } else {
       buttonAdd.style.display = 'none';
+      buttonAdd.removeAttribute('title');
     }
   }
 
