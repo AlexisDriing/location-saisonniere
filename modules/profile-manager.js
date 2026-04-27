@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.050 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.051 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -213,39 +213,35 @@ setupDisableButton(property, targetElement = document) {
   
   if (!disableButton) return;
   
-  // Reset à l'état actif (au cas où setupDisableButton est rappelé après changement)
+  // Reset
   disableButton.style.pointerEvents = '';
   disableButton.style.cursor = '';
   disableButton.style.opacity = '';
   
-  // Déterminer la raison du blocage éventuel
-  let blockReason = null;
-  if (status === 'pending-none') {
-    blockReason = 'fields';
-  } else if (property.photos_complete === false) {
-    blockReason = 'photos';
+  // Si pas en pending-none, le bouton n'a pas besoin d'être désactivé
+  // (le passage à pending-verif n'a lieu que quand TOUT est complet)
+  if (status !== 'pending-none') {
+    if (textInfoVerif) textInfoVerif.style.display = 'none';
+    return;
   }
   
-  if (blockReason) {
-    // Bouton désactivé
-    disableButton.style.pointerEvents = 'none';
-    disableButton.style.cursor = 'not-allowed';
-    disableButton.style.opacity = '0.5';
+  // En pending-none : bouton désactivé
+  disableButton.style.pointerEvents = 'none';
+  disableButton.style.cursor = 'not-allowed';
+  disableButton.style.opacity = '0.5';
+  
+  // Message adapté selon ce qui manque (priorité aux photos car visuellement marquant)
+  if (textInfoVerif) {
+    const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
+    const hasHostImage = !!(property.host_image && String(property.host_image).trim());
+    const photosComplete = galleryCount >= 3 && hasHostImage;
     
-    // Message adapté
-    if (textInfoVerif) {
-      if (blockReason === 'fields') {
-        textInfoVerif.textContent = "Remplissez d'abord les champs obligatoires de votre logement avant d'accéder à la vérification.";
-      } else {
-        textInfoVerif.textContent = "Ajoutez au moins 3 photos de votre logement et une photo de profil avant d'accéder à la vérification.";
-      }
-      textInfoVerif.style.display = '';
+    if (!photosComplete) {
+      textInfoVerif.textContent = "Ajoutez au moins 3 photos de votre logement et une photo de profil avant d'accéder à la vérification.";
+    } else {
+      textInfoVerif.textContent = "Remplissez d'abord les champs obligatoires de votre logement avant d'accéder à la vérification.";
     }
-  } else {
-    // Bouton actif, pas de message bloquant
-    if (textInfoVerif) {
-      textInfoVerif.style.display = 'none';
-    }
+    textInfoVerif.style.display = '';
   }
 }
 
