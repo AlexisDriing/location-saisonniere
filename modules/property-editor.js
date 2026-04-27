@@ -1,4 +1,4 @@
-// LOG production V1.71 - chambres d'hôtes v1.065
+// LOG production V1.72 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3690,11 +3690,21 @@ setupTimeFormatters() {
     this.setupHostPhotoButton();
 
     // 🆕 Validation silencieuse au chargement pour afficher les pastilles
-    // d'erreur sur les onglets (sans notification ni scroll)
+    // d'erreur sur les onglets. On attend que window.load soit déclenché
+    // pour s'assurer que tous les prefills/scripts sont terminés.
     if (this.validationManager) {
-      setTimeout(() => {
-        this.validationManager.validateAllFields();
-      }, 200);
+      const triggerValidation = () => {
+        // Petit délai supplémentaire pour les prefills async
+        setTimeout(() => {
+          this.validationManager.validateAllFields();
+        }, 300);
+      };
+      
+      if (document.readyState === 'complete') {
+        triggerValidation();
+      } else {
+        window.addEventListener('load', triggerValidation, { once: true });
+      }
     }
 
     // 🆕 Appliquer l'opacité initiale après un court délai
@@ -7421,13 +7431,12 @@ setBlockState(element, isActive) {
     }
   }
   
-    // Si VALEURS INVALIDES (mauvais format, hors plage…) : BLOQUER le save comme avant
+    // Si VALEURS INVALIDES (mauvais format, hors plage…) : BLOQUER le save
+  // Pas de scroll : l'hôte vient de taper, il sait où il est, et les pastilles
+  // rouges sur les onglets/champs l'informent visuellement
   if (hasFormatErrors) {
     console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
     this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
-    setTimeout(() => {
-      this.validationManager.navigateToFirstError();
-    }, 100);
     return; // BLOQUE le save
   }
   
