@@ -1,4 +1,4 @@
-// LOG production V1.75 - chambres d'hôtes v1.065
+// LOG production V1.76 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -221,6 +221,12 @@ async setupParentChambreHoteDisplay() {
     if (response.ok) {
       const data = await response.json();
       this.roomsCount = (data.rooms || []).length;
+      // 🆕 Au moins 1 chambre est complète si elle a description + photo
+      this.roomsComplete = (data.rooms || []).some(r => {
+        const hasDesc = !!(r.description && String(r.description).trim());
+        const hasPhotos = Array.isArray(r.photos) && r.photos.length >= 1;
+        return hasDesc && hasPhotos;
+      });
     }
   } catch (error) {
     console.error('⚠️ Erreur chargement nombre chambres:', error);
@@ -7453,17 +7459,39 @@ setBlockState(element, isActive) {
   let hasFormatErrors = false;
   let hasEmptyErrors = false;
   
-  if (this.validationManager) {
+    if (this.validationManager) {
     fieldsValid = this.validationManager.validateAllFields();
     
     if (!fieldsValid) {
       const { empty, format } = this.validationManager.categorizeErrors('validationConfig');
       hasEmptyErrors = empty.length > 0;
       hasFormatErrors = format.length > 0;
+      
+      // 🆕 "Sticky required" : un champ obligatoire qui était rempli avant et est vide maintenant
+      // est traité comme une erreur de format (bloquant)
+      const stickyRegression = empty.some(fieldId => {
+        let fieldConfig = null;
+        for (const tab in this.validationManager.validationConfig) {
+          if (this.validationManager.validationConfig[tab]?.fields?.[fieldId]) {
+            fieldConfig = this.validationManager.validationConfig[tab].fields[fieldId];
+            break;
+          }
+        }
+        if (!fieldConfig?.required) return false;
+        
+        // Mapping fieldId → key dans initialValues : "name-input" → "name", "description-logement-input" → "description_logement"
+        const dataKey = fieldId.replace(/-input$/, '').replace(/-/g, '_');
+        const initialValue = this.initialValues[dataKey];
+        return initialValue && String(initialValue).trim() !== '';
+      });
+      
+      if (stickyRegression) {
+        hasFormatErrors = true; // bloquer le save
+      }
     }
   }
   
-    // Si VALEURS INVALIDES (mauvais format, hors plage…) : BLOQUER le save
+  // Si VALEURS INVALIDES : BLOQUER le save
   // Pas de scroll : l'hôte vient de taper, il sait où il est, et les pastilles
   // rouges sur les onglets/champs l'informent visuellement
   if (hasFormatErrors) {
@@ -7747,8 +7775,8 @@ setBlockState(element, isActive) {
     
     // 🆕 On utilise fieldsValid capturé au début de saveModifications
     if (isChambreHote) {
-      // Chambre d'hôtes : champs valides + au moins 1 chambre + photos OK
-      if (fieldsValid && this.roomsCount >= 1 && photosComplete) {
+      // Chambre d'hôtes : champs OK + au moins 1 chambre COMPLÈTE + photos OK
+      if (this.roomsCount >= 1 && this.roomsComplete && photosComplete && fieldsValid) {
         updates['verification_status'] = 'pending-verif';
       }
     } else {
