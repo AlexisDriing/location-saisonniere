@@ -1,4 +1,4 @@
-// LOG production V1.52
+// LOG production V1.53
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1815,9 +1815,29 @@ validateRoomFields() {
       } else {
         this.scrollToField(field);
       }
-    } else {
+        } else {
       this.scrollToField(field);
     }
+  }
+  
+  // 🆕 Naviguer vers un champ spécifique (changement d'onglet si besoin)
+  navigateToField(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    const tabPane = field.closest('.w-tab-pane');
+    if (tabPane) {
+      const tabName = tabPane.getAttribute('data-w-tab');
+      const tabLink = document.querySelector(`.tab-button[data-w-tab="${tabName}"]`);
+      
+      if (tabLink && !tabLink.classList.contains('w--current')) {
+        tabLink.click();
+        setTimeout(() => this.scrollToField(field), 200);
+        return;
+      }
+    }
+    
+    this.scrollToField(field);
   }
   
   // Scroll simple vers le champ
