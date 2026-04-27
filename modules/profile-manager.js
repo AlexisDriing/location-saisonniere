@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.052 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.053 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -219,7 +219,6 @@ setupDisableButton(property, targetElement = document) {
   disableButton.style.opacity = '';
   
   // Si pas en pending-none, le bouton n'a pas besoin d'être désactivé
-  // (le passage à pending-verif n'a lieu que quand TOUT est complet)
   if (status !== 'pending-none') {
     if (textInfoVerif) textInfoVerif.style.display = 'none';
     return;
@@ -230,16 +229,13 @@ setupDisableButton(property, targetElement = document) {
   disableButton.style.cursor = 'not-allowed';
   disableButton.style.opacity = '0.5';
   
-  // Message adapté selon ce qui manque (priorité aux photos car visuellement marquant)
+  // 🆕 Message unique simplifié, adapté au type de logement
   if (textInfoVerif) {
-    const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
-    const hasHostImage = !!(property.host_image && String(property.host_image).trim());
-    const photosComplete = galleryCount >= 3 && hasHostImage;
-    
-    if (!photosComplete) {
-      textInfoVerif.textContent = "Ajoutez au moins 3 photos de votre logement et une photo de profil avant d'accéder à la vérification.";
+    const isChambreHote = property.mode_location === "Chambre d'hôtes";
+    if (isChambreHote) {
+      textInfoVerif.textContent = "Complétez les champs, photos et au moins une chambre pour activer la vérification.";
     } else {
-      textInfoVerif.textContent = "Remplissez d'abord les champs obligatoires de votre logement avant d'accéder à la vérification.";
+      textInfoVerif.textContent = "Complétez les champs obligatoires et ajoutez vos photos pour activer la vérification.";
     }
     textInfoVerif.style.display = '';
   }
