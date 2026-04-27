@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.053 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.054 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -229,10 +229,18 @@ setupDisableButton(property, targetElement = document) {
   disableButton.style.cursor = 'not-allowed';
   disableButton.style.opacity = '0.5';
   
-  // 🆕 Message unique simplifié, adapté au type de logement
+    // 🆕 Message adapté : cas spécial "il ne manque que la photo de profil"
   if (textInfoVerif) {
     const isChambreHote = property.mode_location === "Chambre d'hôtes";
-    if (isChambreHote) {
+    const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
+    const hasHostImage = !!(property.host_image && String(property.host_image).trim());
+    const photosLogementOK = galleryCount >= 3;
+    const fieldsOK = property.parent_fields_complete === true 
+                    || (!isChambreHote && property.name && property.address && property.host_name);
+    
+    if (fieldsOK && photosLogementOK && !hasHostImage && (!isChambreHote || (property.rooms_complete && property.rooms?.length >= 1))) {
+      textInfoVerif.textContent = "Il vous manque juste une photo de profil pour activer la vérification.";
+    } else if (isChambreHote) {
       textInfoVerif.textContent = "Complétez les champs, photos et au moins une chambre pour activer la vérification.";
     } else {
       textInfoVerif.textContent = "Complétez les champs obligatoires et ajoutez vos photos pour activer la vérification.";
@@ -483,13 +491,27 @@ displayChambreHoteElements(property, targetElement = document) {
     if (status === 'pending-none' && !hasRooms) {
       buttonAdd.style.display = 'flex';
       
-      // Désactiver si les champs parent ne sont pas complets
+      // Calcul des conditions de blocage
+      const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
+      const hasHostImage = !!(property.host_image && String(property.host_image).trim());
+      const photosComplete = galleryCount >= 3 && hasHostImage;
+      
+      let blockingReason = null;
       if (property.parent_fields_complete !== true) {
+        blockingReason = 'fields';
+      } else if (!photosComplete) {
+        blockingReason = 'photos';
+      }
+      
+      if (blockingReason) {
         buttonAdd.style.opacity = '0.5';
         buttonAdd.style.cursor = 'not-allowed';
-        // 🆕 On ne met PAS pointerEvents:none pour que le tooltip s'affiche au hover
         buttonAdd.style.pointerEvents = '';
-        buttonAdd.setAttribute('title', "Remplissez d'abord les champs obligatoires de votre logement avant d'ajouter une chambre.");
+        if (blockingReason === 'fields') {
+          buttonAdd.setAttribute('title', "Remplissez d'abord les champs obligatoires de votre logement avant d'ajouter une chambre.");
+        } else {
+          buttonAdd.setAttribute('title', "Ajoutez d'abord vos photos (logement et profil) avant d'ajouter une chambre.");
+        }
       } else {
         buttonAdd.style.opacity = '';
         buttonAdd.style.cursor = '';
@@ -564,6 +586,12 @@ setupRoomButtons(property, targetElement) {
     buttonAdd.addEventListener('click', (e) => {
       e.preventDefault();
       if (property.parent_fields_complete !== true) {
+        return;
+      }
+      // 🆕 Aussi bloquer si photos non complètes
+      const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
+      const hasHostImage = !!(property.host_image && String(property.host_image).trim());
+      if (!(galleryCount >= 3 && hasHostImage)) {
         return;
       }
       this.openAddRoomModal(property);
