@@ -1,4 +1,4 @@
-// LOG production V1.70 - chambres d'hôtes v1.065
+// LOG production V1.71 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3684,11 +3684,18 @@ setupTimeFormatters() {
 
     // Pré-remplir les autres champs simples
     //this.prefillSimpleFields();
-    
     this.setupFieldListeners();
     this.displayImageGallery();
     this.displayHostImage();
     this.setupHostPhotoButton();
+
+    // 🆕 Validation silencieuse au chargement pour afficher les pastilles
+    // d'erreur sur les onglets (sans notification ni scroll)
+    if (this.validationManager) {
+      setTimeout(() => {
+        this.validationManager.validateAllFields();
+      }, 200);
+    }
 
     // 🆕 Appliquer l'opacité initiale après un court délai
     setTimeout(() => {
@@ -7414,7 +7421,7 @@ setBlockState(element, isActive) {
     }
   }
   
-  // Si VALEURS INVALIDES (mauvais format, hors plage…) : BLOQUER le save comme avant
+    // Si VALEURS INVALIDES (mauvais format, hors plage…) : BLOQUER le save comme avant
   if (hasFormatErrors) {
     console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
     this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
@@ -7424,14 +7431,10 @@ setBlockState(element, isActive) {
     return; // BLOQUE le save
   }
   
-  // Si seulement CHAMPS VIDES : on signale mais on continue (mode brouillon)
+  // Si seulement CHAMPS VIDES : on continue le save sans notification ni scroll
+  // (les pastilles rouges sur les onglets restent visibles pour informer)
   if (hasEmptyErrors) {
     console.log('⚠️ Champs vides détectés - sauvegarde en mode brouillon');
-    this.showNotification('error', "Certains champs sont incomplets — vous pourrez les remplir plus tard pour accéder à la vérification.");
-    setTimeout(() => {
-      this.validationManager.navigateToFirstError();
-    }, 100);
-    // PAS de return : on continue le save
   }
     
  // 🆕 NOUVEAU : Sauvegarder la valeur brute AVANT le blur
@@ -7953,11 +7956,15 @@ setBlockState(element, isActive) {
               this.displayHostImage();
             }
         
-      // Désactiver les boutons
+            // Désactiver les boutons
       this.disableButtons();
       
-      // Message de succès
-      this.showNotification('success', 'Modifications enregistrées avec succès !');        
+      // 🆕 Message de succès combiné (informe sur les champs restants si applicable)
+      if (hasEmptyErrors) {
+        this.showNotification('success', "Modifications enregistrées, il reste des champs à remplir pour activer la vérification.");
+      } else {
+        this.showNotification('success', 'Modifications enregistrées avec succès !');
+      }
         
       } else {
         throw new Error(result.error || 'Erreur lors de la sauvegarde');
