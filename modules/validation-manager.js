@@ -1,4 +1,4 @@
-// LOG production V1.53
+// LOG production V1.54
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1012,7 +1012,7 @@ validateRoomFields() {
     return !hasError;
   }
 
-  validateLienPlateforme(fieldId) {
+    validateLienPlateforme(fieldId) {
     const input = document.getElementById(fieldId);
     if (!input) return true;
     
@@ -1020,28 +1020,36 @@ validateRoomFields() {
     
     if (!value) {
       this.hideFieldError(fieldId);
+      this.errors.delete(fieldId);
       return true;
     }
     
     const urlPattern = /^https?:\/\/.+/i;
     if (!urlPattern.test(value)) {
-      this.showFieldError(fieldId, "Le lien doit être une URL valide (commençant par https://)");
+      const msg = "Le lien doit être une URL valide (commençant par https://)";
+      this.showFieldError(fieldId, msg);
+      this.errors.set(fieldId, msg);
       return false;
     }
     
     if (fieldId === 'lien-airbnb-input') {
       if (!/airbnb/i.test(value)) {
-        this.showFieldError(fieldId, "L'URL doit être un lien Airbnb");
+        const msg = "L'URL doit être un lien Airbnb";
+        this.showFieldError(fieldId, msg);
+        this.errors.set(fieldId, msg);
         return false;
       }
     } else if (fieldId === 'lien-booking-input') {
       if (!/booking/i.test(value)) {
-        this.showFieldError(fieldId, "L'URL doit être un lien Booking");
+        const msg = "L'URL doit être un lien Booking";
+        this.showFieldError(fieldId, msg);
+        this.errors.set(fieldId, msg);
         return false;
       }
     }
     
     this.hideFieldError(fieldId);
+    this.errors.delete(fieldId);
     return true;
   }
   
