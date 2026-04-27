@@ -1,4 +1,4 @@
-// LOG production V1.68 - chambres d'hôtes v1.065
+// LOG production V1.69 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -7395,18 +7395,21 @@ setBlockState(element, isActive) {
     this.disableButtons();
   }
 
-  async saveModifications() {
+    async saveModifications() {
 
-  if (this.validationManager && !this.validationManager.validateAllFields()) {
-    console.log('❌ Validation échouée - Sauvegarde annulée');
-    this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
-    
-    // Naviguer vers la première erreur
-    setTimeout(() => {
-      this.validationManager.navigateToFirstError();
-    }, 100);
-    
-    return;
+  // 🆕 Validation : on signale les erreurs mais on ne bloque PLUS le save
+  // (le passage en pending-verif sera bloqué plus bas si validation invalide)
+  let fieldsValid = true;
+  if (this.validationManager) {
+    fieldsValid = this.validationManager.validateAllFields();
+    if (!fieldsValid) {
+      console.log('⚠️ Validation : certains champs incomplets, sauvegarde en mode brouillon');
+      this.showNotification('error', "Certains champs sont incomplets, vous pourrez les compléter plus tard pour accéder à la vérification.");
+      // Naviguer vers la première erreur pour info (mais on ne return pas)
+      setTimeout(() => {
+        this.validationManager.navigateToFirstError();
+      }, 100);
+    }
   }
     
  // 🆕 NOUVEAU : Sauvegarder la valeur brute AVANT le blur
@@ -7662,20 +7665,20 @@ setBlockState(element, isActive) {
       const currentStatus = this.propertyData.verification_status || 'pending-none';
   if (currentStatus === 'pending-none') {
     // 🆕 Vérifier que les photos sont complètes (3 logement + 1 profil)
-    // On compte aussi les photos staged qui seront uploadées juste avant le PATCH
     const galleryCount = Array.isArray(this.currentImagesGallery) ? this.currentImagesGallery.length : 0;
     const hasHostImage = !!(this.propertyData.host_image && String(this.propertyData.host_image).trim())
                         || !!this.stagedHostImage?._staged;
     const photosComplete = galleryCount >= 3 && hasHostImage;
     
+    // 🆕 On utilise fieldsValid capturé au début de saveModifications
     if (isChambreHote) {
-      // Chambre d'hôtes : basculer seulement si au moins 1 chambre existe ET photos OK
-      if (this.roomsCount >= 1 && photosComplete) {
+      // Chambre d'hôtes : champs valides + au moins 1 chambre + photos OK
+      if (fieldsValid && this.roomsCount >= 1 && photosComplete) {
         updates['verification_status'] = 'pending-verif';
       }
     } else {
-      // Logement entier : basculer si photos OK
-      if (photosComplete) {
+      // Logement entier : champs valides + photos OK
+      if (fieldsValid && photosComplete) {
         updates['verification_status'] = 'pending-verif';
       }
     }
