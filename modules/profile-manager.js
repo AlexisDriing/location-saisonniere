@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.056 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.057 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -519,6 +519,7 @@ displayChambreHoteElements(property, targetElement = document) {
           child.style.pointerEvents = '';
         });
       }
+    }
   }
 
   
