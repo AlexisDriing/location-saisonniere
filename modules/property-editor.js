@@ -1,4 +1,4 @@
-// LOG production V1.77 - chambres d'hôtes v1.065
+// LOG production V1.78 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -7506,8 +7506,77 @@ setBlockState(element, isActive) {
       hasEmptyErrors = empty.length > 0;
       hasFormatErrors = format.length > 0;
       
-      // 🆕 "Sticky required" : un champ obligatoire qui était rempli avant et est vide maintenant
+            // 🆕 "Sticky required" : un champ obligatoire qui était rempli avant et est vide maintenant
       // est traité comme une erreur de format (bloquant)
+      const wasFieldPreviouslyFilled = (fieldId) => {
+        // Champs composés : adresse (ville, pays, rue) → vérifier address global
+        if (['ville-input', 'pays-input', 'rue-input'].includes(fieldId)) {
+          return !!(this.initialValues.address && String(this.initialValues.address).trim());
+        }
+        
+        // Champs composés : horaires → vérifier horaires_arrivee_depart global
+        if (['heure-arrivee-input', 'heure-arrivee-debut-input', 'heure-arrivee-fin-input', 'heure-depart-input'].includes(fieldId)) {
+          return !!(this.initialValues.horaires_arrivee_depart && String(this.initialValues.horaires_arrivee_depart).trim());
+        }
+        
+        // Champs dans pricingData
+        if (fieldId === 'default-price-input') {
+          return (this.propertyData?.pricing_data?.defaultPricing?.price || 0) > 0;
+        }
+        if (fieldId === 'default-min-nights-input') {
+          return (this.propertyData?.pricing_data?.defaultPricing?.minNights || 0) > 0;
+        }
+        if (fieldId === 'voyageurs-input') {
+          return (this.propertyData?.pricing_data?.capacity || 0) > 0;
+        }
+        if (fieldId === 'cleaning-option') {
+          const c = this.propertyData?.pricing_data?.cleaning;
+          return !!(c && (c.included === true || c.included === false || c.optional === true));
+        }
+        
+        // Arrays (modes paiement)
+        if (fieldId === 'payment-methods') {
+          return Array.isArray(this.initialValues.mode_paiement) && this.initialValues.mode_paiement.length > 0;
+        }
+        
+        // Radio buttons
+        if (fieldId === 'mode-location') {
+          return !!(this.initialValues.mode_location && String(this.initialValues.mode_location).trim());
+        }
+        if (fieldId === 'cancellation-policy') {
+          return !!(this.initialValues.conditions_annulation && String(this.initialValues.conditions_annulation).trim());
+        }
+        
+        // Mapping explicite pour les champs simples
+        const simpleMapping = {
+          'name-input': 'name',
+          'description-logement-input': 'description_logement',
+          'description-alentours-input': 'description_alentours',
+          'code-enregistrement-input': 'code_enregistrement',
+          'site-internet-input': 'site_internet',
+          'inclus-reservation-input': 'inclus_reservation',
+          'hote-input': 'host_name',
+          'email-input': 'email',
+          'telephone-input': 'telephone',
+          'annonce-airbnb-input': 'annonce_airbnb',
+          'annonce-booking-input': 'annonce_booking',
+          'annonce-gites-input': 'annonce_gites',
+          'page-google': 'page_google',
+          'cadeaux-input': 'cadeaux',
+          'conditions-annulation-input': 'conditions_annulation',
+        };
+        
+        if (simpleMapping[fieldId]) {
+          const value = this.initialValues[simpleMapping[fieldId]];
+          return !!(value && String(value).trim());
+        }
+        
+        // Fallback heuristique pour cas non listés
+        const dataKey = fieldId.replace(/-input$/, '').replace(/-/g, '_');
+        const value = this.initialValues[dataKey];
+        return !!(value && String(value).trim());
+      };
+      
       const stickyRegression = empty.some(fieldId => {
         let fieldConfig = null;
         for (const tab in this.validationManager.validationConfig) {
@@ -7517,11 +7586,7 @@ setBlockState(element, isActive) {
           }
         }
         if (!fieldConfig?.required) return false;
-        
-        // Mapping fieldId → key dans initialValues : "name-input" → "name", "description-logement-input" → "description_logement"
-        const dataKey = fieldId.replace(/-input$/, '').replace(/-/g, '_');
-        const initialValue = this.initialValues[dataKey];
-        return initialValue && String(initialValue).trim() !== '';
+        return wasFieldPreviouslyFilled(fieldId);
       });
       
       if (stickyRegression) {
