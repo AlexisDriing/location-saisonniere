@@ -1,4 +1,4 @@
-// LOG production V1.76 - chambres d'hôtes v1.065
+// LOG production V1.77 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -137,11 +137,13 @@ class PropertyEditor {
       }
     }
   }
-    this.validationManager = new ValidationManager(this);
+      this.validationManager = new ValidationManager(this);
   
   // 🆕 Validation silencieuse en PREMIER (sinon elle efface les warnings)
   if (!this.isRoomEdit) {
     this.validationManager.validateAllFields();
+    // Pastilles photos (tab 2 + tab 5)
+    this.updatePhotoErrorPastilles();
   }
   
   // Warning iCal APRÈS la validation, pour qu'il ne soit pas effacé
@@ -4219,6 +4221,38 @@ countVisiblePlages(isEdit = false) {
         }
       }
     }
+      // 🆕 Mettre à jour les pastilles photos
+  if (typeof this.updatePhotoErrorPastilles === 'function') {
+    this.updatePhotoErrorPastilles();
+  }
+}
+
+  // 🆕 Met à jour les pastilles d'erreur sur les onglets photos
+  // Tab 2 = photos logement (< 3) | Tab 5 = photo profil (absente)
+  updatePhotoErrorPastilles() {
+    if (!this.validationManager) return;
+    
+    const galleryCount = Array.isArray(this.currentImagesGallery) 
+      ? this.currentImagesGallery.length 
+      : 0;
+    const galleryComplete = galleryCount >= 3;
+    
+    const hostImage = this.propertyData?.host_image || (this.stagedHostImage?._staged ? 'staged' : '');
+    const hostImageComplete = !!(hostImage && String(hostImage).trim());
+    
+    // Tab 2 : photos logement
+    if (galleryComplete) {
+      this.validationManager.hideTabError('error-indicator-tab2');
+    } else {
+      this.validationManager.showTabError('error-indicator-tab2');
+    }
+    
+    // Tab 5 : photo profil
+    if (hostImageComplete) {
+      this.validationManager.hideTabError('error-indicator-tab5');
+    } else {
+      this.validationManager.showTabError('error-indicator-tab5');
+    }
   }
 
   
@@ -6524,6 +6558,10 @@ displayEditableGallery() {
       }
     }
   }
+  // 🆕 Mettre à jour les pastilles photos
+  if (typeof this.updatePhotoErrorPastilles === 'function') {
+    this.updatePhotoErrorPastilles();
+  }
 }
 
 addDeleteButtonFromTemplate(imageBlock, index) {
@@ -6644,6 +6682,8 @@ removeImage(index) {
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
+
+  this.updatePhotoErrorPastilles();
 }
   
   
