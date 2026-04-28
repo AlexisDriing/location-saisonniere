@@ -1,4 +1,4 @@
-// LOG production V1.56
+// LOG production V1.57
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -675,17 +675,7 @@ class ValidationManager {
       });
     }
     
-    // 🆕 Pastille tab 2 si photos logement incomplètes (< 3) ou photo profil manquante
-    const propertyData = this.editor.propertyData || {};
-    const galleryCount = Array.isArray(propertyData.images_gallery) ? propertyData.images_gallery.length : 0;
-    const hasHostImage = !!(propertyData.host_image && String(propertyData.host_image).trim());
-    const photosOK = galleryCount >= 3 && hasHostImage;
-    if (photosOK) {
-      this.hideTabError('error-indicator-tab2');
-    } else {
-      this.showTabError('error-indicator-tab2');
-    }
-    
+    // (Pastilles tab 2 et tab 5 sont gérées par PropertyEditor.updatePhotoErrorPastilles())
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
     return isValid;
   }
