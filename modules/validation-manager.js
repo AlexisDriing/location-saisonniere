@@ -1,4 +1,4 @@
-// LOG production V1.55
+// LOG production V1.56
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1733,10 +1733,15 @@ validateRoomFields() {
     }
   }
 
-  // Afficher la pastille warning sur un tab
-  showTabWarning(indicatorId) {
+    showTabWarning(indicatorId) {
     const indicator = document.getElementById(indicatorId);
     if (indicator) {
+      // 🆕 Si une erreur rouge est déjà affichée sur ce tab, le rouge a priorité
+      const isRedErrorShown = indicator.style.display === 'block' 
+                              && (!indicator.style.backgroundColor || indicator.style.backgroundColor === '');
+      if (isRedErrorShown) {
+        return; // ne pas écraser le rouge
+      }
       indicator.style.display = 'block';
       indicator.style.backgroundColor = '#F67F1D';
     }
