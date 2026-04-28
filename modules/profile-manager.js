@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.054 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.055 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -229,18 +229,10 @@ setupDisableButton(property, targetElement = document) {
   disableButton.style.cursor = 'not-allowed';
   disableButton.style.opacity = '0.5';
   
-    // 🆕 Message adapté : cas spécial "il ne manque que la photo de profil"
+    // 🆕 Message générique adapté au type de logement
   if (textInfoVerif) {
     const isChambreHote = property.mode_location === "Chambre d'hôtes";
-    const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
-    const hasHostImage = !!(property.host_image && String(property.host_image).trim());
-    const photosLogementOK = galleryCount >= 3;
-    const fieldsOK = property.parent_fields_complete === true 
-                    || (!isChambreHote && property.name && property.address && property.host_name);
-    
-    if (fieldsOK && photosLogementOK && !hasHostImage && (!isChambreHote || (property.rooms_complete && property.rooms?.length >= 1))) {
-      textInfoVerif.textContent = "Il vous manque juste une photo de profil pour activer la vérification.";
-    } else if (isChambreHote) {
+    if (isChambreHote) {
       textInfoVerif.textContent = "Complétez les champs, photos et au moins une chambre pour activer la vérification.";
     } else {
       textInfoVerif.textContent = "Complétez les champs obligatoires et ajoutez vos photos pour activer la vérification.";
