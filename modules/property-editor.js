@@ -137,19 +137,18 @@ class PropertyEditor {
       }
     }
   }
-  this.validationManager = new ValidationManager(this);
+    this.validationManager = new ValidationManager(this);
   
-  // Vérifier l'iCal par défaut (après init du validationManager)
+  // 🆕 Validation silencieuse en PREMIER (sinon elle efface les warnings)
+  if (!this.isRoomEdit) {
+    this.validationManager.validateAllFields();
+  }
+  
+  // Warning iCal APRÈS la validation, pour qu'il ne soit pas effacé
   if (this.isRoomEdit) {
     this.checkDefaultRoomIcalWarning();
   } else {
     this.checkDefaultIcalWarning();
-  }
-  
-  // 🆕 Validation silencieuse au chargement pour afficher les pastilles
-  // d'erreur sur les onglets et les champs (même timing que checkDefaultIcalWarning)
-  if (!this.isRoomEdit) {
-    this.validationManager.validateAllFields();
   }
     
   window.propertyEditor = this;
