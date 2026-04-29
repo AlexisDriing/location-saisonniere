@@ -1,4 +1,4 @@
-// LOG production V1.78 - chambres d'hôtes v1.065
+// LOG production V1.79 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3030,38 +3030,37 @@ setupRoomSaveButton() {
 }
 
 async saveRoomModifications() {
-  // 🆕 Validation : 
-  // - champ vide → on laisse passer le save (sera complété plus tard)
-  // - valeur invalide → on bloque le save (data integrity)
-  let fieldsValid = true;
-  let hasFormatErrors = false;
+  // Mod UU — la chambre hérite du statut du logement parent
   let hasEmptyErrors = false;
+  const isDraftMode = (this.propertyData?.verification_status || 'pending-none') === 'pending-none';
   
   if (this.validationManager) {
-    fieldsValid = this.validationManager.validateRoomFields();
+    const fieldsValid = this.validationManager.validateRoomFields();
     
     if (!fieldsValid) {
-      const { empty, format } = this.validationManager.categorizeErrors('roomValidationConfig');
-      hasEmptyErrors = empty.length > 0;
-      hasFormatErrors = format.length > 0;
+      if (isDraftMode) {
+        const { empty, format } = this.validationManager.categorizeErrors('roomValidationConfig');
+        hasEmptyErrors = empty.length > 0;
+        
+        if (format.length > 0) {
+          console.log('❌ Valeurs invalides détectées chambre - sauvegarde annulée');
+          this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+          setTimeout(() => {
+            this.validationManager.navigateToField(format[0]);
+          }, 100);
+          return;
+        }
+      } else {
+        console.log('❌ Validation chambre échouée - sauvegarde annulée');
+        this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+        setTimeout(() => {
+          this.validationManager.navigateToFirstError();
+        }, 100);
+        return;
+      }
     }
   }
   
-  // Si VALEURS INVALIDES : BLOQUER le save
-  if (hasFormatErrors) {
-    console.log('❌ Valeurs invalides détectées chambre - sauvegarde annulée');
-    this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
-    
-    const { format } = this.validationManager.categorizeErrors('roomValidationConfig');
-    setTimeout(() => {
-      if (format[0]) {
-        this.validationManager.navigateToField(format[0]);
-      }
-    }, 100);
-    return;
-  }
-  
-  // Si seulement CHAMPS VIDES : on continue le save (mode brouillon)
   if (hasEmptyErrors) {
     console.log('⚠️ Champs vides chambre - sauvegarde en mode brouillon');
   }
@@ -7489,132 +7488,43 @@ setBlockState(element, isActive) {
     this.disableButtons();
   }
 
-    async saveModifications() {
-
-  // 🆕 Validation : 
-  // - champ vide  → on laisse passer le save (sera complété plus tard)
-  // - valeur invalide → on bloque le save (data integrity)
+  async saveModifications() {
+  // Mod UU — deux modes selon le statut du logement :
+  // - pending-none = brouillon : on ne bloque que les format errors (valeurs invalides)
+  // - pending-verif et + = strict : toute erreur bloque (comportement original)
   let fieldsValid = true;
-  let hasFormatErrors = false;
   let hasEmptyErrors = false;
+  const isDraftMode = (this.propertyData?.verification_status || 'pending-none') === 'pending-none';
   
-    if (this.validationManager) {
+  if (this.validationManager) {
     fieldsValid = this.validationManager.validateAllFields();
     
     if (!fieldsValid) {
-      const { empty, format } = this.validationManager.categorizeErrors('validationConfig');
-      hasEmptyErrors = empty.length > 0;
-      hasFormatErrors = format.length > 0;
-      
-            // 🆕 "Sticky required" : un champ obligatoire qui était rempli avant et est vide maintenant
-      // est traité comme une erreur de format (bloquant)
-      const wasFieldPreviouslyFilled = (fieldId) => {
-        // Champs composés : adresse (ville, pays, rue) → vérifier address global
-        if (['ville-input', 'pays-input', 'rue-input'].includes(fieldId)) {
-          return !!(this.initialValues.address && String(this.initialValues.address).trim());
-        }
+      if (isDraftMode) {
+        // Brouillon : bloque uniquement les format errors
+        const { empty, format } = this.validationManager.categorizeErrors('validationConfig');
+        hasEmptyErrors = empty.length > 0;
         
-        // Champs composés : horaires → vérifier horaires_arrivee_depart global
-        if (['heure-arrivee-input', 'heure-arrivee-debut-input', 'heure-arrivee-fin-input', 'heure-depart-input'].includes(fieldId)) {
-          return !!(this.initialValues.horaires_arrivee_depart && String(this.initialValues.horaires_arrivee_depart).trim());
+        if (format.length > 0) {
+          console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
+          this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+          setTimeout(() => {
+            this.validationManager.navigateToField(format[0]);
+          }, 100);
+          return;
         }
-        
-        // Champs dans pricingData
-        if (fieldId === 'default-price-input') {
-          return (this.propertyData?.pricing_data?.defaultPricing?.price || 0) > 0;
-        }
-        if (fieldId === 'default-min-nights-input') {
-          return (this.propertyData?.pricing_data?.defaultPricing?.minNights || 0) > 0;
-        }
-        if (fieldId === 'voyageurs-input') {
-          return (this.propertyData?.pricing_data?.capacity || 0) > 0;
-        }
-        if (fieldId === 'cleaning-option') {
-          const c = this.propertyData?.pricing_data?.cleaning;
-          return !!(c && (c.included === true || c.included === false || c.optional === true));
-        }
-        
-        // Arrays (modes paiement)
-        if (fieldId === 'payment-methods') {
-          return Array.isArray(this.initialValues.mode_paiement) && this.initialValues.mode_paiement.length > 0;
-        }
-        
-        // Radio buttons
-        if (fieldId === 'mode-location') {
-          return !!(this.initialValues.mode_location && String(this.initialValues.mode_location).trim());
-        }
-        if (fieldId === 'cancellation-policy') {
-          return !!(this.initialValues.conditions_annulation && String(this.initialValues.conditions_annulation).trim());
-        }
-        
-        // Mapping explicite pour les champs simples
-        const simpleMapping = {
-          'name-input': 'name',
-          'description-logement-input': 'description_logement',
-          'description-alentours-input': 'description_alentours',
-          'code-enregistrement-input': 'code_enregistrement',
-          'site-internet-input': 'site_internet',
-          'inclus-reservation-input': 'inclus_reservation',
-          'hote-input': 'host_name',
-          'email-input': 'email',
-          'telephone-input': 'telephone',
-          'annonce-airbnb-input': 'annonce_airbnb',
-          'annonce-booking-input': 'annonce_booking',
-          'annonce-gites-input': 'annonce_gites',
-          'page-google': 'page_google',
-          'cadeaux-input': 'cadeaux',
-          'conditions-annulation-input': 'conditions_annulation',
-        };
-        
-        if (simpleMapping[fieldId]) {
-          const value = this.initialValues[simpleMapping[fieldId]];
-          return !!(value && String(value).trim());
-        }
-        
-        // Fallback heuristique pour cas non listés
-        const dataKey = fieldId.replace(/-input$/, '').replace(/-/g, '_');
-        const value = this.initialValues[dataKey];
-        return !!(value && String(value).trim());
-      };
-      
-      const stickyRegression = empty.some(fieldId => {
-        let fieldConfig = null;
-        for (const tab in this.validationManager.validationConfig) {
-          if (this.validationManager.validationConfig[tab]?.fields?.[fieldId]) {
-            fieldConfig = this.validationManager.validationConfig[tab].fields[fieldId];
-            break;
-          }
-        }
-        if (!fieldConfig?.required) return false;
-        return wasFieldPreviouslyFilled(fieldId);
-      });
-      
-      if (stickyRegression) {
-        hasFormatErrors = true; // bloquer le save
+      } else {
+        // Mode strict : toute erreur bloque
+        console.log('❌ Validation échouée - sauvegarde annulée');
+        this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+        setTimeout(() => {
+          this.validationManager.navigateToFirstError();
+        }, 100);
+        return;
       }
     }
   }
   
-  // Si VALEURS INVALIDES : BLOQUER le save
-  // Pas de scroll : l'hôte vient de taper, il sait où il est, et les pastilles
-  // rouges sur les onglets/champs l'informent visuellement
-  if (hasFormatErrors) {
-    console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
-    this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
-    
-    // Scroll vers le 1er champ avec valeur invalide (pas vers les champs vides)
-    const { format } = this.validationManager.categorizeErrors('validationConfig');
-    setTimeout(() => {
-      if (format[0]) {
-        this.validationManager.navigateToField(format[0]);
-      }
-    }, 100);
-    
-    return; // BLOQUE le save
-  }
-  
-  // Si seulement CHAMPS VIDES : on continue le save sans notification ni scroll
-  // (les pastilles rouges sur les onglets restent visibles pour informer)
   if (hasEmptyErrors) {
     console.log('⚠️ Champs vides détectés - sauvegarde en mode brouillon');
   }
