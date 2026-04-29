@@ -6109,29 +6109,36 @@ displayEditableGallery() {
 addDeleteButtonFromTemplate(imageBlock, index) {
   // Vérifier si le bouton existe déjà
   let deleteBtn = imageBlock.querySelector('.button-delete-photo');
-  
+
+  // Stocker l'index réel du tableau sur le bloc pour le retrouver facilement
+  const imageData = this.currentImagesGallery[index];
+  if (imageData) {
+    imageBlock.dataset.imageIndex = index;
+    imageBlock.dataset.imageUrl = (typeof imageData === 'string') ? imageData : (imageData.url || '');
+  }
+
   if (!deleteBtn) {
     // Récupérer le template depuis Webflow
     const template = document.getElementById('template-delete-button');
-    
+
     if (template) {
       // Cloner le template
       deleteBtn = template.cloneNode(true);
       deleteBtn.style.display = 'block';
       deleteBtn.id = '';
-      
+
       // Position et style
       deleteBtn.style.position = 'absolute';
       deleteBtn.style.top = '8px';
       deleteBtn.style.right = '8px';
       deleteBtn.style.zIndex = '20';
-      
+
       // S'assurer que le bloc parent est en position relative
       imageBlock.style.position = 'relative';
-      
+
       // Ajouter le bouton cloné au bloc image
       imageBlock.appendChild(deleteBtn);
-      
+
     } else {
       console.error('❌ ERREUR : Template de bouton delete non trouvé');
       return;
@@ -6187,19 +6194,17 @@ addDeleteButtonFromTemplate(imageBlock, index) {
   };
 }
 
-removeImage(index) {  
-  // 🆕 NOUVEAU : Récupérer l'image-block qui contient le bouton cliqué
+removeImage(index) {
   const imageBlock = document.getElementById(`image-block-${index + 1}`);
   if (!imageBlock) return;
-  
-  // Récupérer l'URL de l'image dans ce bloc
+
   const imgElement = imageBlock.querySelector('img');
   if (!imgElement) return;
-  
+
   const imageUrl = imgElement.src;
-  
-  // 🆕 Trouver le VRAI index de cette image dans le tableau actuel
-  const realIndex = this.currentImagesGallery.findIndex(img => {
+
+  // Chercher le VRAI index: d'abord par URL, puis utiliser le data-index comme fallback
+  let realIndex = this.currentImagesGallery.findIndex(img => {
     if (typeof img === 'string') {
       return img === imageUrl;
     } else if (img && img.url) {
@@ -6207,30 +6212,39 @@ removeImage(index) {
     }
     return false;
   });
-    
+
+  // Fallback: utiliser le data-imageIndex stocké sur le bloc
+  if (realIndex === -1 && imageBlock.dataset.imageIndex) {
+    const storedIndex = parseInt(imageBlock.dataset.imageIndex);
+    if (storedIndex >= 0 && storedIndex < this.currentImagesGallery.length) {
+      realIndex = storedIndex;
+    }
+  }
+
   if (realIndex === -1) {
     console.error('❌ Image non trouvée dans le tableau');
+    // Même si l'image ne peut pas être trouvée, rafraîchir l'affichage pour nettoyer le bloc
+    this.displayEditableGallery();
     return;
   }
-  
+
   // Vérifier qu'on garde minimum 3 images
   if (this.currentImagesGallery.length <= 3) {
     this.showNotification('error', 'Minimum 3 photos requises pour le logement');
     return;
   }
-  
-  // 🆕 Supprimer au BON index
+
   this.currentImagesGallery.splice(realIndex, 1);
-  
+
   // Réafficher la galerie
   this.displayEditableGallery();
-  
+
   // Réinitialiser SortableJS
   this.initSortable();
 
   // Mettre à jour l'état du bouton d'ajout de photos
   this.updateAddPhotosButtonState();
-  
+
   // Activer les boutons de sauvegarde
   this.enableButtons();
 }
