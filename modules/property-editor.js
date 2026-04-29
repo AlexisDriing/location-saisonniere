@@ -1,4 +1,4 @@
-// LOG production V1.79 - chambres d'hôtes v1.065
+// LOG production V1.80 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -95,6 +95,9 @@ class PropertyEditor {
   }
   
   async init() {
+
+  // 🆕 Désactiver la validation HTML5 native (on utilise notre validation JS)
+  document.querySelectorAll('form').forEach(form => form.setAttribute('novalidate', 'true'));
     
     // 1. Récupérer l'ID depuis l'URL
   this.propertyId = this.getPropertyIdFromUrl();
@@ -859,7 +862,7 @@ async handleProfilePhotoSelection() {
         URL.revokeObjectURL(this.stagedHostImage.url);
       }
       
-      // Stage la nouvelle photo
+            // Stage la nouvelle photo
       this.stagedHostImage = {
         url: blobUrl,
         _staged: true,
@@ -867,7 +870,7 @@ async handleProfilePhotoSelection() {
         _fileName: `${baseName}.${ext}`
       };
       
-      // Mise à jour immédiate de l'aperçu dans le DOM
+      // 🆕 Mise à jour complète : aperçu + visibilité du bloc empty + boutons
       const imageHoteElement = document.getElementById('image-hote');
       if (imageHoteElement) {
         if (imageHoteElement.tagName === 'IMG') {
@@ -877,6 +880,7 @@ async handleProfilePhotoSelection() {
           if (imgEl) imgEl.src = blobUrl;
         }
       }
+      this.displayHostImage();
       
       this.enableButtons();
       this.showNotification('success', 'Photo de profil prête. Cliquez sur Enregistrer pour valider.');
@@ -4189,6 +4193,7 @@ countVisiblePlages(isEdit = false) {
     const hostImageUrl = this.propertyData.host_image || '';
     const blocEmptyHote = document.getElementById('bloc-empty-hote');
     const blocHote = document.getElementById('bloc-hote');
+    const blocPhotoProfil = document.getElementById('bloc-photo-profil');
     
     // bloc-empty-hote est obsolète : on le cache s'il existe encore
     if (blocEmptyHote) blocEmptyHote.style.display = 'none';
@@ -4196,7 +4201,15 @@ countVisiblePlages(isEdit = false) {
     // bloc-hote toujours visible (pour que les boutons restent accessibles)
     if (blocHote) blocHote.style.display = 'flex';
     
-    const hasPhoto = !!(hostImageUrl && String(hostImageUrl).trim());
+    // 🆕 hasPhoto prend en compte aussi une photo en staging (pas encore sauvée)
+    const hasSavedPhoto = !!(hostImageUrl && String(hostImageUrl).trim());
+    const hasStagedPhoto = !!this.stagedHostImage?._staged;
+    const hasPhoto = hasSavedPhoto || hasStagedPhoto;
+    
+    // 🆕 Cacher bloc-photo-profil quand il y a une photo (sauvée ou staged)
+    if (blocPhotoProfil) {
+      blocPhotoProfil.style.display = hasPhoto ? 'none' : '';
+    }
     
     // 🆕 Afficher le bon bouton selon l'état
     const addButton = document.getElementById('button-add-host-photo');
