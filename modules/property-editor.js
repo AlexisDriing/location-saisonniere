@@ -1,4 +1,4 @@
-// LOG production V1.80 - chambres d'hôtes v1.065
+// LOG production V1.81 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -4217,17 +4217,19 @@ countVisiblePlages(isEdit = false) {
     if (addButton) addButton.style.display = hasPhoto ? 'none' : '';
     if (changeButton) changeButton.style.display = hasPhoto ? '' : 'none';
     
-    // Mettre à jour l'image si présente
+        // Mettre à jour l'image si présente (sauvée ou staged)
     if (hasPhoto) {
       const imageHoteElement = document.getElementById('image-hote');
       if (imageHoteElement) {
+        // Si une photo staged existe, on prend son blob URL ; sinon l'URL CMS
+        const displayUrl = hasStagedPhoto ? this.stagedHostImage.url : hostImageUrl;
         if (imageHoteElement.tagName === 'IMG') {
-          imageHoteElement.src = hostImageUrl;
+          imageHoteElement.src = displayUrl;
           imageHoteElement.alt = 'Photo de l\'hôte';
         } else {
           const imgElement = imageHoteElement.querySelector('img');
           if (imgElement) {
-            imgElement.src = hostImageUrl;
+            imgElement.src = displayUrl;
             imgElement.alt = 'Photo de l\'hôte';
           }
         }
