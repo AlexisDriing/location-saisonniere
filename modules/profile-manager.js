@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.057 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.058 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -498,26 +498,9 @@ displayChambreHoteElements(property, targetElement = document) {
             if (blockingReason) {
         buttonAdd.style.opacity = '0.5';
         buttonAdd.style.cursor = 'not-allowed';
-        buttonAdd.style.pointerEvents = '';
-        if (blockingReason === 'fields') {
-          buttonAdd.setAttribute('title', "Remplissez d'abord les champs obligatoires de votre logement avant d'ajouter une chambre.");
-        } else {
-          buttonAdd.setAttribute('title', "Ajoutez d'abord vos photos (logement et profil) avant d'ajouter une chambre.");
-        }
-        // 🆕 Désactiver pointer-events sur les enfants pour que le hover remonte au <a> parent
-        // (sinon une <div> ou <img> enfant capte le hover et le tooltip natif ne s'affiche pas)
-        buttonAdd.querySelectorAll('*').forEach(child => {
-          child.style.pointerEvents = 'none';
-        });
       } else {
         buttonAdd.style.opacity = '';
         buttonAdd.style.cursor = '';
-        buttonAdd.style.pointerEvents = '';
-        buttonAdd.removeAttribute('title');
-        // 🆕 Réactiver pointer-events sur les enfants
-        buttonAdd.querySelectorAll('*').forEach(child => {
-          child.style.pointerEvents = '';
-        });
       }
     }
   }
