@@ -1,4 +1,4 @@
-// LOG production V1.83 - chambres d'hôtes v1.065
+// LOG production V1.84 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -553,7 +553,12 @@ removeRoomImage(index) {
     return;
   }
   
-  // Pas de minimum pour les chambres (on peut avoir 0 photos)
+  // Minimum 1 photo requise une fois qu'on en a ajouté
+  if (this.roomCurrentPhotos.length <= 1) {
+    this.showNotification('error', 'Minimum 1 photo requise pour la chambre');
+    return;
+  }
+  
   this.roomCurrentPhotos.splice(realIndex, 1);
   
   this.displayRoomEditableGallery();
