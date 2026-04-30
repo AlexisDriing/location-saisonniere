@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.059 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.060 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -332,20 +332,14 @@ setupDisableButton(property, targetElement = document) {
   // Injecter les images
   imageMapping.forEach(({ selector, url }) => {
     const imageElement = targetElement.querySelector(selector);
+    if (!imageElement || !url) return; // pas d'URL → on laisse l'image par défaut Webflow
     
-    if (imageElement && url) {
-      if (imageElement.tagName === 'IMG') {
-        imageElement.src = url;
-        imageElement.style.display = 'block';
-      } else {
-        // Si c'est une div avec background-image
-        imageElement.style.backgroundImage = `url(${url})`;
-        imageElement.style.backgroundSize = 'cover';
-        imageElement.style.backgroundPosition = 'center';
-        imageElement.style.display = 'block';
-      }
-    } else if (imageElement) {
-      imageElement.style.display = 'none';
+    if (imageElement.tagName === 'IMG') {
+      imageElement.src = url;
+    } else {
+      imageElement.style.backgroundImage = `url(${url})`;
+      imageElement.style.backgroundSize = 'cover';
+      imageElement.style.backgroundPosition = 'center';
     }
   });
 }
