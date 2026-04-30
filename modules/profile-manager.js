@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.058 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.059 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -154,11 +154,8 @@ class ProfileManager {
   // 2. Remplir les informations - MODIFIÉ pour passer targetElement
   this.fillPropertyInfo(property, targetElement);
   
-  // 3. Remplir les images
-  const status = this.getPropertyStatus(property);
-  if (status === 'verified' || status === 'published') {
-    this.fillPropertyImages(property, targetElement);
-  }
+  // 3. Remplir les images (tous statuts)
+  this.fillPropertyImages(property, targetElement);
   
   // 4. Configurer le bouton modifier
   this.setupModifyButton(property, targetElement);
@@ -516,8 +513,6 @@ displayChambreHoteElements(property, targetElement = document) {
 }
 
 displayRoomImagesOnCard(rooms, targetElement, status) {
-  const showImages = (status === 'verified' || status === 'published');
-  
   for (let i = 0; i < 5; i++) {
     const slot = targetElement.querySelector(`.image-chambre-slot-${i + 1}`);
     if (!slot) continue;
@@ -526,31 +521,29 @@ displayRoomImagesOnCard(rooms, targetElement, status) {
       // Slot correspond à une chambre existante : afficher
       slot.style.display = 'flex';
       
-            // Remplir l'image seulement si verified ou published
-      if (showImages) {
-        const room = rooms[i];
-        const photos = room.photos || [];
-        
-        let photoUrl = null;
-        if (photos.length > 0) {
-          const firstPhoto = photos[0];
-          photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
-        }
-        
-        // Si pas de photo, utiliser l'image par défaut
-        if (!photoUrl) {
-          const defaultImg = document.getElementById('default-room-image');
-          photoUrl = defaultImg?.src || null;
-        }
-        
-        if (photoUrl) {
-          if (slot.tagName === 'IMG') {
-            slot.src = photoUrl;
-          } else {
-            slot.style.backgroundImage = `url(${photoUrl})`;
-            slot.style.backgroundSize = 'cover';
-            slot.style.backgroundPosition = 'center';
-          }
+      // Remplir l'image (tous statuts)
+      const room = rooms[i];
+      const photos = room.photos || [];
+      
+      let photoUrl = null;
+      if (photos.length > 0) {
+        const firstPhoto = photos[0];
+        photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
+      }
+      
+      // Si pas de photo, utiliser l'image par défaut
+      if (!photoUrl) {
+        const defaultImg = document.getElementById('default-room-image');
+        photoUrl = defaultImg?.src || null;
+      }
+      
+      if (photoUrl) {
+        if (slot.tagName === 'IMG') {
+          slot.src = photoUrl;
+        } else {
+          slot.style.backgroundImage = `url(${photoUrl})`;
+          slot.style.backgroundSize = 'cover';
+          slot.style.backgroundPosition = 'center';
         }
       }
     } else {
@@ -629,8 +622,8 @@ openManageRoomsModal(property) {
     
     bloc.style.display = 'flex';
     
-        // Image (remplir seulement si verified ou published)
-        const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
+    // Image (tous statuts)
+    const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
     if (imageEl) {
       // Sauvegarder le src d'origine (image par défaut Webflow) au premier passage
       if (imageEl.tagName === 'IMG' && !imageEl.dataset.defaultSrc) {
@@ -639,9 +632,8 @@ openManageRoomsModal(property) {
         imageEl.dataset.defaultBg = imageEl.style.backgroundImage;
       }
       
-      const status = this.getPropertyStatus(property);
       let photoUrl = null;
-      if ((status === 'verified' || status === 'published') && room.photos && room.photos.length > 0) {
+      if (room.photos && room.photos.length > 0) {
         photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
       }
       
