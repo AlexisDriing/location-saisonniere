@@ -1,4 +1,4 @@
-// LOG production V1.38.25
+// LOG production V1.38.26
 // Page google
 class InterfaceManager {
   constructor() {
@@ -207,10 +207,16 @@ setupConditionsAnnulation() {
     secondaryImage.src = imageUrls[1];
   }
   
-  // 3️⃣ Troisième image → src de .third-image  
+    // 3️⃣ Troisième image → src de .third-image  
   const thirdImage = document.querySelector('.third-image');
   if (thirdImage && imageUrls[2]) {
     thirdImage.src = imageUrls[2];
+  }
+  
+  // 4️⃣ Mobile : première image → src de .images-logement.mobile (remplace le binding image1)
+  const mobileImage = document.querySelector('.images-logement.mobile');
+  if (mobileImage && imageUrls[0]) {
+    mobileImage.src = imageUrls[0];
   }
 }
 
