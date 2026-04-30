@@ -1,4 +1,4 @@
-// LOG production V1.50
+// LOG production V1.58
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -662,7 +662,7 @@ class ValidationManager {
       });
     }
 
-    // Validation des liens plateformes pour logement parent chambre d'hôtes
+        // Validation des liens plateformes pour logement parent chambre d'hôtes
     if (isChambreHote) {
       ['lien-airbnb-input', 'lien-booking-input', 'lien-autre-input'].forEach(id => {
         const input = document.getElementById(id);
@@ -675,6 +675,7 @@ class ValidationManager {
       });
     }
     
+    // (Pastilles tab 2 et tab 5 sont gérées par PropertyEditor.updatePhotoErrorPastilles())
     console.log(isValid ? '✅ Validation réussie' : '❌ Validation échouée');
     return isValid;
   }
@@ -1012,7 +1013,7 @@ validateRoomFields() {
     return !hasError;
   }
 
-  validateLienPlateforme(fieldId) {
+    validateLienPlateforme(fieldId) {
     const input = document.getElementById(fieldId);
     if (!input) return true;
     
@@ -1020,28 +1021,36 @@ validateRoomFields() {
     
     if (!value) {
       this.hideFieldError(fieldId);
+      this.errors.delete(fieldId);
       return true;
     }
     
     const urlPattern = /^https?:\/\/.+/i;
     if (!urlPattern.test(value)) {
-      this.showFieldError(fieldId, "Le lien doit être une URL valide (commençant par https://)");
+      const msg = "Le lien doit être une URL valide (commençant par https://)";
+      this.showFieldError(fieldId, msg);
+      this.errors.set(fieldId, msg);
       return false;
     }
     
     if (fieldId === 'lien-airbnb-input') {
       if (!/airbnb/i.test(value)) {
-        this.showFieldError(fieldId, "L'URL doit être un lien Airbnb");
+        const msg = "L'URL doit être un lien Airbnb";
+        this.showFieldError(fieldId, msg);
+        this.errors.set(fieldId, msg);
         return false;
       }
     } else if (fieldId === 'lien-booking-input') {
       if (!/booking/i.test(value)) {
-        this.showFieldError(fieldId, "L'URL doit être un lien Booking");
+        const msg = "L'URL doit être un lien Booking";
+        this.showFieldError(fieldId, msg);
+        this.errors.set(fieldId, msg);
         return false;
       }
     }
     
     this.hideFieldError(fieldId);
+    this.errors.delete(fieldId);
     return true;
   }
   
@@ -1133,13 +1142,13 @@ validateRoomFields() {
       case 'checkbox-group':
         // Pour les moyens de paiement
         if (fieldId === 'payment-methods') {
-          const checkboxes = document.querySelectorAll('[id^="checkbox-"][id$="visa"], [id^="checkbox-"][id$="mastercard"], [id^="checkbox-"][id$="especes"], [id^="checkbox-"][id$="virement"], [id^="checkbox-"][id$="paypal"], [id^="checkbox-"][id$="paylib"], [id^="checkbox-"][id$="amex"], [id^="checkbox-"][id$="cheques"], [id^="checkbox-"][id$="cheques-vacances"]');
+          const checkboxes = document.querySelectorAll('[id^="checkbox-"][id$="visa"], [id^="checkbox-"][id$="mastercard"], [id^="checkbox-"][id$="especes"], [id^="checkbox-"][id$="virement"], [id^="checkbox-"][id$="paypal"], [id^="checkbox-"][id$="wero"], [id^="checkbox-"][id$="amex"], [id^="checkbox-"][id$="cheques"], [id^="checkbox-"][id$="cheques-vacances"]');
           const checked = Array.from(checkboxes).filter(cb => cb.checked);
           return checked;
         }
         return [];
         
-      default:
+            default:
         const field = document.getElementById(fieldId);
         if (!field) return '';
         
@@ -1150,6 +1159,51 @@ validateRoomFields() {
         
         return field.value;
     }
+  }
+
+  /**
+   * Catégorise les erreurs présentes dans this.errors :
+   * - empty  : champ simplement vide (autorisé au save)
+   * - format : champ rempli mais valeur invalide (bloque le save)
+   * 
+   * À appeler après validateAllFields() ou validateRoomFields().
+   */
+    categorizeErrors(configKey = 'validationConfig') {
+    const empty = [];
+    const format = [];
+    const config = this[configKey];
+    
+    for (const [fieldId, _errorMsg] of this.errors.entries()) {
+      // Trouver la config du champ dans le bon tab
+      let fieldConfig = null;
+      for (const tabKey in config) {
+        if (config[tabKey]?.fields && config[tabKey].fields[fieldId]) {
+          fieldConfig = config[tabKey].fields[fieldId];
+          break;
+        }
+      }
+      
+      const fieldType = fieldConfig?.type;
+      const value = this.getFieldValue(fieldId, fieldType);
+      
+      // 🆕 Considéré comme "non rempli" (équivalent à un état par défaut) :
+      // - chaîne vide, null, undefined
+      // - tableau vide
+      // - "0" ou 0 (placeholder numérique non encore édité par l'hôte)
+      const isUnfilled = !value || 
+                         value === 0 ||
+                         value === '0' ||
+                         (typeof value === 'string' && value.trim() === '') ||
+                         (Array.isArray(value) && value.length === 0);
+      
+      if (isUnfilled) {
+        empty.push(fieldId);
+      } else {
+        format.push(fieldId);
+      }
+    }
+    
+    return { empty, format };
   }
 
   // Validation spéciale des prix plateformes
@@ -1669,10 +1723,15 @@ validateRoomFields() {
     }
   }
 
-  // Afficher la pastille warning sur un tab
-  showTabWarning(indicatorId) {
+    showTabWarning(indicatorId) {
     const indicator = document.getElementById(indicatorId);
     if (indicator) {
+      // 🆕 Si une erreur rouge est déjà affichée sur ce tab, le rouge a priorité
+      const isRedErrorShown = indicator.style.display === 'block' 
+                              && (!indicator.style.backgroundColor || indicator.style.backgroundColor === '');
+      if (isRedErrorShown) {
+        return; // ne pas écraser le rouge
+      }
       indicator.style.display = 'block';
       indicator.style.backgroundColor = '#F67F1D';
     }
@@ -1770,9 +1829,29 @@ validateRoomFields() {
       } else {
         this.scrollToField(field);
       }
-    } else {
+        } else {
       this.scrollToField(field);
     }
+  }
+  
+  // 🆕 Naviguer vers un champ spécifique (changement d'onglet si besoin)
+  navigateToField(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    const tabPane = field.closest('.w-tab-pane');
+    if (tabPane) {
+      const tabName = tabPane.getAttribute('data-w-tab');
+      const tabLink = document.querySelector(`.tab-button[data-w-tab="${tabName}"]`);
+      
+      if (tabLink && !tabLink.classList.contains('w--current')) {
+        tabLink.click();
+        setTimeout(() => this.scrollToField(field), 200);
+        return;
+      }
+    }
+    
+    this.scrollToField(field);
   }
   
   // Scroll simple vers le champ

@@ -1,4 +1,4 @@
-// LOG production V1.5 - chambres d'hôtes v1.065
+// LOG production V1.84 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -95,6 +95,9 @@ class PropertyEditor {
   }
   
   async init() {
+
+  // 🆕 Désactiver la validation HTML5 native (on utilise notre validation JS)
+  document.querySelectorAll('form').forEach(form => form.setAttribute('novalidate', 'true'));
     
     // 1. Récupérer l'ID depuis l'URL
   this.propertyId = this.getPropertyIdFromUrl();
@@ -137,9 +140,16 @@ class PropertyEditor {
       }
     }
   }
-  this.validationManager = new ValidationManager(this);
+      this.validationManager = new ValidationManager(this);
   
-  // Vérifier l'iCal par défaut (après init du validationManager)
+  // 🆕 Validation silencieuse en PREMIER (sinon elle efface les warnings)
+  if (!this.isRoomEdit) {
+    this.validationManager.validateAllFields();
+    // Pastilles photos (tab 2 + tab 5)
+    this.updatePhotoErrorPastilles();
+  }
+  
+  // Warning iCal APRÈS la validation, pour qu'il ne soit pas effacé
   if (this.isRoomEdit) {
     this.checkDefaultRoomIcalWarning();
   } else {
@@ -215,6 +225,12 @@ async setupParentChambreHoteDisplay() {
     if (response.ok) {
       const data = await response.json();
       this.roomsCount = (data.rooms || []).length;
+      // 🆕 Au moins 1 chambre est complète si elle a description + photo
+      this.roomsComplete = (data.rooms || []).some(r => {
+        const hasDesc = !!(r.description && String(r.description).trim());
+        const hasPhotos = Array.isArray(r.photos) && r.photos.length >= 1;
+        return hasDesc && hasPhotos;
+      });
     }
   } catch (error) {
     console.error('⚠️ Erreur chargement nombre chambres:', error);
@@ -387,12 +403,12 @@ initRoomImageManagement() {
   
   this.displayRoomEditableGallery();
   
-  // SortableJS sur desktop
+    // SortableJS sur desktop
   if (window.innerWidth > 768) {
     setTimeout(() => this.initRoomSortable(), 100);
   }
   
-  // Bouton ajout photos
+    // Bouton ajout photos (upload custom)
   const addPhotosButton = document.querySelector('.add-photos.chambre');
   if (addPhotosButton) {
     const newButton = addPhotosButton.cloneNode(true);
@@ -404,16 +420,7 @@ initRoomImageManagement() {
       if (this.roomCurrentPhotos.length >= 5) {
         this.showNotification('error', 'Limite de 5 photos maximum atteinte');
       } else {
-        const tallyUrl = newButton.dataset.tallyUrl;
-        if (tallyUrl) {
-          const params = new URLSearchParams({
-            property_id: this.roomId || '',
-            property_name: this.propertyData.name || '',
-            room_name: this.roomData.name || '',
-            email: this.propertyData.email || ''
-          });
-          window.open(`${tallyUrl}?${params.toString()}`, '_blank');
-        }
+        this.handlePhotoSelection('chambre');
       }
     });
   }
@@ -546,7 +553,12 @@ removeRoomImage(index) {
     return;
   }
   
-  // Pas de minimum pour les chambres (on peut avoir 0 photos)
+  // Minimum 1 photo requise une fois qu'on en a ajouté
+  if (this.roomCurrentPhotos.length <= 1) {
+    this.showNotification('error', 'Minimum 1 photo requise pour la chambre');
+    return;
+  }
+  
   this.roomCurrentPhotos.splice(realIndex, 1);
   
   this.displayRoomEditableGallery();
@@ -566,6 +578,380 @@ updateRoomAddPhotosButtonState() {
     addPhotosButton.style.opacity = '1';
     addPhotosButton.style.cursor = 'pointer';
   }
+}
+
+// ================================
+// 📸 UPLOAD PHOTOS CUSTOM (remplace Tally)
+// ================================
+
+ensureSkeletonStyles() {
+  if (document.getElementById('photo-upload-skeleton-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'photo-upload-skeleton-styles';
+  style.textContent = `
+  @keyframes photoSkeletonPulse {
+    0%, 100% { background-color: #d0d0d0; }
+    50%     { background-color: #eaeaea; }
+  }
+  .image-block.is-loading-photo {
+    animation: photoSkeletonPulse 1.3s infinite ease-in-out;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .image-block.is-loading-photo img {
+    opacity: 0 !important;
+  }
+  .image-block.is-loading-photo .button-delete-photo {
+    display: none !important;
+  }
+  .images-grid.gallery-uploading .button-delete-photo {
+    display: none !important;
+  }
+`;
+  document.head.appendChild(style);
+}
+
+applyLoadingStateToBlocks(isRoom, startIdx, count) {
+  for (let i = 0; i < count; i++) {
+    const idx = startIdx + i + 1;
+    const selector = isRoom ? `#image-block-${idx}-chambre` : `#image-block-${idx}`;
+    const block = document.querySelector(selector);
+    if (block) block.classList.add('is-loading-photo');
+  }
+}
+
+async loadImageCompressionLib() {
+  if (window.imageCompression) return;
+  if (this._compressionLibPromise) return this._compressionLibPromise;
+  this._compressionLibPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js';
+    script.onload = resolve;
+    script.onerror = () => {
+      this._compressionLibPromise = null;
+      reject(new Error('Impossible de charger la librairie de compression'));
+    };
+    document.head.appendChild(script);
+  });
+  return this._compressionLibPromise;
+}
+
+async compressImage(file) {
+  const baseOptions = {
+    maxSizeMB: 0.08,
+    maxWidthOrHeight: 1920,
+    useWebWorker: true,
+    initialQuality: 0.8
+  };
+  try {
+    const avif = await window.imageCompression(file, { ...baseOptions, fileType: 'image/avif' });
+    if (avif && avif.type === 'image/avif') return avif;
+  } catch (e) {
+    console.warn('Encodage AVIF indisponible, bascule en WebP :', e.message);
+  }
+  return await window.imageCompression(file, { ...baseOptions, fileType: 'image/webp' });
+}
+
+fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async handlePhotoSelection(type) {
+  const isRoom = type === 'chambre';
+  const max = isRoom ? 5 : 20;
+  const gallery = isRoom ? this.roomCurrentPhotos : this.currentImagesGallery;
+  const available = max - gallery.length;
+
+  if (available <= 0) {
+    this.showNotification('error', `Limite de ${max} photos atteinte. Supprimez-en avant d'ajouter.`);
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/png,image/webp';
+  input.multiple = true;
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    document.body.removeChild(input);
+    if (files.length === 0) return;
+
+    if (files.length > available) {
+      this.showNotification('error',
+        `Vous pouvez ajouter ${available} photo(s) maximum. Vous en avez sélectionné ${files.length}. Veuillez réessayer.`);
+      return;
+    }
+
+    try {
+      this.ensureSkeletonStyles();
+      await this.loadImageCompressionLib();
+    
+      // 🆕 Bloquer tous les boutons delete pendant l'upload (évite race condition splice/index)
+      const galleryContainer = document.querySelector(isRoom ? '.images-grid.chambre' : '.images-grid');
+      if (galleryContainer) galleryContainer.classList.add('gallery-uploading');
+    
+      // Phase 1 — Insérer N squelettes dans la galerie
+      const SKELETON_SRC = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+      const startIdx = gallery.length;
+      for (let i = 0; i < files.length; i++) {
+        gallery.push({
+          url: SKELETON_SRC,
+          _staged: true,
+          _loading: true,
+          _fileName: files[i].name
+        });
+      }
+
+      // Rendu initial avec squelettes
+      if (isRoom) {
+        this.displayRoomEditableGallery();
+        if (window.innerWidth > 768) this.initRoomSortable();
+        this.updateRoomAddPhotosButtonState();
+      } else {
+        this.displayEditableGallery();
+        if (window.innerWidth > 768) this.initSortable();
+        this.updateAddPhotosButtonState();
+      }
+      this.applyLoadingStateToBlocks(isRoom, startIdx, files.length);
+
+      // Phase 2 — Compresser chaque fichier et remplacer le squelette correspondant
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const compressed = await this.compressImage(file);
+        const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+        const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
+        const blobUrl = URL.createObjectURL(compressed);
+
+        gallery[startIdx + i] = {
+          url: blobUrl,
+          _staged: true,
+          _file: compressed,
+          _fileName: `${baseName}.${ext}`
+        };
+
+        // Mise à jour directe du DOM pour un feedback immédiat
+        const selector = isRoom
+          ? `#image-block-${startIdx + i + 1}-chambre`
+          : `#image-block-${startIdx + i + 1}`;
+        const block = document.querySelector(selector);
+        if (block) {
+          const imgEl = block.querySelector('img');
+          if (imgEl) imgEl.src = blobUrl;
+          block.classList.remove('is-loading-photo');
+        }
+      }
+
+      // 🆕 Upload terminé : réactiver les boutons delete
+      if (galleryContainer) galleryContainer.classList.remove('gallery-uploading');
+
+      this.enableButtons();
+      this.showNotification('success', `${files.length} photo(s) ajoutée(s). Cliquez sur Enregistrer pour valider.`);
+    } catch (err) {
+      // 🆕 En cas d'erreur, réactiver aussi
+      if (galleryContainer) galleryContainer.classList.remove('gallery-uploading');
+      console.error('Erreur sélection photos :', err);
+      this.showNotification('error', 'Erreur : ' + err.message);
+    }
+  });
+
+  input.click();
+}
+
+async uploadStagedPhotos(gallery, type) {
+  const stagedIndices = [];
+  const stagedFiles = [];
+  for (let i = 0; i < gallery.length; i++) {
+    if (gallery[i]._staged) {
+      stagedIndices.push(i);
+      stagedFiles.push(gallery[i]);
+    }
+  }
+  if (stagedIndices.length === 0) return;
+
+  const payload = {
+    photos: await Promise.all(stagedFiles.map(async entry => ({
+      fileName: entry._fileName,
+      dataBase64: await this.fileToBase64(entry._file),
+      mimeType: entry._file.type || 'image/avif'
+    })))
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+  let result;
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/stage-photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Erreur serveur lors du staging');
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Upload trop long (timeout 2 min). Vérifiez votre connexion.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!Array.isArray(result.tempUrls) || result.tempUrls.length !== stagedIndices.length) {
+    throw new Error('Réponse serveur incohérente (nombre d\'URLs incorrect)');
+  }
+
+  // Remplacer les entrées staged par les URLs temp et révoquer les blob URLs
+  for (let i = 0; i < stagedIndices.length; i++) {
+    const idx = stagedIndices[i];
+    if (gallery[idx].url?.startsWith('blob:')) {
+      URL.revokeObjectURL(gallery[idx].url);
+    }
+    gallery[idx] = { url: result.tempUrls[i] };
+  }
+
+    // 🔧 Fix du bug delete : re-render pour synchroniser DOM et tableau
+  if (type === 'chambre') {
+    this.displayRoomEditableGallery();
+    if (window.innerWidth > 768) this.initRoomSortable();
+  } else {
+    this.displayEditableGallery();
+    if (window.innerWidth > 768) this.initSortable();
+  }
+}
+
+// ================================
+// 👤 UPLOAD PHOTO DE PROFIL (une seule photo)
+// ================================
+
+setupHostPhotoButton() {
+  // 2 boutons possibles : "Ajouter" (si pas de photo) et "Modifier" (si photo présente)
+  ['button-add-host-photo', 'button-change-host-photo'].forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    
+    // Cloner pour retirer tout ancien listener
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+    
+    newButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handleProfilePhotoSelection();
+    });
+  });
+}
+
+async handleProfilePhotoSelection() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/png,image/webp';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    document.body.removeChild(input);
+    if (!file) return;
+    
+    try {
+      await this.loadImageCompressionLib();
+      this.showNotification('success', 'Compression de la photo...');
+      
+      const compressed = await this.compressImage(file);
+      const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+      const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo-profil';
+      const blobUrl = URL.createObjectURL(compressed);
+      
+      // Révoquer l'ancien blob URL éventuel
+      if (this.stagedHostImage?.url?.startsWith('blob:')) {
+        URL.revokeObjectURL(this.stagedHostImage.url);
+      }
+      
+            // Stage la nouvelle photo
+      this.stagedHostImage = {
+        url: blobUrl,
+        _staged: true,
+        _file: compressed,
+        _fileName: `${baseName}.${ext}`
+      };
+      
+      // 🆕 Mise à jour complète : aperçu + visibilité du bloc empty + boutons
+      const imageHoteElement = document.getElementById('image-hote');
+      if (imageHoteElement) {
+        if (imageHoteElement.tagName === 'IMG') {
+          imageHoteElement.src = blobUrl;
+        } else {
+          const imgEl = imageHoteElement.querySelector('img');
+          if (imgEl) imgEl.src = blobUrl;
+        }
+      }
+      this.displayHostImage();
+      
+      this.enableButtons();
+      this.showNotification('success', 'Photo de profil prête. Cliquez sur Enregistrer pour valider.');
+    } catch (err) {
+      console.error('Erreur photo profil :', err);
+      this.showNotification('error', 'Erreur : ' + err.message);
+    }
+  });
+  
+  input.click();
+}
+
+async uploadStagedHostImage() {
+  if (!this.stagedHostImage?._staged || !this.stagedHostImage._file) return null;
+  
+  const payload = {
+    photos: [{
+      fileName: this.stagedHostImage._fileName,
+      dataBase64: await this.fileToBase64(this.stagedHostImage._file),
+      mimeType: this.stagedHostImage._file.type || 'image/avif'
+    }]
+  };
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
+  
+  let result;
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/stage-photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Erreur serveur');
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Upload trop long (timeout 2 min)');
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  
+  if (!Array.isArray(result.tempUrls) || result.tempUrls.length !== 1) {
+    throw new Error('Réponse serveur incohérente (photo profil)');
+  }
+  
+  if (this.stagedHostImage.url?.startsWith('blob:')) {
+    URL.revokeObjectURL(this.stagedHostImage.url);
+  }
+  
+  return result.tempUrls[0];
 }
 
 // ================================
@@ -2665,13 +3051,39 @@ setupRoomSaveButton() {
 }
 
 async saveRoomModifications() {
-  // Validation
-  if (this.validationManager && !this.validationManager.validateRoomFields()) {
-    this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
-    setTimeout(() => {
-      this.validationManager.navigateToFirstError();
-    }, 100);
-    return;
+  // Mod UU — la chambre hérite du statut du logement parent
+  let hasEmptyErrors = false;
+  const isDraftMode = (this.propertyData?.verification_status || 'pending-none') === 'pending-none';
+  
+  if (this.validationManager) {
+    const fieldsValid = this.validationManager.validateRoomFields();
+    
+    if (!fieldsValid) {
+      if (isDraftMode) {
+        const { empty, format } = this.validationManager.categorizeErrors('roomValidationConfig');
+        hasEmptyErrors = empty.length > 0;
+        
+        if (format.length > 0) {
+          console.log('❌ Valeurs invalides détectées chambre - sauvegarde annulée');
+          this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+          setTimeout(() => {
+            this.validationManager.navigateToField(format[0]);
+          }, 100);
+          return;
+        }
+      } else {
+        console.log('❌ Validation chambre échouée - sauvegarde annulée');
+        this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+        setTimeout(() => {
+          this.validationManager.navigateToFirstError();
+        }, 100);
+        return;
+      }
+    }
+  }
+  
+  if (hasEmptyErrors) {
+    console.log('⚠️ Champs vides chambre - sauvegarde en mode brouillon');
   }
   
   const updates = {};
@@ -2750,7 +3162,7 @@ async saveRoomModifications() {
   // Collecter les iCals modifiés
   const currentIcalValues = this.collectRoomIcalValues();
   
-  this.roomIcalFieldMapping.forEach((fieldName, index) => {
+    this.roomIcalFieldMapping.forEach((fieldName, index) => {
     const currentValue = currentIcalValues[index] || '';
     const initialValue = this.initialValues[`room_${fieldName}`] || '';
     
@@ -2758,6 +3170,18 @@ async saveRoomModifications() {
       updates[fieldName] = currentValue;
     }
   });
+  
+    // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+  try {
+    if (this.roomCurrentPhotos.some(p => p._staged)) {
+      this.showNotification('success', 'Envoi des photos en cours...');
+      await this.uploadStagedPhotos(this.roomCurrentPhotos, 'chambre');
+    }
+  } catch (err) {
+    console.error('❌ Erreur upload photos chambre :', err);
+    this.showNotification('error', 'Échec de l\'envoi des photos : ' + err.message);
+    return;
+  }
   
   // Photos
   const originalPhotosJson = JSON.stringify(this.roomOriginalPhotos);
@@ -2818,10 +3242,35 @@ async saveRoomModifications() {
         this.initialValues.room_pricing_min_nights = updates.pricing_data.defaultPricing?.minNights || 1;
         this.initialValues.room_pricing_prices_per_guest = JSON.stringify(updates.pricing_data.defaultPricing?.pricesPerGuest || []);
       }
-      if (updates['photos-de-la-chambre'] !== undefined) {
-        this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
-        this.roomData.photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
-        this.initialValues.room_photos = JSON.parse(JSON.stringify(this.roomCurrentPhotos));
+            if (updates['photos-de-la-chambre'] !== undefined) {
+        // Si le backend renvoie les vraies URLs Webflow (après re-hosting), les utiliser
+        const freshPhotos = Array.isArray(result.fieldData?.['photos-de-la-chambre'])
+          ? result.fieldData['photos-de-la-chambre']
+          : this.roomCurrentPhotos;
+
+        this.roomCurrentPhotos = JSON.parse(JSON.stringify(freshPhotos));
+        this.roomOriginalPhotos = JSON.parse(JSON.stringify(freshPhotos));
+        this.roomData.photos = JSON.parse(JSON.stringify(freshPhotos));
+        this.initialValues.room_photos = JSON.parse(JSON.stringify(freshPhotos));
+
+        // 🔧 Détruire Sortable et réinitialiser l'ordre DOM des blocs chambre
+        if (this.roomSortableInstance) {
+          this.roomSortableInstance.destroy();
+          this.roomSortableInstance = null;
+        }
+        const container = document.querySelector('.images-grid.chambre');
+        if (container) {
+          for (let i = 1; i <= 5; i++) {
+            const block = document.getElementById(`image-block-${i}-chambre`);
+            if (block) container.appendChild(block);
+          }
+        }
+
+        // Re-render avec les vraies URLs et l'ordre DOM remis à zéro
+        this.displayRoomEditableGallery();
+        if (window.innerWidth > 768) {
+          setTimeout(() => this.initRoomSortable(), 100);
+        }
       }
       
       // Mettre à jour les valeurs iCal initiales
@@ -2843,7 +3292,13 @@ async saveRoomModifications() {
       this.roomData.ical_urls = updatedIcalUrls;
       
       this.disableButtons();
-      this.showNotification('success', 'Modifications enregistrées avec succès !');
+      
+      // 🆕 Message de succès combiné (informe sur les champs restants si applicable)
+      if (hasEmptyErrors) {
+        this.showNotification('success', "Modifications enregistrées, il reste des champs à remplir pour activer la vérification.");
+      } else {
+        this.showNotification('success', 'Modifications enregistrées avec succès !');
+      }
     } else {
       throw new Error(result.error || 'Erreur lors de la sauvegarde');
     }
@@ -3298,10 +3753,10 @@ setupTimeFormatters() {
 
     // Pré-remplir les autres champs simples
     //this.prefillSimpleFields();
-    
     this.setupFieldListeners();
     this.displayImageGallery();
     this.displayHostImage();
+    this.setupHostPhotoButton();
 
     // 🆕 Appliquer l'opacité initiale après un court délai
     setTimeout(() => {
@@ -3752,62 +4207,102 @@ countVisiblePlages(isEdit = false) {
 }
 
   displayHostImage() {    
-    // Récupérer l'URL de l'image hôte
     const hostImageUrl = this.propertyData.host_image || '';
-    
-    // Récupérer les blocs
     const blocEmptyHote = document.getElementById('bloc-empty-hote');
     const blocHote = document.getElementById('bloc-hote');
+    const blocPhotoProfil = document.getElementById('bloc-photo-profil');
     
-    if (!hostImageUrl || hostImageUrl.trim() === '') {
-      // Pas d'image hôte : afficher empty, masquer bloc hôte
-      if (blocEmptyHote) blocEmptyHote.style.display = 'flex';
-      if (blocHote) blocHote.style.display = 'none';
-    } else {
-      // Il y a une image : masquer empty, afficher bloc hôte
-      if (blocEmptyHote) blocEmptyHote.style.display = 'none';
-      if (blocHote) {
-        blocHote.style.display = 'flex';
-        
-        // NOUVEAU : Mettre à jour l'image dans le bloc avec l'ID "image-hote"
-        const imageHoteElement = document.getElementById('image-hote');
-        if (imageHoteElement) {
-          // Si c'est directement une image
-          if (imageHoteElement.tagName === 'IMG') {
-            imageHoteElement.src = hostImageUrl;
-            imageHoteElement.alt = 'Photo de l\'hôte';
-          } 
-          // Si c'est un conteneur avec une image dedans
-          else {
-            const imgElement = imageHoteElement.querySelector('img');
-            if (imgElement) {
-              imgElement.src = hostImageUrl;
-              imgElement.alt = 'Photo de l\'hôte';
-            }
+    // bloc-empty-hote est obsolète : on le cache s'il existe encore
+    if (blocEmptyHote) blocEmptyHote.style.display = 'none';
+    
+    // bloc-hote toujours visible (pour que les boutons restent accessibles)
+    if (blocHote) blocHote.style.display = 'flex';
+    
+    // 🆕 hasPhoto prend en compte aussi une photo en staging (pas encore sauvée)
+    const hasSavedPhoto = !!(hostImageUrl && String(hostImageUrl).trim());
+    const hasStagedPhoto = !!this.stagedHostImage?._staged;
+    const hasPhoto = hasSavedPhoto || hasStagedPhoto;
+    
+    // 🆕 Cacher bloc-photo-profil quand il y a une photo (sauvée ou staged)
+    if (blocPhotoProfil) {
+      blocPhotoProfil.style.display = hasPhoto ? 'none' : '';
+    }
+    
+    // 🆕 Afficher le bon bouton selon l'état
+    const addButton = document.getElementById('button-add-host-photo');
+    const changeButton = document.getElementById('button-change-host-photo');
+    if (addButton) addButton.style.display = hasPhoto ? 'none' : '';
+    if (changeButton) changeButton.style.display = hasPhoto ? '' : 'none';
+    
+        // Mettre à jour l'image si présente (sauvée ou staged)
+    if (hasPhoto) {
+      const imageHoteElement = document.getElementById('image-hote');
+      if (imageHoteElement) {
+        // Si une photo staged existe, on prend son blob URL ; sinon l'URL CMS
+        const displayUrl = hasStagedPhoto ? this.stagedHostImage.url : hostImageUrl;
+        if (imageHoteElement.tagName === 'IMG') {
+          imageHoteElement.src = displayUrl;
+          imageHoteElement.alt = 'Photo de l\'hôte';
+        } else {
+          const imgElement = imageHoteElement.querySelector('img');
+          if (imgElement) {
+            imgElement.src = displayUrl;
+            imgElement.alt = 'Photo de l\'hôte';
           }
         }
       }
+    }
+      // 🆕 Mettre à jour les pastilles photos
+  if (typeof this.updatePhotoErrorPastilles === 'function') {
+    this.updatePhotoErrorPastilles();
+  }
+}
+
+  // 🆕 Met à jour les pastilles d'erreur sur les onglets photos
+  // Tab 2 = photos logement (< 3) | Tab 5 = photo profil (absente)
+  updatePhotoErrorPastilles() {
+    if (!this.validationManager) return;
+    
+    const galleryCount = Array.isArray(this.currentImagesGallery) 
+      ? this.currentImagesGallery.length 
+      : 0;
+    const galleryComplete = galleryCount >= 3;
+    
+    const hostImage = this.propertyData?.host_image || (this.stagedHostImage?._staged ? 'staged' : '');
+    const hostImageComplete = !!(hostImage && String(hostImage).trim());
+    
+    // Tab 2 : photos logement
+    if (galleryComplete) {
+      this.validationManager.hideTabError('error-indicator-tab2');
+    } else {
+      this.validationManager.showTabError('error-indicator-tab2');
+    }
+    
+    // Tab 5 : photo profil + champs hôte
+    const hoteFilled = !!document.getElementById('hote-input')?.value.trim();
+    const emailFilled = !!document.getElementById('email-input')?.value.trim();
+    const telephoneFilled = !!document.getElementById('telephone-input')?.value.trim();
+    const tab5Complete = hostImageComplete && hoteFilled && emailFilled && telephoneFilled;
+    
+    if (tab5Complete) {
+      this.validationManager.hideTabError('error-indicator-tab5');
+    } else {
+      this.validationManager.showTabError('error-indicator-tab5');
     }
   }
 
   
   displayImageGallery() { 
-  // Récupérer les images depuis propertyData
   const imagesGallery = this.propertyData.images_gallery || [];
 
-  // Gérer l'affichage du bloc empty ET du bloc photos
   const blocEmpty = document.getElementById('bloc-empty-photos');
   const blocPhotos = document.getElementById('bloc-photos-logement');
   
-  if (!Array.isArray(imagesGallery) || imagesGallery.length === 0) {
-    // Pas d'images : afficher empty, masquer photos
-    if (blocEmpty) blocEmpty.style.display = 'flex';
-    if (blocPhotos) blocPhotos.style.display = 'none';
-  } else {
-    // Il y a des images : masquer empty, afficher photos
-    if (blocEmpty) blocEmpty.style.display = 'none';
-    if (blocPhotos) blocPhotos.style.display = 'block';
-  }
+  // bloc-empty-photos est obsolète : on le cache s'il existe encore
+  if (blocEmpty) blocEmpty.style.display = 'none';
+  
+  // bloc-photos-logement toujours visible (bouton d'ajout accessible même sans photos)
+  if (blocPhotos) blocPhotos.style.display = 'block';
   // Masquer tous les blocs image par défaut
   for (let i = 1; i <= 20; i++) {
     const imageBlock = document.getElementById(`image-block-${i}`);
@@ -5974,14 +6469,14 @@ initImageManagement() {
   // Réafficher avec les contrôles
   this.displayEditableGallery();
   
-  // Initialiser SortableJS après un court délai (DOM ready)
+    // Initialiser SortableJS après un court délai (DOM ready)
   if (window.innerWidth > 768) {
     setTimeout(() => {
       this.initSortable();
     }, 100);
   }
 
-  // Listener sur le bouton d'ajout de photos (cloner pour supprimer le listener Tally)
+    // Listener sur le bouton d'ajout de photos (upload custom)
   const addPhotosButton = document.querySelector('.add-photos');
   if (addPhotosButton) {
     const newButton = addPhotosButton.cloneNode(true);
@@ -5993,15 +6488,7 @@ initImageManagement() {
       if (this.currentImagesGallery.length >= 20) {
         this.showNotification('error', 'Limite de 20 photos maximum atteinte');
       } else {
-        const tallyUrl = newButton.dataset.tallyUrl;
-        if (tallyUrl) {
-          const params = new URLSearchParams({
-            property_id: this.propertyId || '',
-            property_name: this.propertyData.name || '',
-            email: this.propertyData.email || ''
-          });
-          window.open(`${tallyUrl}?${params.toString()}`, '_blank');
-        }
+        this.handlePhotoSelection('logement');
       }
     });
   }
@@ -6041,14 +6528,17 @@ displayEditableGallery() {
   const blocEmpty = document.getElementById('bloc-empty-photos');
   const blocPhotos = document.getElementById('bloc-photos-logement');
   
-  // Gérer l'affichage empty/photos
+  // bloc-empty-photos obsolète, bloc-photos toujours visible
+  if (blocEmpty) blocEmpty.style.display = 'none';
+  if (blocPhotos) blocPhotos.style.display = 'block';
+  
+  // Si pas de photos, on ne fait que masquer les blocs image — mais on reste dans la fonction
   if (!Array.isArray(this.currentImagesGallery) || this.currentImagesGallery.length === 0) {
-    if (blocEmpty) blocEmpty.style.display = 'flex';
-    if (blocPhotos) blocPhotos.style.display = 'none';
+    for (let i = 1; i <= 20; i++) {
+      const imageBlock = document.getElementById(`image-block-${i}`);
+      if (imageBlock) imageBlock.style.display = 'none';
+    }
     return;
-  } else {
-    if (blocEmpty) blocEmpty.style.display = 'none';
-    if (blocPhotos) blocPhotos.style.display = 'block';
   }
   
   // Masquer tous les blocs d'abord
@@ -6104,6 +6594,10 @@ displayEditableGallery() {
       }
     }
   }
+  // 🆕 Mettre à jour les pastilles photos
+  if (typeof this.updatePhotoErrorPastilles === 'function') {
+    this.updatePhotoErrorPastilles();
+  }
 }
 
 addDeleteButtonFromTemplate(imageBlock, index) {
@@ -6138,47 +6632,38 @@ addDeleteButtonFromTemplate(imageBlock, index) {
     }
   }
   
-  // 🆕 NOUVEAU : Détecter si on est sur mobile
-  const isMobile = window.matchMedia('(max-width: 768px)').matches || 
-                   'ontouchstart' in window;
+    // 📱 MOBILE : Tap simple pour afficher/masquer le bouton delete
+  // (Sortable gère le long-press pour le drag via _justDragged)
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
   
   if (isMobile) {
-    // 📱 MOBILE : Système de clic
-    let clickTimeout;
-    let isDragging = false;
-    
     imageBlock.onclick = (e) => {
       if (e.target.closest('.button-delete-photo')) return;
-      if (isDragging) {
-        isDragging = false;
-        return;
-      }
+      // Si on vient de finir un drag, on ignore le click
+      if (this._justDragged) return;
       
-      // Toggle le bouton delete de cette image
-      deleteBtn.classList.toggle('show-delete');
-      
-      // Masquer les autres boutons
-      document.querySelectorAll('.button-delete-photo').forEach(btn => {
-        if (btn !== deleteBtn) {
-          btn.classList.remove('show-delete');
-        }
+      // Masquer tous les autres boutons delete ouverts
+      document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
+        if (btn !== deleteBtn) btn.classList.remove('show-delete');
       });
+      
+      // Toggle sur celui-ci
+      deleteBtn.classList.toggle('show-delete');
     };
-    
-    // Détecter le drag
-    imageBlock.addEventListener('touchstart', () => {
-      clickTimeout = setTimeout(() => {
-        isDragging = true;
-      }, 200);
+    }
+  
+  // Tap en dehors d'une photo → fermer tous les boutons delete ouverts
+  if (!this._globalClickHandlerAdded) {
+    this._globalClickHandlerAdded = true;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.image-block') && !e.target.closest('.button-delete-photo')) {
+        document.querySelectorAll('.button-delete-photo.show-delete').forEach(btn => {
+          btn.classList.remove('show-delete');
+        });
+      }
     });
-    
-    imageBlock.addEventListener('touchend', () => {
-      clearTimeout(clickTimeout);
-      setTimeout(() => {
-        isDragging = false;
-      }, 100);
-    });
-  }  
+  }
+  
   // Handler pour le bouton delete (mobile + desktop)
   deleteBtn.onclick = (e) => {
     e.preventDefault();
@@ -6233,6 +6718,8 @@ removeImage(index) {
   
   // Activer les boutons de sauvegarde
   this.enableButtons();
+
+  this.updatePhotoErrorPastilles();
 }
   
   
@@ -7023,24 +7510,60 @@ setBlockState(element, isActive) {
       this.initSortable();
     }, 100);
 
-    // Mettre à jour l'état du bouton d'ajout de photos
+        // Mettre à jour l'état du bouton d'ajout de photos
     this.updateAddPhotosButtonState();
+    
+    // 🆕 Annuler la photo de profil staged si existante
+    if (this.stagedHostImage?.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.stagedHostImage.url);
+    }
+    this.stagedHostImage = null;
+    // Re-afficher la photo de profil originale
+    this.displayHostImage();
+    
     // Désactiver les boutons
     this.disableButtons();
   }
 
   async saveModifications() {
-
-  if (this.validationManager && !this.validationManager.validateAllFields()) {
-    console.log('❌ Validation échouée - Sauvegarde annulée');
-    this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+  // Mod UU — deux modes selon le statut du logement :
+  // - pending-none = brouillon : on ne bloque que les format errors (valeurs invalides)
+  // - pending-verif et + = strict : toute erreur bloque (comportement original)
+  let fieldsValid = true;
+  let hasEmptyErrors = false;
+  const isDraftMode = (this.propertyData?.verification_status || 'pending-none') === 'pending-none';
+  
+  if (this.validationManager) {
+    fieldsValid = this.validationManager.validateAllFields();
     
-    // Naviguer vers la première erreur
-    setTimeout(() => {
-      this.validationManager.navigateToFirstError();
-    }, 100);
-    
-    return;
+    if (!fieldsValid) {
+      if (isDraftMode) {
+        // Brouillon : bloque uniquement les format errors
+        const { empty, format } = this.validationManager.categorizeErrors('validationConfig');
+        hasEmptyErrors = empty.length > 0;
+        
+        if (format.length > 0) {
+          console.log('❌ Valeurs invalides détectées - sauvegarde annulée');
+          this.showNotification('error', 'Certaines valeurs sont invalides, veuillez les corriger avant d\'enregistrer');
+          setTimeout(() => {
+            this.validationManager.navigateToField(format[0]);
+          }, 100);
+          return;
+        }
+      } else {
+        // Mode strict : toute erreur bloque
+        console.log('❌ Validation échouée - sauvegarde annulée');
+        this.showNotification('error', 'Veuillez corriger les erreurs avant d\'enregistrer');
+        setTimeout(() => {
+          this.validationManager.navigateToFirstError();
+        }, 100);
+        return;
+      }
+    }
+  }
+  
+  if (hasEmptyErrors) {
+    console.log('⚠️ Champs vides détectés - sauvegarde en mode brouillon');
   }
     
  // 🆕 NOUVEAU : Sauvegarder la valeur brute AVANT le blur
@@ -7293,16 +7816,25 @@ setBlockState(element, isActive) {
     }
   });
 
-    const currentStatus = this.propertyData.verification_status || 'pending-none';
+      const currentStatus = this.propertyData.verification_status || 'pending-none';
   if (currentStatus === 'pending-none') {
+    // 🆕 Vérifier que les photos sont complètes (3 logement + 1 profil)
+    const galleryCount = Array.isArray(this.currentImagesGallery) ? this.currentImagesGallery.length : 0;
+    const hasHostImage = !!(this.propertyData.host_image && String(this.propertyData.host_image).trim())
+                        || !!this.stagedHostImage?._staged;
+    const photosComplete = galleryCount >= 3 && hasHostImage;
+    
+    // 🆕 On utilise fieldsValid capturé au début de saveModifications
     if (isChambreHote) {
-      // Chambre d'hôtes : basculer seulement si au moins 1 chambre existe
-      if (this.roomsCount >= 1) {
+      // Chambre d'hôtes : champs OK + au moins 1 chambre COMPLÈTE + photos OK
+      if (this.roomsCount >= 1 && this.roomsComplete && photosComplete && fieldsValid) {
         updates['verification_status'] = 'pending-verif';
       }
     } else {
-      // Logement entier : basculer directement
-      updates['verification_status'] = 'pending-verif';
+      // Logement entier : champs valides + photos OK
+      if (fieldsValid && photosComplete) {
+        updates['verification_status'] = 'pending-verif';
+      }
     }
   }
 
@@ -7373,10 +7905,38 @@ setBlockState(element, isActive) {
   const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
   const currentPricingJson = JSON.stringify(this.pricingData);
   
-  if (originalPricingJson !== currentPricingJson) {
+    if (originalPricingJson !== currentPricingJson) {
     updates.pricing_data = this.pricingData;
   } else {
     console.log('❌ Les données tarifaires sont identiques, pas d\'ajout aux updates');
+  }
+
+  // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
+  try {
+    if (this.currentImagesGallery.some(p => p._staged)) {
+      this.showNotification('success', 'Envoi des photos en cours...');
+      await this.uploadStagedPhotos(this.currentImagesGallery, 'logement');
+    }
+  } catch (err) {
+    console.error('❌ Erreur upload photos :', err);
+    this.showNotification('error', 'Échec de l\'envoi des photos : ' + err.message);
+    return;
+  }
+  
+  // 🆕 Upload de la photo de profil si staged
+  let stagedHostUrl = null;
+  try {
+    if (this.stagedHostImage?._staged) {
+      this.showNotification('success', 'Envoi de la photo de profil...');
+      stagedHostUrl = await this.uploadStagedHostImage();
+    }
+  } catch (err) {
+    console.error('❌ Erreur upload photo profil :', err);
+    this.showNotification('error', 'Échec photo de profil : ' + err.message);
+    return;
+  }
+  if (stagedHostUrl) {
+    updates['image-hote'] = { url: stagedHostUrl };
   }
 
   // 🆕 NOUVEAU : Vérifier si les images ont changé
@@ -7479,18 +8039,61 @@ setBlockState(element, isActive) {
         this.propertyData.pricing_data = JSON.parse(JSON.stringify(this.pricingData));
       }
 
-      // 🆕 NOUVEAU : Mettre à jour les images d'origine après sauvegarde réussie
+      // 🆕 Mettre à jour les images d'origine après sauvegarde réussie
       if (updates['photos-du-logement']) {
-        this.originalImagesGallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
-        this.propertyData.images_gallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
-        this.initialValues.images_gallery = JSON.parse(JSON.stringify(this.currentImagesGallery));
+        // Si le backend renvoie les vraies URLs Webflow (après re-hosting), les utiliser
+        const freshPhotos = Array.isArray(result.fieldData?.['photos-du-logement'])
+          ? result.fieldData['photos-du-logement']
+          : this.currentImagesGallery;
+
+        this.currentImagesGallery = JSON.parse(JSON.stringify(freshPhotos));
+        this.originalImagesGallery = JSON.parse(JSON.stringify(freshPhotos));
+        this.propertyData.images_gallery = JSON.parse(JSON.stringify(freshPhotos));
+        this.initialValues.images_gallery = JSON.parse(JSON.stringify(freshPhotos));
+
+        // 🔧 Détruire Sortable et réinitialiser l'ordre DOM
+        // (sinon displayEditableGallery remplit les blocs par ID alors que le DOM a été réordonné par Sortable)
+        if (this.sortableInstance) {
+          this.sortableInstance.destroy();
+          this.sortableInstance = null;
+        }
+        const container = document.querySelector('.images-grid');
+        if (container) {
+          for (let i = 1; i <= 20; i++) {
+            const block = document.getElementById(`image-block-${i}`);
+            if (block) container.appendChild(block);
+          }
+        }
+
+        // Re-render avec les vraies URLs et l'ordre DOM remis à zéro
+        this.displayEditableGallery();
+        if (window.innerWidth > 768) {
+          setTimeout(() => this.initSortable(), 100);
+        }
       }
+
+      // 🆕 Mettre à jour la photo de profil après save réussi
+            if (updates['image-hote']) {
+              const freshHostUrl = result.fieldData?.['image-hote']?.url 
+                || (typeof result.fieldData?.['image-hote'] === 'string' ? result.fieldData['image-hote'] : null)
+                || stagedHostUrl; // fallback sur l'URL temp
+              
+              if (freshHostUrl) {
+                this.propertyData.host_image = freshHostUrl;
+              }
+              this.stagedHostImage = null;
+              this.displayHostImage();
+            }
         
-      // Désactiver les boutons
+            // Désactiver les boutons
       this.disableButtons();
       
-      // Message de succès
-      this.showNotification('success', 'Modifications enregistrées avec succès !');        
+      // 🆕 Message de succès combiné (informe sur les champs restants si applicable)
+      if (hasEmptyErrors) {
+        this.showNotification('success', "Modifications enregistrées, il reste des champs à remplir pour activer la vérification.");
+      } else {
+        this.showNotification('success', 'Modifications enregistrées avec succès !');
+      }
         
       } else {
         throw new Error(result.error || 'Erreur lors de la sauvegarde');

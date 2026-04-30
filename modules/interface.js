@@ -1,4 +1,4 @@
-// LOG production V1.38.25
+// LOG production V1.38.27
 // Page google
 class InterfaceManager {
   constructor() {
@@ -207,10 +207,16 @@ setupConditionsAnnulation() {
     secondaryImage.src = imageUrls[1];
   }
   
-  // 3️⃣ Troisième image → src de .third-image  
+    // 3️⃣ Troisième image → src de .third-image  
   const thirdImage = document.querySelector('.third-image');
   if (thirdImage && imageUrls[2]) {
     thirdImage.src = imageUrls[2];
+  }
+  
+  // 4️⃣ Mobile : première image → src de .images-logement.mobile (remplace le binding image1)
+  const mobileImage = document.querySelector('.images-logement.mobile');
+  if (mobileImage && imageUrls[0]) {
+    mobileImage.src = imageUrls[0];
   }
 }
 
@@ -443,13 +449,13 @@ setupConditionsAnnulation() {
     
   }
 
-  // Gestion de l'affichage conditionnel pour Chambre d'hôtes
+    // Gestion de l'affichage conditionnel pour Chambre d'hôtes
   setupChambreHoteDisplay() {
     const typeElement = document.querySelector('[data-mode-location]');
-    
+
     if (typeElement) {
       const typeLogement = typeElement.getAttribute('data-mode-location');
-      
+
       // Afficher/masquer le tag chambre d'hôtes
       const chambreHoteElement = document.querySelector('.chambres-hote');
       if (chambreHoteElement) {
@@ -465,8 +471,22 @@ setupConditionsAnnulation() {
         const infoChambreHotes = document.getElementById('info-chambre-hotes');
         if (infoChambreHotes) infoChambreHotes.style.display = 'flex';
         this.loadAndDisplayRooms();
+        this.hideSallesBainFromTailleMaison();
       }
 
+    }
+  }
+
+  // Le nombre de salles de bain n'est pas saisi pour les chambres d'hôtes,
+  // on retire donc la portion " - X salle(s) de bain" du texte taille_maison.
+  hideSallesBainFromTailleMaison() {
+    const regex = /\s*[-–]\s*\d+\s*salle[s]?\s*de\s*bain/i;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => regex.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+    });
+    let node;
+    while ((node = walker.nextNode())) {
+      node.nodeValue = node.nodeValue.replace(regex, '');
     }
   }
 

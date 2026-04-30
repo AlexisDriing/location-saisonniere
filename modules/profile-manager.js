@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.049 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.061 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -154,11 +154,8 @@ class ProfileManager {
   // 2. Remplir les informations - MODIFIÉ pour passer targetElement
   this.fillPropertyInfo(property, targetElement);
   
-  // 3. Remplir les images
-  const status = this.getPropertyStatus(property);
-  if (status === 'verified' || status === 'published') {
-    this.fillPropertyImages(property, targetElement);
-  }
+  // 3. Remplir les images (tous statuts)
+  this.fillPropertyImages(property, targetElement);
   
   // 4. Configurer le bouton modifier
   this.setupModifyButton(property, targetElement);
@@ -203,18 +200,41 @@ setupModifyButton(property, targetElement = document) {  // AJOUT du paramètre
   }
 }
 
-// 🆕 NOUVELLE MÉTHODE : Désactiver le bouton dans pending-none
-setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
+// 🆕 Désactiver le bouton de vérification selon deux critères :
+// 1. Champs obligatoires non remplis (status === 'pending-none')
+// 2. Photos incomplètes (< 3 photos logement OU pas de photo profil)
+setupDisableButton(property, targetElement = document) {
   const status = this.getPropertyStatus(property);
+  const disableButton = targetElement.querySelector('#button-disable');
+  const textInfoVerif = targetElement.querySelector('#texte-info-verif');
   
-  if (status === 'pending-none') {
-    const disableButton = targetElement.querySelector('#button-disable');
-    
-    if (disableButton) {
-      // Désactiver le clic sans changer l'apparence
-      disableButton.style.pointerEvents = 'none';
-      disableButton.style.cursor = 'not-allowed';
+  if (!disableButton) return;
+  
+  // Reset
+  disableButton.style.pointerEvents = '';
+  disableButton.style.cursor = '';
+  disableButton.style.opacity = '';
+  
+  // Si pas en pending-none, le bouton n'a pas besoin d'être désactivé
+  if (status !== 'pending-none') {
+    if (textInfoVerif) textInfoVerif.style.display = 'none';
+    return;
+  }
+  
+  // En pending-none : bouton désactivé
+  disableButton.style.pointerEvents = 'none';
+  disableButton.style.cursor = 'not-allowed';
+  disableButton.style.opacity = '0.5';
+  
+    // 🆕 Message générique adapté au type de logement
+  if (textInfoVerif) {
+    const isChambreHote = property.mode_location === "Chambre d'hôtes";
+    if (isChambreHote) {
+      textInfoVerif.textContent = "Complétez les champs, photos et au moins une chambre pour activer la vérification.";
+    } else {
+      textInfoVerif.textContent = "Complétez les champs obligatoires et ajoutez vos photos pour activer la vérification.";
     }
+    textInfoVerif.style.display = '';
   }
 }
 
@@ -312,20 +332,14 @@ setupDisableButton(property, targetElement = document) {  // AJOUT du paramètre
   // Injecter les images
   imageMapping.forEach(({ selector, url }) => {
     const imageElement = targetElement.querySelector(selector);
+    if (!imageElement || !url) return; // pas d'URL → on laisse l'image par défaut Webflow
     
-    if (imageElement && url) {
-      if (imageElement.tagName === 'IMG') {
-        imageElement.src = url;
-        imageElement.style.display = 'block';
-      } else {
-        // Si c'est une div avec background-image
-        imageElement.style.backgroundImage = `url(${url})`;
-        imageElement.style.backgroundSize = 'cover';
-        imageElement.style.backgroundPosition = 'center';
-        imageElement.style.display = 'block';
-      }
-    } else if (imageElement) {
-      imageElement.style.display = 'none';
+    if (imageElement.tagName === 'IMG') {
+      imageElement.src = url;
+    } else {
+      imageElement.style.backgroundImage = `url(${url})`;
+      imageElement.style.backgroundSize = 'cover';
+      imageElement.style.backgroundPosition = 'center';
     }
   });
 }
@@ -460,18 +474,25 @@ displayChambreHoteElements(property, targetElement = document) {
     if (status === 'pending-none' && !hasRooms) {
       buttonAdd.style.display = 'flex';
       
-      // Désactiver si les champs parent ne sont pas complets
+      // Calcul des conditions de blocage
+      const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
+      const hasHostImage = !!(property.host_image && String(property.host_image).trim());
+      const photosComplete = galleryCount >= 3 && hasHostImage;
+      
+      let blockingReason = null;
       if (property.parent_fields_complete !== true) {
+        blockingReason = 'fields';
+      } else if (!photosComplete) {
+        blockingReason = 'photos';
+      }
+      
+            if (blockingReason) {
         buttonAdd.style.opacity = '0.5';
         buttonAdd.style.cursor = 'not-allowed';
-        buttonAdd.style.pointerEvents = 'none';
       } else {
         buttonAdd.style.opacity = '';
         buttonAdd.style.cursor = '';
-        buttonAdd.style.pointerEvents = '';
       }
-    } else {
-      buttonAdd.style.display = 'none';
     }
   }
 
@@ -486,45 +507,32 @@ displayChambreHoteElements(property, targetElement = document) {
 }
 
 displayRoomImagesOnCard(rooms, targetElement, status) {
-  const showImages = (status === 'verified' || status === 'published');
-  
   for (let i = 0; i < 5; i++) {
     const slot = targetElement.querySelector(`.image-chambre-slot-${i + 1}`);
     if (!slot) continue;
     
     if (i < rooms.length) {
-      // Slot correspond à une chambre existante : afficher
       slot.style.display = 'flex';
       
-            // Remplir l'image seulement si verified ou published
-      if (showImages) {
-        const room = rooms[i];
-        const photos = room.photos || [];
-        
-        let photoUrl = null;
-        if (photos.length > 0) {
-          const firstPhoto = photos[0];
-          photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
-        }
-        
-        // Si pas de photo, utiliser l'image par défaut
-        if (!photoUrl) {
-          const defaultImg = document.getElementById('default-room-image');
-          photoUrl = defaultImg?.src || null;
-        }
-        
-        if (photoUrl) {
-          if (slot.tagName === 'IMG') {
-            slot.src = photoUrl;
-          } else {
-            slot.style.backgroundImage = `url(${photoUrl})`;
-            slot.style.backgroundSize = 'cover';
-            slot.style.backgroundPosition = 'center';
-          }
+      const room = rooms[i];
+      const photos = room.photos || [];
+      
+      // Si pas de photo : on ne touche pas → l'image par défaut Webflow reste affichée
+      if (photos.length === 0) continue;
+      
+      const firstPhoto = photos[0];
+      const photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
+      
+      if (photoUrl) {
+        if (slot.tagName === 'IMG') {
+          slot.src = photoUrl;
+        } else {
+          slot.style.backgroundImage = `url(${photoUrl})`;
+          slot.style.backgroundSize = 'cover';
+          slot.style.backgroundPosition = 'center';
         }
       }
     } else {
-      // Pas de chambre pour ce slot : masquer
       slot.style.display = 'none';
     }
   }
@@ -537,6 +545,12 @@ setupRoomButtons(property, targetElement) {
     buttonAdd.addEventListener('click', (e) => {
       e.preventDefault();
       if (property.parent_fields_complete !== true) {
+        return;
+      }
+      // 🆕 Aussi bloquer si photos non complètes
+      const galleryCount = Array.isArray(property.images_gallery) ? property.images_gallery.length : 0;
+      const hasHostImage = !!(property.host_image && String(property.host_image).trim());
+      if (!(galleryCount >= 3 && hasHostImage)) {
         return;
       }
       this.openAddRoomModal(property);
@@ -593,8 +607,8 @@ openManageRoomsModal(property) {
     
     bloc.style.display = 'flex';
     
-        // Image (remplir seulement si verified ou published)
-        const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
+    // Image (tous statuts)
+    const imageEl = document.getElementById(`image-chambres-gerer-${index + 1}`);
     if (imageEl) {
       // Sauvegarder le src d'origine (image par défaut Webflow) au premier passage
       if (imageEl.tagName === 'IMG' && !imageEl.dataset.defaultSrc) {
@@ -603,9 +617,8 @@ openManageRoomsModal(property) {
         imageEl.dataset.defaultBg = imageEl.style.backgroundImage;
       }
       
-      const status = this.getPropertyStatus(property);
       let photoUrl = null;
-      if ((status === 'verified' || status === 'published') && room.photos && room.photos.length > 0) {
+      if (room.photos && room.photos.length > 0) {
         photoUrl = typeof room.photos[0] === 'object' ? room.photos[0].url : room.photos[0];
       }
       
