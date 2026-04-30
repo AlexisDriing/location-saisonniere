@@ -1,4 +1,4 @@
-// LOG production V1.81 - chambres d'hôtes v1.065
+// LOG production V1.82 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -584,22 +584,25 @@ ensureSkeletonStyles() {
   const style = document.createElement('style');
   style.id = 'photo-upload-skeleton-styles';
   style.textContent = `
-    @keyframes photoSkeletonPulse {
-      0%, 100% { background-color: #d0d0d0; }
-      50%     { background-color: #eaeaea; }
-    }
-    .image-block.is-loading-photo {
-      animation: photoSkeletonPulse 1.3s infinite ease-in-out;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .image-block.is-loading-photo img {
-      opacity: 0 !important;
-    }
-    .image-block.is-loading-photo .button-delete-photo {
-      display: none !important;
-    }
-  `;
+  @keyframes photoSkeletonPulse {
+    0%, 100% { background-color: #d0d0d0; }
+    50%     { background-color: #eaeaea; }
+  }
+  .image-block.is-loading-photo {
+    animation: photoSkeletonPulse 1.3s infinite ease-in-out;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .image-block.is-loading-photo img {
+    opacity: 0 !important;
+  }
+  .image-block.is-loading-photo .button-delete-photo {
+    display: none !important;
+  }
+  .images-grid.gallery-uploading .button-delete-photo {
+    display: none !important;
+  }
+`;
   document.head.appendChild(style);
 }
 
@@ -685,7 +688,11 @@ async handlePhotoSelection(type) {
     try {
       this.ensureSkeletonStyles();
       await this.loadImageCompressionLib();
-
+    
+      // 🆕 Bloquer tous les boutons delete pendant l'upload (évite race condition splice/index)
+      const galleryContainer = document.querySelector(isRoom ? '.images-grid.chambre' : '.images-grid');
+      if (galleryContainer) galleryContainer.classList.add('gallery-uploading');
+    
       // Phase 1 — Insérer N squelettes dans la galerie
       const SKELETON_SRC = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
       const startIdx = gallery.length;
@@ -737,9 +744,14 @@ async handlePhotoSelection(type) {
         }
       }
 
+      // 🆕 Upload terminé : réactiver les boutons delete
+      if (galleryContainer) galleryContainer.classList.remove('gallery-uploading');
+
       this.enableButtons();
       this.showNotification('success', `${files.length} photo(s) ajoutée(s). Cliquez sur Enregistrer pour valider.`);
     } catch (err) {
+      // 🆕 En cas d'erreur, réactiver aussi
+      if (galleryContainer) galleryContainer.classList.remove('gallery-uploading');
       console.error('Erreur sélection photos :', err);
       this.showNotification('error', 'Erreur : ' + err.message);
     }
