@@ -1,4 +1,4 @@
-// LOG production V1.82 - chambres d'hôtes v1.065
+// LOG production V1.83 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -4273,8 +4273,13 @@ countVisiblePlages(isEdit = false) {
       this.validationManager.showTabError('error-indicator-tab2');
     }
     
-    // Tab 5 : photo profil
-    if (hostImageComplete) {
+    // Tab 5 : photo profil + champs hôte
+    const hoteFilled = !!document.getElementById('hote-input')?.value.trim();
+    const emailFilled = !!document.getElementById('email-input')?.value.trim();
+    const telephoneFilled = !!document.getElementById('telephone-input')?.value.trim();
+    const tab5Complete = hostImageComplete && hoteFilled && emailFilled && telephoneFilled;
+    
+    if (tab5Complete) {
       this.validationManager.hideTabError('error-indicator-tab5');
     } else {
       this.validationManager.showTabError('error-indicator-tab5');
