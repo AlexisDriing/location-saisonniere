@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.060 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.061 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -512,24 +512,16 @@ displayRoomImagesOnCard(rooms, targetElement, status) {
     if (!slot) continue;
     
     if (i < rooms.length) {
-      // Slot correspond à une chambre existante : afficher
       slot.style.display = 'flex';
       
-      // Remplir l'image (tous statuts)
       const room = rooms[i];
       const photos = room.photos || [];
       
-      let photoUrl = null;
-      if (photos.length > 0) {
-        const firstPhoto = photos[0];
-        photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
-      }
+      // Si pas de photo : on ne touche pas → l'image par défaut Webflow reste affichée
+      if (photos.length === 0) continue;
       
-      // Si pas de photo, utiliser l'image par défaut
-      if (!photoUrl) {
-        const defaultImg = document.getElementById('default-room-image');
-        photoUrl = defaultImg?.src || null;
-      }
+      const firstPhoto = photos[0];
+      const photoUrl = typeof firstPhoto === 'object' ? firstPhoto.url : firstPhoto;
       
       if (photoUrl) {
         if (slot.tagName === 'IMG') {
@@ -541,7 +533,6 @@ displayRoomImagesOnCard(rooms, targetElement, status) {
         }
       }
     } else {
-      // Pas de chambre pour ce slot : masquer
       slot.style.display = 'none';
     }
   }
