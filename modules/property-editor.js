@@ -1,4 +1,4 @@
-// LOG production V1.84 - chambres d'hôtes v1.065
+// LOG production V1.85 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -674,7 +674,7 @@ async handlePhotoSelection(type) {
 
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/jpeg,image/png,image/webp';
+  input.accept = 'image/jpeg,image/png,image/webp,image/avif';
   input.multiple = true;
   input.style.display = 'none';
   document.body.appendChild(input);
@@ -856,7 +856,7 @@ setupHostPhotoButton() {
 async handleProfilePhotoSelection() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/jpeg,image/png,image/webp';
+  input.accept = 'image/jpeg,image/png,image/webp,image/avif';
   input.style.display = 'none';
   document.body.appendChild(input);
   
