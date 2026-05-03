@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.22
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.23
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -858,10 +858,11 @@ if (imageElement) {
     }
   }
   
-  // PUIS ajouter la nouvelle image si elle existe
+    // PUIS ajouter la nouvelle image si elle existe
   if (firstImageUrl && firstImageUrl.startsWith('http')) {
     imageElement.src = firstImageUrl;
     imageElement.style.backgroundImage = `url(${firstImageUrl})`;
+    imageElement.classList.remove('w-dyn-bind-empty');
   }
 }
 
@@ -872,8 +873,9 @@ if (hostImageElement) {
   hostImageElement.src = '';
   hostImageElement.style.backgroundImage = '';
   
-  if (propData.host_image) {
+   if (propData.host_image) {
     hostImageElement.src = propData.host_image;
+    hostImageElement.classList.remove('w-dyn-bind-empty');
   }
 }
     
