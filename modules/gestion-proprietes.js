@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.23
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.24
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1283,7 +1283,7 @@ if (hostImageElement) {
       }, 500);
     }
       
-      // 3. Appliquer le nombre de voyageurs
+          // 3. Appliquer le nombre de voyageurs
       if ((data.adultes || data.enfants) && window.filtersManager) {
         
         // Mettre à jour FiltersManager
@@ -1294,6 +1294,20 @@ if (hostImageElement) {
         window.filtersManager.updateVoyageursFilter();
         window.filtersManager.updateTravelersUI();
       }
+
+      // 4. Sauvegarder dans selected_search_data pour transmission à la page détail
+      // (même si aucune date n'a été choisie, on transmet au moins les voyageurs)
+      const persistedData = {
+        adultes: data.adultes || 1,
+        enfants: data.enfants || 0,
+        bebes: data.bebes || 0,
+        timestamp: Date.now()
+      };
+      if (data.startDate && data.endDate) {
+        persistedData.startDate = data.startDate;
+        persistedData.endDate = data.endDate;
+      }
+      localStorage.setItem('selected_search_data', JSON.stringify(persistedData));
       
       // Nettoyer après utilisation
       localStorage.removeItem('home_search_data');
@@ -1493,10 +1507,13 @@ document.addEventListener('click', function(e) {
       const adultsElement = document.getElementById('chiffres-adultes');
       const enfantsElement = document.getElementById('chiffres-enfants');
       
-      const storedDataJSON = localStorage.getItem('selected_search_data');
-      if (storedDataJSON && adultsElement && enfantsElement) {
+      if (adultsElement && enfantsElement) {
         try {
-          const storedData = JSON.parse(storedDataJSON);
+          // Créer ou mettre à jour selected_search_data
+          // (avant : ne mettait à jour que si la clé existait déjà — du coup les
+          // voyageurs n'étaient jamais sauvegardés sans dates)
+          const storedDataJSON = localStorage.getItem('selected_search_data');
+          const storedData = storedDataJSON ? JSON.parse(storedDataJSON) : {};
           
           storedData.adultes = parseInt(adultsElement.textContent, 10);
           storedData.enfants = parseInt(enfantsElement.textContent, 10);
