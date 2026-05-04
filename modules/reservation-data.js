@@ -1,4 +1,4 @@
-// LOG production V1.17
+// LOG production V1.18
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -242,15 +242,13 @@ class ReservationDataManager {
   try {
     const searchData = JSON.parse(storedData);
       
-      // Vérifier si les données ne sont pas trop anciennes (24h)
+        // Vérifier si les données ne sont pas trop anciennes (24h)
       if (Date.now() - searchData.timestamp >= 24 * 60 * 60 * 1000) {
         localStorage.removeItem("selected_search_data");
         return;
       }
-      
-      if (!searchData.startDate || !searchData.endDate) return;
             
-      // Mettre à jour les voyageurs si disponible
+      // Mettre à jour les voyageurs si disponible (qu'il y ait des dates ou non)
       if (window.travelersManager) {
         if (typeof searchData.adultes === "number") {
           window.travelersManager.adults = searchData.adultes;
@@ -295,6 +293,11 @@ class ReservationDataManager {
         travelersElements.forEach(el => {
           if (el) el.textContent = travelersText;
         });
+      }
+      
+      // Si pas de dates, on s'arrête ici (les voyageurs ont été appliqués au-dessus)
+      if (!searchData.startDate || !searchData.endDate) {
+        return;
       }
       
       const applyDatesToCalendar = () => {
