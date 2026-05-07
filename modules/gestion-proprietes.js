@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.25
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.26
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -736,26 +736,32 @@ class PropertyManager {
       }
     }
 
-    const basePrice = lowestPrice !== Infinity ? lowestPrice : (propData.price || 100);
+        const basePrice = lowestPrice !== Infinity ? lowestPrice : (propData.price || 100);
 
-    // Prix plateforme
-    let platformPrice = basePrice;
+    // fullPrice = prix plein de la saison (sert à calculer le ratio plein-vs-plateforme)
+    const fullPrice = lowestPriceData?.price || basePrice;
+
+    // Étape 1 : calculer le platformFullPrice (ce que coûterait le PLEIN sur plateforme)
+    let platformFullPrice = fullPrice;
     let hasDiscount = false;
-    if (lowestPriceData) {
-      if (lowestPriceData.platformPrices) {
-        const prices = Object.values(lowestPriceData.platformPrices).filter(p => p > 0);
-        if (prices.length > 0) {
-          platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-          hasDiscount = true;
-        }
-      }
-      if (!hasDiscount) {
-        const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
-          ? pricingData.platformPricing.defaultDiscount : 17;
-        platformPrice = Math.round(basePrice * (100 / (100 - defaultDiscount)));
+    if (lowestPriceData?.platformPrices) {
+      const prices = Object.values(lowestPriceData.platformPrices).filter(p => p > 0);
+      if (prices.length > 0) {
+        platformFullPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
         hasDiscount = true;
       }
     }
+    if (!hasDiscount) {
+      const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
+        ? pricingData.platformPricing.defaultDiscount : 17;
+      platformFullPrice = fullPrice * (100 / (100 - defaultDiscount));
+      hasDiscount = true;
+    }
+
+    // Étape 2 : appliquer le ratio (platformFullPrice / fullPrice) au basePrice voyageur
+    // → prix barré cohérent avec le prix voyageur, % stable et honnête
+    const ratio = fullPrice > 0 ? (platformFullPrice / fullPrice) : 1;
+    const platformPrice = Math.round(basePrice * ratio);
 
     // Affichage
     if (hasDiscount && platformPrice > basePrice) {
@@ -775,17 +781,7 @@ class PropertyManager {
     }
   }
 
-  // Recalcule les prix de toutes les cartes visibles (côté client uniquement, 0 appel API)
-  // Utilisé quand l'utilisateur change le filtre voyageurs sans dates posées
-  refreshAllVisiblePrices() {
-    if (!this.containerElement) return;
-    const visibleCards = this.containerElement.querySelectorAll('.housing-item:not([style*="display: none"])');
-    visibleCards.forEach(card => {
-      if (card._propData) {
-        this._renderPropertyCardPrice(card, card._propData);
-      }
-    });
-  }
+  
   
   createPropertyCard(propData) {
     if (!this.templateClone) return null;
@@ -1513,7 +1509,6 @@ document.addEventListener('click', function(e) {
 });
 
 // Gestionnaire pour mettre à jour localStorage quand les voyageurs changent
-let _voyageursPriceDebounce = null;
 document.addEventListener('click', function(e) {
   const buttonId = e.target.id;
   const isCounterButton = [
@@ -1541,24 +1536,6 @@ document.addEventListener('click', function(e) {
         } catch (error) {
           console.error('❌ Erreur mise à jour voyageurs:', error);
         }
-      }
-
-      // Rafraîchir les prix des cartes selon le nouveau filtre voyageurs
-      const pm = window.propertyManager;
-      if (!pm) return;
-      const filters = pm.getFilterValues ? pm.getFilterValues() : null;
-      const hasDates = filters && filters.start && filters.end;
-      
-      if (hasDates) {
-        // Avec dates : 1 appel API par intention utilisateur (debounce 300ms)
-        // Le cache (clé incluant childrenCount) évite les appels répétés inutiles
-        if (_voyageursPriceDebounce) clearTimeout(_voyageursPriceDebounce);
-        _voyageursPriceDebounce = setTimeout(() => {
-          pm.updatePricesForDates(filters.start, filters.end);
-        }, 300);
-      } else {
-        // Sans dates : recalcul 100% côté client (0 appel API)
-        if (pm.refreshAllVisiblePrices) pm.refreshAllVisiblePrices();
       }
     }, 50);
   }
