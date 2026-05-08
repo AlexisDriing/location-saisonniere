@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.01
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.02
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -230,31 +230,53 @@ enhancePickerPositioning() {
   if (!this.picker) return;
 
   const $ = jQuery;
-  
-  // Sauvegarder la fonction move originale
+  const GAP = 8; // px - marge entre l'input et le calendrier
+
   const originalMove = this.picker.move;
-  
+
   this.picker.move = function() {
     originalMove.call(this);
-    
-    // Récupérer la position du champ input
+
     const inputElement = $('#input-calendar');
     const rect = inputElement[0].getBoundingClientRect();
-    
-    // Calculer les positions
-    const currentTop = parseInt(this.container.css('top'), 10);
+    const calWidth  = this.container.outerWidth();
+    const calHeight = this.container.outerHeight();
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+
+    // Position par défaut : sous l'input (conversion document → viewport)
+    const currentTop  = parseInt(this.container.css('top'),  10);
     const currentLeft = parseInt(this.container.css('left'), 10);
-    const offset = currentTop - (rect.bottom + window.pageYOffset);
-    
-    // Repositionner en position fixe sous l'input
+    let top  = currentTop - window.pageYOffset;
+    let left = currentLeft;
+
+    // Si le calendrier déborderait en bas, on tente à gauche, puis à droite
+    const wouldOverflow = (rect.bottom + calHeight + GAP) > vh;
+    if (wouldOverflow) {
+      const leftCandidate  = rect.left  - calWidth - GAP;
+      const rightCandidate = rect.right + GAP;
+
+      if (leftCandidate >= 0) {
+        left = leftCandidate;
+        top  = rect.top;
+      } else if (rightCandidate + calWidth <= vw) {
+        left = rightCandidate;
+        top  = rect.top;
+      }
+      // sinon : pas la place, on garde la position par défaut
+
+      // Recadrage vertical si débordement
+      if (top + calHeight > vh) top = Math.max(4, vh - calHeight - 4);
+    }
+
     this.container.css({
       position: 'fixed',
-      top: (rect.bottom + offset) + 'px',
-      left: currentLeft + 'px'
+      top:   top  + 'px',
+      left:  left + 'px',
+      right: 'auto'
     });
   };
-  
-  // Repositionner lors du redimensionnement de la fenêtre
+
   $(window).on('resize', () => {
     if (this.picker.isShowing) {
       this.picker.move();

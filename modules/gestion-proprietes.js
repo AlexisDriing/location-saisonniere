@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.22
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.26
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -216,23 +216,21 @@ class PropertyManager {
       
       if (visiblePropertyIds.length === 0) return;
       
-      // Récupérer le nombre d'adultes
+            // Récupérer le nombre d'adultes et d'enfants (avant la cacheKey, pour qu'elle inclue les deux)
       const adultsElement = document.getElementById('chiffres-adultes');
       const adultsCount = adultsElement ? parseInt(adultsElement.textContent, 10) : 1;
+      const childrenElement = document.getElementById('chiffres-enfants');
+      const childrenCount = childrenElement ? parseInt(childrenElement.textContent, 10) : 0;
+      const totalGuests = adultsCount + childrenCount;
       
-      // Vérifier le cache d'abord
-      const cacheKey = `prices_${startDate}_${endDate}_${adultsCount}_${visiblePropertyIds.join(',')}`;
+      // Vérifier le cache d'abord (clé inclut childrenCount pour invalider quand le filtre voyageurs change)
+      const cacheKey = `prices_${startDate}_${endDate}_${adultsCount}_${childrenCount}_${visiblePropertyIds.join(',')}`;
       const cachedPrices = this.getFromCache(cacheKey);
       
       if (cachedPrices) {
         this.updatePriceDisplays(cachedPrices.prices, cachedPrices.nights);
         return;
       }
-      
-      // 🆕 Récupérer le nombre total de voyageurs (adultes + enfants, hors bébés)
-      const childrenElement = document.getElementById('chiffres-enfants');
-      const childrenCount = childrenElement ? parseInt(childrenElement.textContent, 10) : 0;
-      const totalGuests = adultsCount + childrenCount;
       
       // Construire l'URL pour la requête
       let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}&total_guests=${totalGuests}`;
@@ -679,6 +677,112 @@ class PropertyManager {
     
   }
 
+  // Calcule et écrit le prix d'une carte selon le filtre voyageurs actuel
+  // (utilise pricesPerGuest[N-1] si mode per_guest, sinon prix plein de la saison la moins chère)
+  _renderPropertyCardPrice(cardElement, propData) {
+    const priceElement = cardElement.querySelector('.texte-prix');
+    const pourcentageElement = cardElement.querySelector('.pourcentage');
+    if (!priceElement) return;
+
+    if (!propData.pricing_data) {
+      if (propData.price) {
+        priceElement.textContent = '';
+        priceElement.appendChild(document.createTextNode('Dès '));
+        const strong = document.createElement('strong');
+        strong.textContent = `${propData.price}€ / nuit`;
+        priceElement.appendChild(strong);
+        if (pourcentageElement) pourcentageElement.style.display = 'none';
+      }
+      return;
+    }
+
+    const pricingData = propData.pricing_data;
+
+    // Lire le filtre voyageurs actuel
+    const adultsCount = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1', 10);
+    const childrenCount = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0', 10);
+    const totalGuests = Math.max(1, adultsCount + childrenCount);
+
+    // Helper : prix d'une saison selon le mode (per_guest → pricesPerGuest[N-1], sinon prix plein)
+    const getSeasonPrice = (season) => {
+      if (pricingData.defaultPricing?.mode === 'per_guest') {
+        const ppg = (season.pricesPerGuest?.length ? season.pricesPerGuest : pricingData.defaultPricing.pricesPerGuest) || [];
+        if (ppg.length > 0) {
+          const idx = Math.min(totalGuests - 1, ppg.length - 1);
+          return ppg[Math.max(0, idx)];
+        }
+      }
+      return season.price;
+    };
+
+    // Trouver le prix le plus bas
+    let lowestPrice = Infinity;
+    let lowestPriceData = null;
+
+    if (pricingData.defaultPricing) {
+      const dpPrice = getSeasonPrice(pricingData.defaultPricing);
+      if (dpPrice && dpPrice < lowestPrice) {
+        lowestPrice = dpPrice;
+        lowestPriceData = pricingData.defaultPricing;
+      }
+    }
+    if (pricingData.seasons) {
+      for (const season of pricingData.seasons) {
+        const sPrice = getSeasonPrice(season);
+        if (sPrice && sPrice < lowestPrice) {
+          lowestPrice = sPrice;
+          lowestPriceData = season;
+        }
+      }
+    }
+
+        const basePrice = lowestPrice !== Infinity ? lowestPrice : (propData.price || 100);
+
+    // fullPrice = prix plein de la saison (sert à calculer le ratio plein-vs-plateforme)
+    const fullPrice = lowestPriceData?.price || basePrice;
+
+    // Étape 1 : calculer le platformFullPrice (ce que coûterait le PLEIN sur plateforme)
+    let platformFullPrice = fullPrice;
+    let hasDiscount = false;
+    if (lowestPriceData?.platformPrices) {
+      const prices = Object.values(lowestPriceData.platformPrices).filter(p => p > 0);
+      if (prices.length > 0) {
+        platformFullPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+        hasDiscount = true;
+      }
+    }
+    if (!hasDiscount) {
+      const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
+        ? pricingData.platformPricing.defaultDiscount : 17;
+      platformFullPrice = fullPrice * (100 / (100 - defaultDiscount));
+      hasDiscount = true;
+    }
+
+    // Étape 2 : appliquer le ratio (platformFullPrice / fullPrice) au basePrice voyageur
+    // → prix barré cohérent avec le prix voyageur, % stable et honnête
+    const ratio = fullPrice > 0 ? (platformFullPrice / fullPrice) : 1;
+    const platformPrice = Math.round(basePrice * ratio);
+
+    // Affichage
+    if (hasDiscount && platformPrice > basePrice) {
+      setPriceWithStrike(priceElement, platformPrice, basePrice, 'Dès', '/ nuit');
+      if (pourcentageElement) {
+        const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
+        pourcentageElement.textContent = `-${discount}%`;
+        pourcentageElement.style.display = 'block';
+      }
+    } else {
+      priceElement.textContent = '';
+      priceElement.appendChild(document.createTextNode('Dès '));
+      const strong = document.createElement('strong');
+      strong.textContent = `${basePrice}€ / nuit`;
+      priceElement.appendChild(strong);
+      if (pourcentageElement) pourcentageElement.style.display = 'none';
+    }
+  }
+
+  
+  
   createPropertyCard(propData) {
     if (!this.templateClone) return null;
     
@@ -713,99 +817,10 @@ class PropertyManager {
       addressElement.textContent = cityCountry;
     }
     
-   // Prix avec gestion du prix barré
-  const priceElement = newCard.querySelector('.texte-prix');
-  const pourcentageElement = newCard.querySelector('.pourcentage');
-  
-  if (priceElement && propData.pricing_data) {
-    const pricingData = propData.pricing_data;
-    
-    // SIMPLIFICATION : Trouver le prix le plus bas
-    let lowestPrice = Infinity;
-    let lowestPriceData = null;
-    
-    // Vérifier le prix par défaut
-    if (pricingData.defaultPricing && pricingData.defaultPricing.price) {
-      if (pricingData.defaultPricing.price < lowestPrice) {
-        lowestPrice = pricingData.defaultPricing.price;
-        lowestPriceData = pricingData.defaultPricing;
-      }
-    }
-    
-    // Vérifier les saisons
-    if (pricingData.seasons) {
-      for (const season of pricingData.seasons) {
-        if (season.price < lowestPrice) {
-          lowestPrice = season.price;
-          lowestPriceData = season;
-        }
-      }
-    }
-    
-    // Si on n'a trouvé aucun prix, utiliser le prix du CMS ou 100
-    const basePrice = lowestPrice !== Infinity ? lowestPrice : (propData.price || 100);
-    
-    // Calculer le prix plateforme
-    let platformPrice = basePrice;
-    let hasDiscount = false;
-    
-    if (lowestPriceData) {
-      // Si on a des prix plateformes pour cette donnée
-      if (lowestPriceData.platformPrices) {
-        // 🔧 FIX : Filtrer les prix à 0 comme dans les autres modules
-        const prices = Object.values(lowestPriceData.platformPrices).filter(price => price > 0);
-        if (prices.length > 0) {
-          platformPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-          hasDiscount = true;
-        }
-      }
-      
-      // Si pas de prix plateformes valides, appliquer 17% par défaut
-      if (!hasDiscount) {
-        const defaultDiscount = (pricingData.platformPricing && pricingData.platformPricing.defaultDiscount) 
-          ? pricingData.platformPricing.defaultDiscount 
-          : 17;
-        platformPrice = Math.round(basePrice * (100 / (100 - defaultDiscount)));
-        hasDiscount = true;
-      }
-    }
-    
-    // Afficher avec prix barré si différent
-    if (hasDiscount && platformPrice > basePrice) {
-      setPriceWithStrike(priceElement, platformPrice, basePrice, 'Dès', '/ nuit');  // ✅ SÉCURISÉ
-      
-      // Calculer et afficher le pourcentage
-      if (pourcentageElement) {
-        const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
-        pourcentageElement.textContent = `-${discount}%`;
-        pourcentageElement.style.display = 'block';
-      }
-    } else {
-      setPriceDisplay(priceElement, basePrice, '/ nuit');  // ✅ SÉCURISÉ
-      // Ajouter "Dès" manuellement
-      const currentContent = priceElement.innerHTML;
-      priceElement.textContent = '';
-      priceElement.appendChild(document.createTextNode('Dès '));
-      const strong = document.createElement('strong');
-      strong.textContent = `${basePrice}€ / nuit`;
-      priceElement.appendChild(strong);
-      
-      if (pourcentageElement) {
-        pourcentageElement.style.display = 'none';
-      }
-    }
-  } else if (priceElement && propData.price) {
-    // Fallback si pas de pricing_data
-    priceElement.textContent = '';  // ✅ SÉCURISÉ
-    priceElement.appendChild(document.createTextNode('Dès '));
-    const strong = document.createElement('strong');
-    strong.textContent = `${propData.price}€ / nuit`;
-    priceElement.appendChild(strong);
-    
-    if (pourcentageElement) {
-      pourcentageElement.style.display = 'none';
-    }
-  }
+    // Prix : déléguer à _renderPropertyCardPrice (gère mode per_guest selon filtre voyageurs)
+    this._renderPropertyCardPrice(newCard, propData);
+    // Stocker propData sur la carte pour pouvoir rafraîchir le prix sans appel API
+    newCard._propData = propData;
     
     // Capacité
     const capacityElement = newCard.querySelector('[data-voyageurs]');
@@ -858,10 +873,11 @@ if (imageElement) {
     }
   }
   
-  // PUIS ajouter la nouvelle image si elle existe
+    // PUIS ajouter la nouvelle image si elle existe
   if (firstImageUrl && firstImageUrl.startsWith('http')) {
     imageElement.src = firstImageUrl;
     imageElement.style.backgroundImage = `url(${firstImageUrl})`;
+    imageElement.classList.remove('w-dyn-bind-empty');
   }
 }
 
@@ -872,8 +888,9 @@ if (hostImageElement) {
   hostImageElement.src = '';
   hostImageElement.style.backgroundImage = '';
   
-  if (propData.host_image) {
+   if (propData.host_image) {
     hostImageElement.src = propData.host_image;
+    hostImageElement.classList.remove('w-dyn-bind-empty');
   }
 }
     
@@ -1281,7 +1298,7 @@ if (hostImageElement) {
       }, 500);
     }
       
-      // 3. Appliquer le nombre de voyageurs
+          // 3. Appliquer le nombre de voyageurs
       if ((data.adultes || data.enfants) && window.filtersManager) {
         
         // Mettre à jour FiltersManager
@@ -1292,6 +1309,20 @@ if (hostImageElement) {
         window.filtersManager.updateVoyageursFilter();
         window.filtersManager.updateTravelersUI();
       }
+
+      // 4. Sauvegarder dans selected_search_data pour transmission à la page détail
+      // (même si aucune date n'a été choisie, on transmet au moins les voyageurs)
+      const persistedData = {
+        adultes: data.adultes || 1,
+        enfants: data.enfants || 0,
+        bebes: data.bebes || 0,
+        timestamp: Date.now()
+      };
+      if (data.startDate && data.endDate) {
+        persistedData.startDate = data.startDate;
+        persistedData.endDate = data.endDate;
+      }
+      localStorage.setItem('selected_search_data', JSON.stringify(persistedData));
       
       // Nettoyer après utilisation
       localStorage.removeItem('home_search_data');
@@ -1491,10 +1522,11 @@ document.addEventListener('click', function(e) {
       const adultsElement = document.getElementById('chiffres-adultes');
       const enfantsElement = document.getElementById('chiffres-enfants');
       
-      const storedDataJSON = localStorage.getItem('selected_search_data');
-      if (storedDataJSON && adultsElement && enfantsElement) {
+      if (adultsElement && enfantsElement) {
         try {
-          const storedData = JSON.parse(storedDataJSON);
+          // Créer ou mettre à jour selected_search_data
+          const storedDataJSON = localStorage.getItem('selected_search_data');
+          const storedData = storedDataJSON ? JSON.parse(storedDataJSON) : {};
           
           storedData.adultes = parseInt(adultsElement.textContent, 10);
           storedData.enfants = parseInt(enfantsElement.textContent, 10);

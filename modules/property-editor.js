@@ -1,4 +1,4 @@
-// LOG production V1.84 - chambres d'hôtes v1.065
+// LOG production V1.86 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -674,7 +674,7 @@ async handlePhotoSelection(type) {
 
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/jpeg,image/png,image/webp';
+  input.accept = 'image/jpeg,image/png,image/webp,image/avif';
   input.multiple = true;
   input.style.display = 'none';
   document.body.appendChild(input);
@@ -856,7 +856,7 @@ setupHostPhotoButton() {
 async handleProfilePhotoSelection() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/jpeg,image/png,image/webp';
+  input.accept = 'image/jpeg,image/png,image/webp,image/avif';
   input.style.display = 'none';
   document.body.appendChild(input);
   
@@ -3003,25 +3003,42 @@ collectRoomPricingData() {
   // Réductions
   pricingData.discounts = JSON.parse(JSON.stringify(this.roomPricingData.discounts || []));
   
-  // Prix plateformes par défaut
+    // Prix plateformes par défaut — uniquement pour les plateformes encore actives côté parent
+  const parentLinks = this.parentPlatformLinks || {};
+  const isPlatformActive = (p) => !!(parentLinks[p] && parentLinks[p].trim() !== '');
+
   const platformPrices = {};
-  let hasPlatformPrices = false;
-  
   ['airbnb', 'booking', 'other'].forEach(platform => {
+    if (!isPlatformActive(platform)) return; // lien parent vide → on ignore
     const input = document.getElementById(`default-${platform}-price-input-chambre`);
     if (input) {
       const value = parseInt(this.getRawValue(input)) || 0;
       if (value > 0) {
         platformPrices[platform] = value;
-        hasPlatformPrices = true;
       }
     }
   });
-  
-  if (hasPlatformPrices) {
+
+  if (Object.keys(platformPrices).length > 0) {
     pricingData.defaultPricing.platformPrices = platformPrices;
+  } else if (pricingData.defaultPricing.platformPrices) {
+    // Aucune plateforme active : supprimer la clé orpheline héritée du JSON
+    delete pricingData.defaultPricing.platformPrices;
   }
-  
+
+  // Nettoyer aussi les prix plateformes orphelins dans les saisons
+  if (Array.isArray(pricingData.seasons)) {
+    pricingData.seasons.forEach(season => {
+      if (!season.platformPrices) return;
+      Object.keys(season.platformPrices).forEach(p => {
+        if (!isPlatformActive(p)) delete season.platformPrices[p];
+      });
+      if (Object.keys(season.platformPrices).length === 0) {
+        delete season.platformPrices;
+      }
+    });
+  }
+
   return pricingData;
 }
   
@@ -8084,8 +8101,13 @@ setBlockState(element, isActive) {
               this.stagedHostImage = null;
               this.displayHostImage();
             }
-        
-            // Désactiver les boutons
+
+      // Cascade : si un lien plateforme a été retiré, nettoyer les chambres
+      if (isChambreHote) {
+        await this.cascadeOrphanPlatformCleanup(updates);
+      }
+
+      // Désactiver les boutons
       this.disableButtons();
       
       // 🆕 Message de succès combiné (informe sur les champs restants si applicable)
@@ -8106,6 +8128,71 @@ setBlockState(element, isActive) {
       // Réactiver le bouton
       saveButton.disabled = false;
       saveButton.textContent = originalText;
+    }
+  }
+
+  // Nettoie les prix plateformes orphelins dans les chambres après retrait
+  // d'un ou plusieurs liens plateforme du logement parent.
+  async cascadeOrphanPlatformCleanup(updates) {
+    const removedPlatforms = [];
+    if (updates.annonce_airbnb  !== undefined && updates.annonce_airbnb  === '') removedPlatforms.push('airbnb');
+    if (updates.annonce_booking !== undefined && updates.annonce_booking === '') removedPlatforms.push('booking');
+    if (updates.annonce_gites   !== undefined && updates.annonce_gites   === '') removedPlatforms.push('other');
+  
+    if (removedPlatforms.length === 0) return;
+  
+    try {
+      const resp = await fetch(`${window.CONFIG.API_URL}/property-rooms/${this.propertyId}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const rooms = data.rooms || [];
+  
+      for (const room of rooms) {
+        const pricingData = room.pricing_data;
+        if (!pricingData) continue;
+  
+        let modified = false;
+  
+        // Nettoyage defaultPricing
+        if (pricingData.defaultPricing?.platformPrices) {
+          removedPlatforms.forEach(p => {
+            if (p in pricingData.defaultPricing.platformPrices) {
+              delete pricingData.defaultPricing.platformPrices[p];
+              modified = true;
+            }
+          });
+          if (Object.keys(pricingData.defaultPricing.platformPrices).length === 0) {
+            delete pricingData.defaultPricing.platformPrices;
+          }
+        }
+  
+        // Nettoyage saisons
+        if (Array.isArray(pricingData.seasons)) {
+          pricingData.seasons.forEach(season => {
+            if (!season.platformPrices) return;
+            removedPlatforms.forEach(p => {
+              if (p in season.platformPrices) {
+                delete season.platformPrices[p];
+                modified = true;
+              }
+            });
+            if (Object.keys(season.platformPrices).length === 0) {
+              delete season.platformPrices;
+            }
+          });
+        }
+  
+        if (!modified) continue; // chambre sans orphelin → pas de PUT
+  
+        await fetch(`${window.CONFIG.API_URL}/update-room/${room.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pricing_data: pricingData })
+        });
+      }
+    } catch (err) {
+      console.error('⚠️ Erreur nettoyage chambres après retrait lien plateforme:', err);
+      // L'étape 1 (filet à la sauvegarde chambre) prendra le relais
     }
   }
 }

@@ -1,4 +1,4 @@
-// LOG production V1.38.27
+// LOG production V1.38.28
 // Page google
 class InterfaceManager {
   constructor() {
@@ -2013,7 +2013,7 @@ setupImmatriculation() {
   setupPopin(popinSelector, openSelector, closeSelectors) {
     const popin = document.querySelector(popinSelector);
     const openBtn = document.querySelector(openSelector);
-    const closeBtns = document.querySelectorAll(closeSelectors);
+    const closeBtns = popin ? popin.querySelectorAll(closeSelectors) : [];
     
     if (!popin || !openBtn) {
       console.error(`Popin (${popinSelector}) ou bouton d'ouverture (${openSelector}) non trouvé.`);
