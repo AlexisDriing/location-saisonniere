@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.061 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.062 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -74,7 +74,9 @@ class ProfileManager {
     try {
       
       // Appel à votre API pour récupérer les logements de l'utilisateur
-      const response = await fetch(`${window.CONFIG.API_URL}/user-properties?member_id=${this.currentUser.id}`);
+      const response = await fetch(`${window.CONFIG.API_URL}/user-properties`, {
+  headers: window.AuthHelper.getAuthHeaders()
+});
       
       if (!response.ok) {
         throw new Error(`Erreur API: ${response.status}`);
@@ -716,7 +718,8 @@ async deleteRoom(roomId, property) {
   
   try {
     const response = await fetch(`${window.CONFIG.API_URL}/delete-room/${roomId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: window.AuthHelper.getAuthHeaders()
     });
     
     const result = await response.json();
@@ -786,9 +789,8 @@ setupAddRoomSubmit() {
     
     try {
       const response = await fetch(`${window.CONFIG.API_URL}/create-room`, {
-
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: name,
           voyageursMax: voyageursMax,
@@ -804,7 +806,7 @@ setupAddRoomSubmit() {
           try {
             await fetch(`${window.CONFIG.API_URL}/update-property/${property.webflow_item_id}`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
               body: JSON.stringify({ verification_status: 'pending-verif' })
             });
           } catch (statusError) {
@@ -1066,11 +1068,10 @@ checkPopupTrigger() {
     try {
       const response = await fetch(`${window.CONFIG.API_URL}/create-property`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: nomLogement,
           address: adresse,
-          memberId: this.currentUser.id,
           modeLocation: modeLocation
         })
       });
