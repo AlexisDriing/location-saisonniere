@@ -1,4 +1,4 @@
-// LOG production V1.38.28
+// LOG production V1.38.29
 // Page google
 class InterfaceManager {
   constructor() {
@@ -365,7 +365,7 @@ setupConditionsAnnulation() {
       return;
     }
 
-    const blocEquipements = document.querySelector('.blocentier-equipements');
+    const blocEquipements = document.querySelector('.blocentier-equipements:not(.chambre)');
     if (blocEquipements) {
       blocEquipements.style.display = 'block'; // ou 'block' selon votre design
     }
