@@ -1,4 +1,4 @@
-// LOG production V1.87 - chambres d'hôtes v1.065
+// LOG production V1.88 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -3433,6 +3433,12 @@ cancelRoomModifications() {
       const response = await fetch(`${window.CONFIG.API_URL}/property-details-by-id/${this.propertyId}`, {
         headers: window.AuthHelper.getAuthHeaders()
       });
+
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        alert("Vous n'avez pas accès à ce logement.");
+        window.location.href = '/mon-espace';
+        return;
+      }
       
       if (!response.ok) {
         throw new Error(`Erreur serveur: ${response.status}`);
