@@ -1,4 +1,4 @@
-// LOG production V1.86 - chambres d'hôtes v1.065
+// LOG production V1.88 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -96,10 +96,13 @@ class PropertyEditor {
   
   async init() {
 
+  // 🔐 Attendre que Memberstack soit chargé avant tout fetch protégé
+  await window.AuthHelper.init();
+
   // 🆕 Désactiver la validation HTML5 native (on utilise notre validation JS)
   document.querySelectorAll('form').forEach(form => form.setAttribute('novalidate', 'true'));
     
-    // 1. Récupérer l'ID depuis l'URL
+  // 1. Récupérer l'ID depuis l'URL
   this.propertyId = this.getPropertyIdFromUrl();
   this.roomId = this.getRoomIdFromUrl();
   this.isRoomEdit = !!this.roomId;
@@ -791,7 +794,7 @@ async uploadStagedPhotos(gallery, type) {
   try {
     const response = await fetch(`${window.CONFIG.API_URL}/stage-photos`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
       signal: controller.signal
     });
@@ -928,7 +931,7 @@ async uploadStagedHostImage() {
   try {
     const response = await fetch(`${window.CONFIG.API_URL}/stage-photos`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
       signal: controller.signal
     });
@@ -3220,11 +3223,11 @@ async saveRoomModifications() {
   }
   
   try {
-    const response = await fetch(`${window.CONFIG.API_URL}/update-room/${this.roomId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
+      const response = await fetch(`${window.CONFIG.API_URL}/update-room/${this.roomId}`, {
+        method: 'PUT',
+        headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(updates)
+      });
     
     const result = await response.json();
     
@@ -3427,7 +3430,15 @@ cancelRoomModifications() {
   async loadPropertyData() {
     try {
       
-      const response = await fetch(`${window.CONFIG.API_URL}/property-details-by-id/${this.propertyId}`);
+      const response = await fetch(`${window.CONFIG.API_URL}/property-details-by-id/${this.propertyId}`, {
+        headers: window.AuthHelper.getAuthHeaders()
+      });
+
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        alert("Vous n'avez pas accès à ce logement.");
+        window.location.href = '/mon-espace';
+        return;
+      }
       
       if (!response.ok) {
         throw new Error(`Erreur serveur: ${response.status}`);
@@ -7991,9 +8002,7 @@ setBlockState(element, isActive) {
     // Appeler la route de mise à jour
     const response = await fetch(`${window.CONFIG.API_URL}/update-property/${this.propertyId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(updates)
     });
       
