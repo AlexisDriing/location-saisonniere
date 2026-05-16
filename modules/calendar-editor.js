@@ -1,4 +1,4 @@
-// LOG production V1.00
+// LOG production V1.01
 // Module : gestion du calendrier de blocage manuel des dates (tab Calendrier)
 // Instancié par PropertyEditor pour les logements ET les chambres
 class CalendarEditor {
@@ -90,11 +90,13 @@ class CalendarEditor {
     this.render();
   }
 
-  destroy() {
-    if (this._boundMouseDown) document.removeEventListener('mousedown', this._boundMouseDown);
+    destroy() {
+    if (this.container) {
+      if (this._boundMouseDown) this.container.removeEventListener('mousedown', this._boundMouseDown);
+      if (this._boundTouchStart) this.container.removeEventListener('touchstart', this._boundTouchStart);
+    }
     if (this._boundMouseMove) document.removeEventListener('mousemove', this._boundMouseMove);
     if (this._boundMouseUp) document.removeEventListener('mouseup', this._boundMouseUp);
-    if (this._boundTouchStart) document.removeEventListener('touchstart', this._boundTouchStart);
     if (this._boundTouchMove) document.removeEventListener('touchmove', this._boundTouchMove);
     if (this._boundTouchEnd) document.removeEventListener('touchend', this._boundTouchEnd);
     if (this.container) this.container.innerHTML = '';
@@ -162,8 +164,8 @@ class CalendarEditor {
     if (CalendarEditor.CSS_INJECTED) return;
     const style = document.createElement('style');
     style.id = 'calendar-editor-styles';
-    style.textContent = `
-:root {
+        style.textContent = `
+.cale-wrap {
   --cale-primary: #235B59;
   --cale-primary-hover: #1a4544;
   --cale-select-bg: #EDF1F0;
@@ -178,8 +180,9 @@ class CalendarEditor {
   --cale-text-soft: #6A6A6A;
   --cale-text-muted: #C8C8CC;
   --cale-border: #E8E8EB;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  color: var(--cale-text);
 }
-.cale-wrap { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; color: var(--cale-text); }
 .cale-helper { background: #FEFAEE; border: 1px solid #F5E8B8; border-radius: 10px; padding: 14px 16px; font-size: 13px; line-height: 1.6; margin-bottom: 20px; color: #6B5400; }
 .cale-helper strong { color: #4A3A00; }
 .cale-legend { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; padding: 14px 16px; background: #FAFAFB; border: 1px solid #ECECEF; border-radius: 12px; margin-bottom: 20px; font-size: 13px; }
@@ -381,10 +384,12 @@ class CalendarEditor {
       if (this.isDragging) this.endDrag();
     };
 
-    document.addEventListener('mousedown', this._boundMouseDown);
+        // mousedown / touchstart : uniquement sur le container (on ne peut démarrer un drag que dans la grille)
+    this.container.addEventListener('mousedown', this._boundMouseDown);
+    this.container.addEventListener('touchstart', this._boundTouchStart, { passive: true });
+    // mousemove / mouseup / touchmove / touchend : sur document (pour suivre le drag même hors zone)
     document.addEventListener('mousemove', this._boundMouseMove);
     document.addEventListener('mouseup', this._boundMouseUp);
-    document.addEventListener('touchstart', this._boundTouchStart, { passive: true });
     document.addEventListener('touchmove', this._boundTouchMove, { passive: false });
     document.addEventListener('touchend', this._boundTouchEnd);
   }
