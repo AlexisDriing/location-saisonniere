@@ -1,4 +1,4 @@
-// LOG production V1.38.29
+// LOG production V1.38.30
 // Page google
 class InterfaceManager {
   constructor() {
@@ -769,6 +769,7 @@ setupConditionsAnnulation() {
   }
 
     // Précharger les données iCal de toutes les chambres
+    // ✅ Utilise la route serveur unifiée qui inclut dates manuelles + iCal externes
   async preloadRoomsCalendarData(rooms) {
     // Attendre que le CalendarManager soit prêt (picker initialisé)
     let calendarManager = null;
@@ -784,26 +785,7 @@ setupConditionsAnnulation() {
     const today = moment().startOf('day');
     const twoYears = moment().add(2, 'year').endOf('month');
 
-    // Collecter toutes les URLs iCal de toutes les chambres
-    const allUrls = [];
-    rooms.forEach(room => {
-      (room.ical_urls || []).forEach(url => {
-        if (url && url.trim() !== '') allUrls.push(url);
-      });
-    });
-
-    if (allUrls.length === 0) {
-      this._combinedUnavailableDates = new Set();
-      this._roomsUnavailableDates = {};
-      return;
-    }
-
-    // Charger tout (chaque URL est mise en cache par ICalManager)
-    await icalManager.loadAllUnavailableDates(allUrls);
-    this._combinedUnavailableDates = new Set(icalManager.unavailableDates);
-
-    // Construire les Sets par chambre
-    this._roomsUnavailableDates = {};
+    // Filtrer les chambres affichées (avec photos)
     const roomsWithPhotos = rooms.filter(room => {
       const photos = room.photos || [];
       if (photos.length === 0) return false;
@@ -811,19 +793,64 @@ setupConditionsAnnulation() {
       return firstPhoto && firstPhoto.trim() !== '';
     });
 
+    // 🆕 Pour chaque chambre, appeler la route serveur unifiée
+    this._roomsUnavailableDates = {};
+    const combined = new Set();
+
     for (let i = 0; i < roomsWithPhotos.length; i++) {
-      const roomUrls = (roomsWithPhotos[i].ical_urls || []).filter(u => u && u.trim() !== '');
-      if (roomUrls.length > 0) {
-        const events = await Promise.all(
-          roomUrls.map(url => icalManager.getICalData(url, today, twoYears))
-        );
-        this._roomsUnavailableDates[i + 1] = new Set(events.flat().map(e => e.date));
-      } else {
-        this._roomsUnavailableDates[i + 1] = new Set();
+      const room = roomsWithPhotos[i];
+      const roomKey = i + 1;
+      const set = new Set();
+
+      try {
+        const resp = await fetch(`${window.CONFIG.API_URL}/property-unavailability/room/${room.id}`);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        // Dates fermées manuellement (ranges {s, e})
+        (data.blockedDates || []).forEach(rng => {
+          if (!rng || !rng.s || !rng.e) return;
+          const cursor = moment(rng.s, 'YYYY-MM-DD');
+          const end = moment(rng.e, 'YYYY-MM-DD');
+          while (cursor.isSameOrBefore(end, 'day')) {
+            const day = cursor.format('YYYY-MM-DD');
+            set.add(day);
+            combined.add(day);
+            cursor.add(1, 'day');
+          }
+        });
+
+        // Dates iCal externes (déjà jour-par-jour)
+        Object.keys(data.externalDates || {}).forEach(d => {
+          set.add(d);
+          combined.add(d);
+        });
+
+      } catch (err) {
+        // Fallback : ancienne méthode (parsing client) pour cette chambre
+        console.warn(`[interface.js] Fallback iCal pour chambre ${room.id}:`, err.message);
+        const roomUrls = (room.ical_urls || []).filter(u => u && u.trim() !== '');
+        if (roomUrls.length > 0) {
+          const events = await Promise.all(
+            roomUrls.map(url => icalManager.getICalData(url, today, twoYears).catch(() => []))
+          );
+          events.flat().forEach(e => {
+            set.add(e.date);
+            combined.add(e.date);
+          });
+        }
       }
+
+      this._roomsUnavailableDates[roomKey] = set;
     }
 
-        // Mettre à jour le picker avec les dates combinées
+    this._combinedUnavailableDates = combined;
+
+    // Écraser le Set du picker avec les dates combinées
+    icalManager.unavailableDates = combined;
+    icalManager.initialDataLoaded = true;
+
+    // Mettre à jour le picker avec les dates combinées
     if (calendarManager.picker) {
       calendarManager.picker.updateCalendars();
     }
