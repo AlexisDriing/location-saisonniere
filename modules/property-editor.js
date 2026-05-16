@@ -1,4 +1,4 @@
-// LOG production V1.90 - chambres d'hôtes v1.065
+// LOG production V1.91 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -5907,9 +5907,9 @@ updateAddButtonState() {
   // 📅 GESTION DU CALENDRIER DE BLOCAGE MANUEL
 
 async initCalendarEditor() {
-  const container = document.getElementById('calendar-host-edit');
+  const container = document.getElementById('calendar-host-edit-logement');
   if (!container) {
-    console.warn('[property-editor] #calendar-host-edit introuvable, calendrier ignoré');
+    console.warn('[property-editor] #calendar-host-edit-logement introuvable, calendrier ignoré');
     return;
   }
   if (typeof window.CalendarEditor === 'undefined') {
@@ -5925,10 +5925,12 @@ async initCalendarEditor() {
     const icalExportUrl = this.propertyData.ical_export_url || '';
 
     this.calendarEditor = new CalendarEditor({
-      containerSelector: '#calendar-host-edit',
+      containerSelector: '#calendar-host-edit-logement',
       propertyId: this.propertyId,
       isRoom: false,
       icalExportUrl: icalExportUrl,
+      exportUrlInputId: 'ical-export-url-logement',
+      exportCopyBtnId: 'ical-export-copy-btn-logement',
       onChange: () => this.enableButtons()
     });
     this.calendarEditor.init({
@@ -5944,9 +5946,9 @@ async initCalendarEditor() {
 }
 
 async initRoomCalendarEditor() {
-  const container = document.getElementById('calendar-host-edit');
+  const container = document.getElementById('calendar-host-edit-chambre');
   if (!container) {
-    console.warn('[property-editor] #calendar-host-edit introuvable (chambre), calendrier ignoré');
+    console.warn('[property-editor] #calendar-host-edit-chambre introuvable, calendrier ignoré');
     return;
   }
   if (typeof window.CalendarEditor === 'undefined') {
@@ -5962,11 +5964,13 @@ async initRoomCalendarEditor() {
     const icalExportUrl = this.roomData?.ical_export_url || '';
 
     this.calendarEditor = new CalendarEditor({
-      containerSelector: '#calendar-host-edit',
+      containerSelector: '#calendar-host-edit-chambre',
       propertyId: this.propertyId,
       isRoom: true,
       roomId: this.roomId,
       icalExportUrl: icalExportUrl,
+      exportUrlInputId: 'ical-export-url-chambre',
+      exportCopyBtnId: 'ical-export-copy-btn-chambre',
       onChange: () => this.enableButtons()
     });
     this.calendarEditor.init({
