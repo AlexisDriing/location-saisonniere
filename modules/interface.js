@@ -1,4 +1,4 @@
-// LOG production V1.38.30
+// LOG production V1.38.31
 // Page google
 class InterfaceManager {
   constructor() {
@@ -785,6 +785,9 @@ setupConditionsAnnulation() {
     const today = moment().startOf('day');
     const twoYears = moment().add(2, 'year').endOf('month');
 
+    // 🆕 Sauvegarder les dates du parent (chargées par calendrier.js : iCal externes + dates manuelles du parent)
+    const parentDates = new Set(icalManager.unavailableDates);
+
     // Filtrer les chambres affichées (avec photos)
     const roomsWithPhotos = rooms.filter(room => {
       const photos = room.photos || [];
@@ -795,12 +798,12 @@ setupConditionsAnnulation() {
 
     // 🆕 Pour chaque chambre, appeler la route serveur unifiée
     this._roomsUnavailableDates = {};
-    const combined = new Set();
+    const combined = new Set(parentDates); // 🆕 Inclure les dates du parent
 
     for (let i = 0; i < roomsWithPhotos.length; i++) {
       const room = roomsWithPhotos[i];
       const roomKey = i + 1;
-      const set = new Set();
+      const set = new Set(parentDates); // 🆕 Inclure les dates du parent dans chaque chambre
 
       try {
         const resp = await fetch(`${window.CONFIG.API_URL}/property-unavailability/room/${room.id}`);
