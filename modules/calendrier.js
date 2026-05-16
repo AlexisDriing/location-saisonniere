@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.02
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.03
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -24,10 +24,14 @@ class CalendarManager {
       const $ = jQuery;
       this.updateDatesText(null, null);
       
-      // Récupérer les URLs iCal
+      // Récupérer les URLs iCal (utilisées en fallback)
       const icalUrls = Array.from(document.querySelectorAll('[data-ical-url]'))
         .map(e => e.getAttribute('data-ical-url'))
         .filter(e => e && e.trim() !== '');
+
+      // 🆕 Extraire le slug du logement depuis l'URL de la page détail
+      // ex: https://www.driing.co/logements/mon-logement → "mon-logement"
+      const propertyId = window.location.pathname.split('/').filter(Boolean).pop() || null;
     
       
       // Initialiser le DateRangePicker
@@ -64,15 +68,22 @@ class CalendarManager {
       this.setupPickerEvents();
       this.enhancePickerUI();
       
-      // Charger les données iCal
+            // Charger les données indisponibilité (route unifiée + fallback)
       try {
-        await this.icalManager.loadAllUnavailableDates(icalUrls);
+        if (propertyId) {
+          // ✅ Mode optimisé : 1 seul appel JSON compact
+          await this.icalManager.loadFromUnavailabilityEndpoint(propertyId, icalUrls);
+        } else {
+          // Fallback historique si data-property-id absent
+          console.warn('[calendrier.js] data-property-id introuvable, fallback iCal classique');
+          await this.icalManager.loadAllUnavailableDates(icalUrls);
+        }
         if (this.picker && this.picker.leftCalendar && this.picker.rightCalendar) {
           this.picker.updateCalendars();
           this.updateCalendarUI();
         }
       } catch (e) {
-        console.error('Erreur de chargement iCal:', e);
+        console.error('Erreur de chargement disponibilités:', e);
       }
     }, 500);
   }
@@ -598,6 +609,53 @@ class ICalManager {
     return events;
   }
 
+
+    // ✅ Charge les dates indisponibles via la route unifiée /property-unavailability/:id
+  // Fallback automatique sur loadAllUnavailableDates() si la nouvelle route échoue
+  // TODO: supprimer le fallback après ~2 semaines de production sans occurrence dans les logs
+  async loadFromUnavailabilityEndpoint(propertyId, fallbackIcalUrls) {
+    this.loadingError = null;
+    try {
+      const url = `${window.CONFIG.API_URL}/property-unavailability/${propertyId}`;
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+
+      const unavailableDates = new Set();
+
+      // Dates fermées manuellement (ranges {s, e}) → expanser en jours
+      if (Array.isArray(data.blockedDates)) {
+        for (const range of data.blockedDates) {
+          if (!range || !range.s || !range.e) continue;
+          const cursor = moment(range.s, 'YYYY-MM-DD');
+          const end = moment(range.e, 'YYYY-MM-DD');
+          while (cursor.isSameOrBefore(end, 'day')) {
+            unavailableDates.add(cursor.format('YYYY-MM-DD'));
+            cursor.add(1, 'day');
+          }
+        }
+      }
+
+      // Dates iCal externes (déjà jour-par-jour : clés "YYYY-MM-DD")
+      if (data.externalDates && typeof data.externalDates === 'object') {
+        for (const day of Object.keys(data.externalDates)) {
+          unavailableDates.add(day);
+        }
+      }
+
+      this.unavailableDates = unavailableDates;
+      this.initialDataLoaded = true;
+      return this.unavailableDates;
+
+    } catch (err) {
+      console.warn('[calendrier.js] Fallback iCal triggered:', err.message);
+      // Fallback sur l'ancien comportement (4 fetchs /get-ical + parsing client)
+      return await this.loadAllUnavailableDates(fallbackIcalUrls || []);
+    }
+  }
+
+
+  
   async loadAllUnavailableDates(icalUrls) {
     this.loadingError = null;
     const today = moment().startOf('day');
