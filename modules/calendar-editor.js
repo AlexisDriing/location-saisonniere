@@ -1,4 +1,4 @@
-// LOG production V1.01
+// LOG production V1.02
 // Module : gestion du calendrier de blocage manuel des dates (tab Calendrier)
 // Instancié par PropertyEditor pour les logements ET les chambres
 class CalendarEditor {
@@ -236,9 +236,6 @@ class CalendarEditor {
   buildDOM() {
     this.container.innerHTML = `
       <div class="cale-wrap">
-        <div class="cale-helper">
-          <strong>💡 Comment ça marche</strong> — Cliquez sur une date pour la fermer (rouge). Cliquez à nouveau pour la rouvrir. Cliquez et glissez pour appliquer l'action à une plage entière. Les dates rayées grises sont verrouillées car réservées sur une plateforme externe.
-        </div>
         <div class="cale-legend">
           <div class="cale-legend-item"><div class="cale-legend-swatch libre"></div>Disponible</div>
           <div class="cale-legend-item"><div class="cale-legend-swatch ferme"></div>Fermée manuellement</div>
