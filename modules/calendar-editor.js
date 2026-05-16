@@ -1,4 +1,4 @@
-// LOG production V1.03
+// LOG production V1.04
 // Module : gestion du calendrier de blocage manuel des dates (tab Calendrier)
 // Instancié par PropertyEditor pour les logements ET les chambres
 class CalendarEditor {
@@ -187,7 +187,7 @@ class CalendarEditor {
 }
 .cale-helper { background: #FEFAEE; border: 1px solid #F5E8B8; border-radius: 10px; padding: 14px 16px; font-size: 13px; line-height: 1.6; margin-bottom: 20px; color: #6B5400; }
 .cale-helper strong { color: #4A3A00; }
-.cale-legend { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; padding: 14px 16px; background: #FAFAFB; border: 1px solid #ECECEF; border-radius: 12px; margin-bottom: 20px; font-size: 13px; }
+.cale-legend { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; border-radius: 12px; margin-bottom: 20px; font-size: 13px; }
 .cale-legend-item { display: flex; align-items: center; gap: 8px; }
 .cale-legend-swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid #E0E0E3; flex-shrink: 0; }
 .cale-legend-swatch.libre { background: #fff; }
