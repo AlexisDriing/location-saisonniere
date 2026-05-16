@@ -1,4 +1,4 @@
-// LOG production V1.02
+// LOG production V1.03
 // Module : gestion du calendrier de blocage manuel des dates (tab Calendrier)
 // Instancié par PropertyEditor pour les logements ET les chambres
 class CalendarEditor {
@@ -6,12 +6,14 @@ class CalendarEditor {
   static WEEKDAYS_SHORT = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
   static CSS_INJECTED = false;
 
-  constructor(options = {}) {
+    constructor(options = {}) {
     this.containerSelector = options.containerSelector;
     this.propertyId = options.propertyId || null;
     this.isRoom = !!options.isRoom;
     this.roomId = options.roomId || null;
     this.icalExportUrl = options.icalExportUrl || '';
+    this.exportUrlInputId = options.exportUrlInputId || 'ical-export-url';
+    this.exportCopyBtnId = options.exportCopyBtnId || 'ical-export-copy-btn';
     this.onChange = options.onChange || (() => {});
 
     this.container = null;
@@ -452,9 +454,9 @@ class CalendarEditor {
 
   // ===== Bloc URL d'export iCal driing =====
 
-  setupExportBlock() {
-    const urlInput = document.getElementById('ical-export-url');
-    const copyBtn = document.getElementById('ical-export-copy-btn');
+    setupExportBlock() {
+    const urlInput = document.getElementById(this.exportUrlInputId);
+    const copyBtn = document.getElementById(this.exportCopyBtnId);
     if (urlInput) {
       urlInput.value = this.icalExportUrl || '';
       urlInput.readOnly = true;
