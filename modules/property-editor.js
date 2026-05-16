@@ -1,4 +1,4 @@
-// LOG production V1.91 - chambres d'hôtes v1.065
+// LOG production V1.92 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -5918,7 +5918,7 @@ async initCalendarEditor() {
   }
 
   try {
-    const response = await fetch(`${window.CONFIG.API_URL}/property-unavailability/${this.propertyId}`);
+    const response = await fetch(`${window.CONFIG.API_URL}/property-unavailability/${this.propertyId}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.json();
 
@@ -5957,7 +5957,7 @@ async initRoomCalendarEditor() {
   }
 
   try {
-    const response = await fetch(`${window.CONFIG.API_URL}/property-unavailability/room/${this.roomId}`);
+    const response = await fetch(`${window.CONFIG.API_URL}/property-unavailability/room/${this.roomId}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.json();
 
