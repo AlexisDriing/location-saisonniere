@@ -1,4 +1,4 @@
-// LOG production V1.92 - chambres d'hôtes v1.065
+// LOG production V1.93 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -50,7 +50,6 @@ class PropertyEditor {
     this.roomsCount = 0;
 
     this.icalUrls = []; // Stockage des URLs iCal
-    this.DEFAULT_ICAL_URL = 'https://calendar.google.com/calendar/ical/c_20c899760ed3ef0d0fb0db69c71909b19c0584bbbdf32e9714b224fc005ae2c0%40group.calendar.google.com/public/basic.ics';
     this.icalFieldMapping = [
     'url-calendrier',    // Position 0 → Premier iCal
     'ical-booking',      // Position 1 → Deuxième iCal
@@ -154,12 +153,6 @@ class PropertyEditor {
     this.updatePhotoErrorPastilles();
   }
   
-  // Warning iCal APRÈS la validation, pour qu'il ne soit pas effacé
-  if (this.isRoomEdit) {
-    this.checkDefaultRoomIcalWarning();
-  } else {
-    this.checkDefaultIcalWarning();
-  }
     
   window.propertyEditor = this;
 }
@@ -1783,9 +1776,6 @@ initRoomIcalManagement() {
   
   // Afficher les iCals existants
   this.displayRoomIcals();
-  
-  // Vérifier l'iCal par défaut
-  this.checkDefaultRoomIcalWarning();
 }
 
 displayRoomIcals() {
@@ -1830,18 +1820,6 @@ displayRoomIcals() {
   
   // Mettre à jour l'état du bouton d'ajout
   this.updateRoomAddIcalButton();
-}
-
-checkDefaultRoomIcalWarning() {
-  const icalInput = document.getElementById('ical-url-1-chambre');
-  if (!icalInput) return;
-  
-  if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
-    if (this.validationManager) {
-      this.validationManager.showFieldWarning('ical-url-1-chambre', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
-      this.validationManager.showTabWarning('error-indicator-tab3-chambre');
-    }
-  }
 }
 
 addRoomIcal() {
@@ -1912,11 +1890,6 @@ setupRoomIcalListeners() {
       input.parentNode.replaceChild(newInput, input);
       
       newInput.addEventListener('input', () => {
-        // Masquer l'avertissement si c'est ical-url-1-chambre
-        if (newInput.id === 'ical-url-1-chambre' && this.validationManager) {
-          this.validationManager.hideFieldWarning('ical-url-1-chambre');
-          this.validationManager.hideTabWarning('error-indicator-tab3-chambre');
-        }
         this.enableButtons();
       });
     }
@@ -3172,23 +3145,6 @@ async saveRoomModifications() {
   
   if (originalPricingJson !== currentPricingJson) {
     updates.pricing_data = currentPricingData;
-  }
-  
-  // iCal - Injecter l'URL par défaut si aucun iCal n'est rempli
-  let hasAnyRoomIcal = false;
-  for (let i = 1; i <= 4; i++) {
-    const input = document.getElementById(`ical-url-${i}-chambre`);
-    if (input && input.value.trim() !== '') {
-      hasAnyRoomIcal = true;
-      break;
-    }
-  }
-  
-  if (!hasAnyRoomIcal) {
-    const firstIcalInput = document.getElementById('ical-url-1-chambre');
-    if (firstIcalInput) {
-      firstIcalInput.value = this.DEFAULT_ICAL_URL;
-    }
   }
   
     // Collecter les iCals modifiés
@@ -6057,19 +6013,6 @@ displayIcals() {
   // Mettre à jour l'état du bouton d'ajout
   this.updateAddIcalButton();
 }
-
-checkDefaultIcalWarning() {
-  const icalInput = document.getElementById('ical-url-1');
-  if (!icalInput) return;
-  
-  if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
-    // Afficher l'avertissement via le validationManager
-    if (this.validationManager) {
-      this.validationManager.showFieldWarning('ical-url-1', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
-      this.validationManager.showTabWarning('error-indicator-tab3');
-    }
-  }
-}
   
 addIcal() {
   
@@ -6151,11 +6094,6 @@ setupIcalListeners() {
       input.parentNode.replaceChild(newInput, input);
       
       newInput.addEventListener('input', () => {
-        // Masquer l'avertissement si c'est ical-url-1 et que la valeur change
-        if (newInput.id === 'ical-url-1' && this.validationManager) {
-          this.validationManager.hideFieldWarning('ical-url-1');
-          this.validationManager.hideTabWarning('error-indicator-tab3');
-        }
         this.enableButtons();
       });
     }
@@ -8013,23 +7951,6 @@ setBlockState(element, isActive) {
   
   if (currentExtrasString !== initialExtrasString) {
     updates.extras = currentExtrasString;
-  }
-    
-  // Injecter l'URL par défaut si aucun iCal n'est rempli
-  let hasAnyIcal = false;
-  for (let i = 1; i <= 4; i++) {
-    const input = document.getElementById(`ical-url-${i}`);
-    if (input && input.value.trim() !== '') {
-      hasAnyIcal = true;
-      break;
-    }
-  }
-  
-  if (!hasAnyIcal) {
-    const firstIcalInput = document.getElementById('ical-url-1');
-    if (firstIcalInput) {
-      firstIcalInput.value = this.DEFAULT_ICAL_URL;
-    }
   }
   
   // NOUVEAU : Collecter les iCals modifiés avec la bonne logique
