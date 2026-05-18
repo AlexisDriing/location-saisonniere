@@ -2,7 +2,7 @@
 const CONFIG = {
   API_URL: window.location.hostname.includes('webflow.io') 
     ? 'https://ical-develop.onrender.com'      // Serveur staging pour webflow.io
-    : 'https://ical-proxy-stdn.onrender.com',  // Serveur production pour driing.co
+    : 'https://ical.driing.co',  // Serveur production pour driing.co
     
   MAPBOX_API_KEY: null,
   UPDATE_INTERVAL: 4 * 60 * 60 * 1000, // 4 heures

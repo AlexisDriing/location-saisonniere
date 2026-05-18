@@ -1,4 +1,4 @@
-// LOG production V1.88 - chambres d'hôtes v1.065
+// LOG production V1.93 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -50,15 +50,15 @@ class PropertyEditor {
     this.roomsCount = 0;
 
     this.icalUrls = []; // Stockage des URLs iCal
-    this.DEFAULT_ICAL_URL = 'https://calendar.google.com/calendar/ical/c_20c899760ed3ef0d0fb0db69c71909b19c0584bbbdf32e9714b224fc005ae2c0%40group.calendar.google.com/public/basic.ics';
     this.icalFieldMapping = [
     'url-calendrier',    // Position 0 → Premier iCal
     'ical-booking',      // Position 1 → Deuxième iCal
     'ical-autres',       // Position 2 → Troisième iCal
     'ical-abritel'       // Position 3 → Quatrième iCal
   ];
-    // Mapping iCal chambre (noms des champs CMS)
+   // Mapping iCal chambre (noms des champs CMS)
     this.roomIcalFieldMapping = ['ical-1', 'ical-2', 'ical-3', 'ical-4'];
+    this.calendarEditor = null;
     this.extras = [];
     this.init();
   }
@@ -130,7 +130,7 @@ class PropertyEditor {
       // Adapter l'affichage si logement parent chambre d'hôtes
       const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
       
-      if (isChambreHote) {
+    if (isChambreHote) {
         await this.setupParentChambreHoteDisplay();
       } else {
 
@@ -140,6 +140,7 @@ class PropertyEditor {
         this.initExtrasManagement();
         this.initImageManagement();
         this.updatePlatformBlocksVisibility();
+        await this.initCalendarEditor();
       }
     }
   }
@@ -152,12 +153,6 @@ class PropertyEditor {
     this.updatePhotoErrorPastilles();
   }
   
-  // Warning iCal APRÈS la validation, pour qu'il ne soit pas effacé
-  if (this.isRoomEdit) {
-    this.checkDefaultRoomIcalWarning();
-  } else {
-    this.checkDefaultIcalWarning();
-  }
     
   window.propertyEditor = this;
 }
@@ -172,7 +167,7 @@ class PropertyEditor {
     return urlParams.get('room');
   }
 
-  setupTabsDisplay() {
+    setupTabsDisplay() {
   const modeLocation = this.propertyData.mode_location || '';
   const isChambreHote = modeLocation === "Chambre d'hôtes";
   
@@ -192,6 +187,13 @@ class PropertyEditor {
   } else {
     if (tabsLogement) tabsLogement.style.display = 'flex';
     if (tabsChambres) tabsChambres.style.display = 'none';
+  }
+
+    // Cacher la tab Calendrier pour les logements parents Chambres d'hôtes
+  // (uniquement la tab côté logement entier, celle des chambres ne s'affiche jamais pour le parent)
+  const tabCalendrierLogement = document.getElementById('tab-calendrier-logement');
+  if (tabCalendrierLogement) {
+    tabCalendrierLogement.style.display = (!this.isRoomEdit && isChambreHote) ? 'none' : '';
   }
 }
 
@@ -313,6 +315,9 @@ async loadRoomData() {
     
     // Afficher les blocs plateformes selon les liens du parent
     this.updateRoomPlatformBlocksVisibility();
+    
+    // Initialiser le calendrier de blocage
+    await this.initRoomCalendarEditor();
     
   } catch (error) {
     console.error('❌ Erreur chargement chambre:', error);
@@ -1771,9 +1776,6 @@ initRoomIcalManagement() {
   
   // Afficher les iCals existants
   this.displayRoomIcals();
-  
-  // Vérifier l'iCal par défaut
-  this.checkDefaultRoomIcalWarning();
 }
 
 displayRoomIcals() {
@@ -1818,18 +1820,6 @@ displayRoomIcals() {
   
   // Mettre à jour l'état du bouton d'ajout
   this.updateRoomAddIcalButton();
-}
-
-checkDefaultRoomIcalWarning() {
-  const icalInput = document.getElementById('ical-url-1-chambre');
-  if (!icalInput) return;
-  
-  if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
-    if (this.validationManager) {
-      this.validationManager.showFieldWarning('ical-url-1-chambre', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
-      this.validationManager.showTabWarning('error-indicator-tab3-chambre');
-    }
-  }
 }
 
 addRoomIcal() {
@@ -1900,11 +1890,6 @@ setupRoomIcalListeners() {
       input.parentNode.replaceChild(newInput, input);
       
       newInput.addEventListener('input', () => {
-        // Masquer l'avertissement si c'est ical-url-1-chambre
-        if (newInput.id === 'ical-url-1-chambre' && this.validationManager) {
-          this.validationManager.hideFieldWarning('ical-url-1-chambre');
-          this.validationManager.hideTabWarning('error-indicator-tab3-chambre');
-        }
         this.enableButtons();
       });
     }
@@ -3162,24 +3147,7 @@ async saveRoomModifications() {
     updates.pricing_data = currentPricingData;
   }
   
-  // iCal - Injecter l'URL par défaut si aucun iCal n'est rempli
-  let hasAnyRoomIcal = false;
-  for (let i = 1; i <= 4; i++) {
-    const input = document.getElementById(`ical-url-${i}-chambre`);
-    if (input && input.value.trim() !== '') {
-      hasAnyRoomIcal = true;
-      break;
-    }
-  }
-  
-  if (!hasAnyRoomIcal) {
-    const firstIcalInput = document.getElementById('ical-url-1-chambre');
-    if (firstIcalInput) {
-      firstIcalInput.value = this.DEFAULT_ICAL_URL;
-    }
-  }
-  
-  // Collecter les iCals modifiés
+    // Collecter les iCals modifiés
   const currentIcalValues = this.collectRoomIcalValues();
   
     this.roomIcalFieldMapping.forEach((fieldName, index) => {
@@ -3190,6 +3158,14 @@ async saveRoomModifications() {
       updates[fieldName] = currentValue;
     }
   });
+
+  // 🆕 Dates bloquées manuellement (chambre)
+  if (this.calendarEditor) {
+    const currentBlockedJson = this.calendarEditor.getBlockedDatesJson();
+    if (currentBlockedJson !== (this.initialValues.blocked_dates || '[]')) {
+      updates['dates-bloquees'] = currentBlockedJson;
+    }
+  }
   
     // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
   try {
@@ -3301,7 +3277,7 @@ async saveRoomModifications() {
           this.initialValues[`room_${fieldName}`] = currentValue;
         }
       });
-      // Mettre à jour les ical_urls dans roomData
+           // Mettre à jour les ical_urls dans roomData
       const updatedIcalUrls = [];
       for (let i = 1; i <= 4; i++) {
         const input = document.getElementById(`ical-url-${i}-chambre`);
@@ -3310,6 +3286,13 @@ async saveRoomModifications() {
         }
       }
       this.roomData.ical_urls = updatedIcalUrls;
+
+      // 🆕 Commit du calendrier de blocage chambre
+      if (this.calendarEditor && updates['dates-bloquees'] !== undefined) {
+        this.calendarEditor.commitChanges();
+        this.initialValues.blocked_dates = updates['dates-bloquees'];
+        this.roomData['dates-bloquees'] = updates['dates-bloquees'];
+      }
       
       this.disableButtons();
       
@@ -3337,6 +3320,11 @@ async saveRoomModifications() {
 cancelRoomModifications() {
   if (this.validationManager) {
     this.validationManager.clearAllErrors();
+  }
+
+  // 🆕 Restaurer l'état initial du calendrier de blocage
+  if (this.calendarEditor) {
+    this.calendarEditor.restoreInitialState();
   }
   
   // Restaurer nom et description
@@ -5871,6 +5859,89 @@ updateAddButtonState() {
   }
 }
 
+
+  // 📅 GESTION DU CALENDRIER DE BLOCAGE MANUEL
+
+async initCalendarEditor() {
+  const container = document.getElementById('calendar-host-edit-logement');
+  if (!container) {
+    console.warn('[property-editor] #calendar-host-edit-logement introuvable, calendrier ignoré');
+    return;
+  }
+  if (typeof window.CalendarEditor === 'undefined') {
+    console.error('[property-editor] CalendarEditor non chargé');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/property-unavailability/${this.propertyId}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+
+    const icalExportUrl = this.propertyData.ical_export_url || '';
+
+    this.calendarEditor = new CalendarEditor({
+      containerSelector: '#calendar-host-edit-logement',
+      propertyId: this.propertyId,
+      isRoom: false,
+      icalExportUrl: icalExportUrl,
+      exportUrlInputId: 'ical-export-url-logement',
+      exportCopyBtnId: 'ical-export-copy-btn-logement',
+      onChange: () => this.enableButtons()
+    });
+    this.calendarEditor.init({
+      blockedDates: data.blockedDates || [],
+      externalDates: data.externalDates || {},
+      icalExportUrl: icalExportUrl
+    });
+
+    this.initialValues.blocked_dates = this.calendarEditor.getBlockedDatesJson();
+  } catch (err) {
+    console.error('[property-editor] initCalendarEditor erreur:', err);
+  }
+}
+
+async initRoomCalendarEditor() {
+  const container = document.getElementById('calendar-host-edit-chambre');
+  if (!container) {
+    console.warn('[property-editor] #calendar-host-edit-chambre introuvable, calendrier ignoré');
+    return;
+  }
+  if (typeof window.CalendarEditor === 'undefined') {
+    console.error('[property-editor] CalendarEditor non chargé');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${window.CONFIG.API_URL}/property-unavailability/room/${this.roomId}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+
+    const icalExportUrl = this.roomData?.ical_export_url || '';
+
+    this.calendarEditor = new CalendarEditor({
+      containerSelector: '#calendar-host-edit-chambre',
+      propertyId: this.propertyId,
+      isRoom: true,
+      roomId: this.roomId,
+      icalExportUrl: icalExportUrl,
+      exportUrlInputId: 'ical-export-url-chambre',
+      exportCopyBtnId: 'ical-export-copy-btn-chambre',
+      onChange: () => this.enableButtons()
+    });
+    this.calendarEditor.init({
+      blockedDates: data.blockedDates || [],
+      externalDates: data.externalDates || {},
+      icalExportUrl: icalExportUrl
+    });
+
+    this.initialValues.blocked_dates = this.calendarEditor.getBlockedDatesJson();
+  } catch (err) {
+    console.error('[property-editor] initRoomCalendarEditor erreur:', err);
+  }
+}
+  
+  
   // ================================
 // 🗓️ GESTION DES LIENS ICAL
 // ================================
@@ -5941,19 +6012,6 @@ displayIcals() {
   
   // Mettre à jour l'état du bouton d'ajout
   this.updateAddIcalButton();
-}
-
-checkDefaultIcalWarning() {
-  const icalInput = document.getElementById('ical-url-1');
-  if (!icalInput) return;
-  
-  if (icalInput.value.trim() === this.DEFAULT_ICAL_URL) {
-    // Afficher l'avertissement via le validationManager
-    if (this.validationManager) {
-      this.validationManager.showFieldWarning('ical-url-1', "Ce lien iCal a été ajouté par défaut et n'est pas valide. Remplacez-le pour synchroniser votre calendrier.");
-      this.validationManager.showTabWarning('error-indicator-tab3');
-    }
-  }
 }
   
 addIcal() {
@@ -6036,11 +6094,6 @@ setupIcalListeners() {
       input.parentNode.replaceChild(newInput, input);
       
       newInput.addEventListener('input', () => {
-        // Masquer l'avertissement si c'est ical-url-1 et que la valeur change
-        if (newInput.id === 'ical-url-1' && this.validationManager) {
-          this.validationManager.hideFieldWarning('ical-url-1');
-          this.validationManager.hideTabWarning('error-indicator-tab3');
-        }
         this.enableButtons();
       });
     }
@@ -7419,6 +7472,12 @@ setBlockState(element, isActive) {
     if (this.validationManager) {
       this.validationManager.clearAllErrors();
     }
+
+    // 🆕 Restaurer l'état initial du calendrier de blocage
+    if (this.calendarEditor) {
+      this.calendarEditor.restoreInitialState();
+    }
+
     // Configuration des champs à réinitialiser
     const fields = [
       { id: 'name-input', dataKey: 'name' },
@@ -7893,23 +7952,6 @@ setBlockState(element, isActive) {
   if (currentExtrasString !== initialExtrasString) {
     updates.extras = currentExtrasString;
   }
-    
-  // Injecter l'URL par défaut si aucun iCal n'est rempli
-  let hasAnyIcal = false;
-  for (let i = 1; i <= 4; i++) {
-    const input = document.getElementById(`ical-url-${i}`);
-    if (input && input.value.trim() !== '') {
-      hasAnyIcal = true;
-      break;
-    }
-  }
-  
-  if (!hasAnyIcal) {
-    const firstIcalInput = document.getElementById('ical-url-1');
-    if (firstIcalInput) {
-      firstIcalInput.value = this.DEFAULT_ICAL_URL;
-    }
-  }
   
   // NOUVEAU : Collecter les iCals modifiés avec la bonne logique
   const currentIcalValues = [];
@@ -7918,7 +7960,7 @@ setBlockState(element, isActive) {
     currentIcalValues.push(input ? input.value.trim() : '');
   }
   
-  // Mapper les valeurs actuelles aux champs CMS
+    // Mapper les valeurs actuelles aux champs CMS
   // IMPORTANT : Les valeurs dans l'ordre des inputs correspondent aux champs CMS dans l'ordre
   this.icalFieldMapping.forEach((fieldName, index) => {
     const currentValue = currentIcalValues[index] || '';
@@ -7929,6 +7971,14 @@ setBlockState(element, isActive) {
       updates[fieldName] = currentValue;
     }
   });
+
+  // 🆕 Dates bloquées manuellement
+  if (this.calendarEditor) {
+    const currentBlockedJson = this.calendarEditor.getBlockedDatesJson();
+    if (currentBlockedJson !== (this.initialValues.blocked_dates || '[]')) {
+      updates['dates-bloquees'] = currentBlockedJson;
+    }
+  }
       
   const originalPricingJson = JSON.stringify(this.propertyData.pricing_data || {});
   const currentPricingJson = JSON.stringify(this.pricingData);
@@ -8041,6 +8091,13 @@ setBlockState(element, isActive) {
           this.initialValues[fieldName] = currentValue;
         }
       });
+
+      // 🆕 Commit du calendrier de blocage : nouvelle baseline
+      if (this.calendarEditor && updates['dates-bloquees'] !== undefined) {
+        this.calendarEditor.commitChanges();
+        this.initialValues.blocked_dates = updates['dates-bloquees'];
+        this.propertyData['dates-bloquees'] = updates['dates-bloquees'];
+      }
 
       // Mettre à jour les liens plateformes chambre d'hôtes
       if (isChambreHote) {
