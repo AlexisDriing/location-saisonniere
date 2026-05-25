@@ -1,4 +1,4 @@
-// LOG production V1.93 - chambres d'hôtes v1.065
+// LOG production V1.94 - chambres d'hôtes v1.065
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -2910,6 +2910,10 @@ updateRoomPlatformBlocksVisibility() {
   // Bloc global tarif par défaut
   const blocGlobal = document.getElementById('bloc-tarifs-plateformes-chambre');
   if (blocGlobal) blocGlobal.style.display = hasAnyLink ? 'block' : 'none';
+
+  // Séparateur plateformes — masqué également quand aucun lien parent
+  const separateur = document.getElementById('separateur-plateformes');
+  if (separateur) separateur.style.display = hasAnyLink ? 'block' : 'none';
   
   // Blocs individuels tarif par défaut
   const blocAirbnb = document.getElementById('bloc-airbnb-chambre');
@@ -6361,6 +6365,8 @@ setupExtraListeners(blocElement, index) {
   const priceInput = blocElement.querySelector('[data-extra="price"]');
   
   if (emojiInput) {
+    // Lecture seule : la saisie se fait via le picker emoji (desktop ET mobile)
+    // pour éviter toute saisie de texte invalide.
     emojiInput.readOnly = true;
     emojiInput.style.cursor = 'pointer';
     emojiInput.addEventListener('input', (e) => {
@@ -6409,7 +6415,6 @@ setupExtraListeners(blocElement, index) {
 
 setupEmojiPicker(blocElement, emojiInput, index) {
   // Skip sur mobile - utiliser le clavier natif
-  if (window.innerWidth < 768) return;
   
   const wrapper = emojiInput.closest('.emoji-input-wrapper');
   if (!wrapper) return;
