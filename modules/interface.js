@@ -1994,42 +1994,39 @@ setupImmatriculation() {
   
   // Gestion du téléphone cliquable
   setupTelephone() {
-    
-    // Chercher l'élément qui contient le numéro de téléphone
-    const telephoneElement = document.querySelector('[data-telephone]');
-    
-    if (!telephoneElement) {
-      console.warn('⚠️ Élément data-telephone non trouvé');
-      return;
-    }
-    
-    // Récupérer le numéro de téléphone
-    const numeroTelephone = telephoneElement.getAttribute('data-telephone');
-    
-    if (!numeroTelephone || numeroTelephone.trim() === '') {
-      return;
-    }
-    
-    // Chercher le bouton téléphone et l'élément texte
+    // Le bouton et l'élément d'affichage restent en place après la Brique C
     const boutonTel = document.querySelector('.bouton-tel');
     const numeroHoteElement = document.getElementById('numero-hote');
-    
+
     if (!boutonTel || !numeroHoteElement) {
       console.warn('⚠️ Bouton .bouton-tel ou élément #numero-hote non trouvé');
       return;
     }
-    
-    // Ajouter le style cursor pointer
+
+    const propertyId = window.location.pathname.split("/").pop();
     boutonTel.style.cursor = 'pointer';
-    
-    // Ajouter l'événement de clic
-    boutonTel.addEventListener('click', function(e) {
+
+    boutonTel.addEventListener('click', async (e) => {
       e.preventDefault();
-      
-      // Révéler le numéro de téléphone
-      numeroHoteElement.textContent = numeroTelephone;
+
+      // 1. Fallback : si l'attribut est encore là (AVANT la C3), on l'utilise
+      const telAttr = document.querySelector('[data-telephone]')?.getAttribute('data-telephone');
+      if (telAttr && telAttr.trim() !== '') {
+        numeroHoteElement.textContent = telAttr;
+        return;
+      }
+
+      // 2. Sinon (APRÈS la C3), on récupère le numéro à la demande
+      numeroHoteElement.textContent = '…';
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/property-contact/${propertyId}`);
+        const data = await res.json();
+        numeroHoteElement.textContent = data.telephone || 'Non disponible';
+      } catch (err) {
+        console.warn('Téléphone non récupéré:', err);
+        numeroHoteElement.textContent = 'Non disponible';
+      }
     });
-    
   }
 
   // Gestion des liens vers plateformes
