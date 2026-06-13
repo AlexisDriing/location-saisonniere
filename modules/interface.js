@@ -1,4 +1,4 @@
-// LOG production V1.38.32
+// LOG production V1.38.34
 // Page google
 class InterfaceManager {
   constructor() {
@@ -34,6 +34,7 @@ class InterfaceManager {
     this.setupAnnonces();
     this.setupImmatriculation();
     this.setupTelephone();
+    this.setupEmail();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -1992,44 +1993,53 @@ setupImmatriculation() {
   }
 }
   
-  // Gestion du téléphone cliquable
+  // 🆕 Brique C — récupère les coordonnées de l'hôte UNE SEULE FOIS par page (cache)
+  getHostContact() {
+    if (this._hostContactPromise) return this._hostContactPromise;
+    const propertyId = window.location.pathname.split("/").pop();
+    this._hostContactPromise = fetch(`${CONFIG.API_URL}/property-contact/${propertyId}`)
+      .then(res => res.ok ? res.json() : {})
+      .catch(() => ({}));
+    return this._hostContactPromise;
+  }
+
+  // Affiche l'email au chargement (injecté en JS → absent du HTML brut)
+  async setupEmail() {
+    const emailElement = document.getElementById('email-hote');
+    if (!emailElement) return;
+
+    // Fallback : data-email encore présent (AVANT la C3)
+    const emailAttr = emailElement.getAttribute('data-email');
+    if (emailAttr && emailAttr.trim() !== '') {
+      emailElement.textContent = emailAttr;
+      return;
+    }
+
+    const contact = await this.getHostContact();
+    if (contact.email) emailElement.textContent = contact.email;
+  }
+
+  // Téléphone au clic — réutilise le contact déjà récupéré (0 appel en plus)
   setupTelephone() {
-    
-    // Chercher l'élément qui contient le numéro de téléphone
-    const telephoneElement = document.querySelector('[data-telephone]');
-    
-    if (!telephoneElement) {
-      console.warn('⚠️ Élément data-telephone non trouvé');
-      return;
-    }
-    
-    // Récupérer le numéro de téléphone
-    const numeroTelephone = telephoneElement.getAttribute('data-telephone');
-    
-    if (!numeroTelephone || numeroTelephone.trim() === '') {
-      return;
-    }
-    
-    // Chercher le bouton téléphone et l'élément texte
     const boutonTel = document.querySelector('.bouton-tel');
     const numeroHoteElement = document.getElementById('numero-hote');
-    
-    if (!boutonTel || !numeroHoteElement) {
-      console.warn('⚠️ Bouton .bouton-tel ou élément #numero-hote non trouvé');
-      return;
-    }
-    
-    // Ajouter le style cursor pointer
+    if (!boutonTel || !numeroHoteElement) return;
+
     boutonTel.style.cursor = 'pointer';
-    
-    // Ajouter l'événement de clic
-    boutonTel.addEventListener('click', function(e) {
+    boutonTel.addEventListener('click', async (e) => {
       e.preventDefault();
-      
-      // Révéler le numéro de téléphone
-      numeroHoteElement.textContent = numeroTelephone;
+
+      // Fallback : data-telephone encore présent (AVANT la C3)
+      const telAttr = document.querySelector('[data-telephone]')?.getAttribute('data-telephone');
+      if (telAttr && telAttr.trim() !== '') {
+        numeroHoteElement.textContent = telAttr;
+        return;
+      }
+
+      numeroHoteElement.textContent = '…';
+      const contact = await this.getHostContact();
+      numeroHoteElement.textContent = contact.telephone || 'Non disponible';
     });
-    
   }
 
   // Gestion des liens vers plateformes
