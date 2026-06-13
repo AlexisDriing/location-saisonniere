@@ -1,4 +1,4 @@
-// LOG production V1.38.33
+// LOG production V1.38.34
 // Page google
 class InterfaceManager {
   constructor() {
@@ -34,6 +34,7 @@ class InterfaceManager {
     this.setupAnnonces();
     this.setupImmatriculation();
     this.setupTelephone();
+    this.setupEmail();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -1992,40 +1993,52 @@ setupImmatriculation() {
   }
 }
   
-  // Gestion du téléphone cliquable
-  setupTelephone() {
-    // Le bouton et l'élément d'affichage restent en place après la Brique C
-    const boutonTel = document.querySelector('.bouton-tel');
-    const numeroHoteElement = document.getElementById('numero-hote');
+  // 🆕 Brique C — récupère les coordonnées de l'hôte UNE SEULE FOIS par page (cache)
+  getHostContact() {
+    if (this._hostContactPromise) return this._hostContactPromise;
+    const propertyId = window.location.pathname.split("/").pop();
+    this._hostContactPromise = fetch(`${CONFIG.API_URL}/property-contact/${propertyId}`)
+      .then(res => res.ok ? res.json() : {})
+      .catch(() => ({}));
+    return this._hostContactPromise;
+  }
 
-    if (!boutonTel || !numeroHoteElement) {
-      console.warn('⚠️ Bouton .bouton-tel ou élément #numero-hote non trouvé');
+  // Affiche l'email au chargement (injecté en JS → absent du HTML brut)
+  async setupEmail() {
+    const emailElement = document.getElementById('email-hote');
+    if (!emailElement) return;
+
+    // Fallback : data-email encore présent (AVANT la C3)
+    const emailAttr = emailElement.getAttribute('data-email');
+    if (emailAttr && emailAttr.trim() !== '') {
+      emailElement.textContent = emailAttr;
       return;
     }
 
-    const propertyId = window.location.pathname.split("/").pop();
-    boutonTel.style.cursor = 'pointer';
+    const contact = await this.getHostContact();
+    if (contact.email) emailElement.textContent = contact.email;
+  }
 
+  // Téléphone au clic — réutilise le contact déjà récupéré (0 appel en plus)
+  setupTelephone() {
+    const boutonTel = document.querySelector('.bouton-tel');
+    const numeroHoteElement = document.getElementById('numero-hote');
+    if (!boutonTel || !numeroHoteElement) return;
+
+    boutonTel.style.cursor = 'pointer';
     boutonTel.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      // 1. Fallback : si l'attribut est encore là (AVANT la C3), on l'utilise
+      // Fallback : data-telephone encore présent (AVANT la C3)
       const telAttr = document.querySelector('[data-telephone]')?.getAttribute('data-telephone');
       if (telAttr && telAttr.trim() !== '') {
         numeroHoteElement.textContent = telAttr;
         return;
       }
 
-      // 2. Sinon (APRÈS la C3), on récupère le numéro à la demande
       numeroHoteElement.textContent = '…';
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/property-contact/${propertyId}`);
-        const data = await res.json();
-        numeroHoteElement.textContent = data.telephone || 'Non disponible';
-      } catch (err) {
-        console.warn('Téléphone non récupéré:', err);
-        numeroHoteElement.textContent = 'Non disponible';
-      }
+      const contact = await this.getHostContact();
+      numeroHoteElement.textContent = contact.telephone || 'Non disponible';
     });
   }
 
