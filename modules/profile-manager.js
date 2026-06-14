@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.062 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.063 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1120,3 +1120,159 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export global
 window.ProfileManager = ProfileManager;
+
+
+// ============================================================
+// 🛡️ VÉRIFIER UN VOYAGEUR — se monte dans <div id="verif-voyageur-app">
+// Dépend de window.CONFIG (config.js) et window.AuthHelper (auth-helper.js)
+// ============================================================
+(function () {
+  const MOUNT_ID = 'verif-voyageur-app';
+
+  const STYLE = `
+  .vv-wrap{font-family:inherit;color:#1d2421;max-width:520px}
+  .vv-seg{display:flex;gap:6px;background:#EFF0F0;padding:5px;border-radius:12px;margin-bottom:16px}
+  .vv-seg button{flex:1;border:0;background:transparent;padding:10px;border-radius:9px;cursor:pointer;font:inherit;font-weight:600;color:#6b7672}
+  .vv-seg button.vv-on{background:#fff;color:#235B59;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .vv-field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+  .vv-field input,.vv-field textarea{width:100%;border:1px solid #e2e5e4;border-radius:11px;padding:12px;font:inherit;font-size:14px;background:#fbfcfc;box-sizing:border-box}
+  .vv-field textarea{min-height:120px;resize:vertical}
+  .vv-field input:focus,.vv-field textarea:focus{outline:none;border-color:#235B59}
+  .vv-go{margin-top:14px;width:100%;background:#235B59;color:#fff;border:0;padding:13px;border-radius:11px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  .vv-go:hover{background:#1a4543}
+  .vv-go:disabled{opacity:.6;cursor:default}
+  .vv-res{margin-top:16px;border-radius:14px;padding:16px;display:none}
+  .vv-res.vv-show{display:block}
+  .vv-res.vv-red{background:#fbeae9}.vv-res.vv-orange{background:#fbf3e2}.vv-res.vv-green{background:#e8f0ef}
+  .vv-vd{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+  .vv-tag{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:6px;color:#fff}
+  .vv-red .vv-tag{background:#b42318}.vv-orange .vv-tag{background:#9a6a08}.vv-green .vv-tag{background:#235B59}
+  .vv-red .vv-vd{color:#b42318}.vv-orange .vv-vd{color:#9a6a08}.vv-green .vv-vd{color:#235B59}
+  .vv-why{list-style:none;padding:0;margin:12px 0 0}
+  .vv-why li{display:flex;gap:8px;padding:8px 0;border-top:1px solid rgba(0,0,0,.06);font-size:13.5px;line-height:1.45}
+  .vv-dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;margin-top:7px}
+  .vv-dot.red{background:#b42318}.vv-dot.orange{background:#9a6a08}.vv-dot.green{background:#235B59}
+  .vv-tips{margin-top:14px;border:1px solid #e2e5e4;border-radius:11px;padding:12px 14px}
+  .vv-tips summary{cursor:pointer;font-size:13px;font-weight:600;color:#235B59}
+  .vv-tips ul{margin:10px 0 2px;padding-left:18px;font-size:13px}
+  .vv-tips li{margin:5px 0}
+  .vv-foot{margin-top:12px;font-size:11.5px;color:#6b7672;line-height:1.5}`;
+
+  const TEMPLATE = `
+  <div class="vv-wrap">
+    <div class="vv-seg">
+      <button data-mode="phone" class="vv-on">Numéro</button>
+      <button data-mode="email">Email</button>
+      <button data-mode="message">Message</button>
+    </div>
+    <div class="vv-field" id="vv-field"></div>
+    <button class="vv-go" id="vv-go">Vérifier</button>
+    <div class="vv-res" id="vv-res">
+      <div class="vv-vd"><span class="vv-tag" id="vv-tag"></span><span id="vv-sub"></span></div>
+      <ul class="vv-why" id="vv-why"></ul>
+    </div>
+    <details class="vv-tips">
+      <summary>Bonnes pratiques en cas de doute</summary>
+      <ul>
+        <li>Ne communiquez et ne payez jamais en dehors de la plateforme.</li>
+        <li>Méfiez-vous des paiements par chèque, virement ou « trop-perçu ».</li>
+        <li>Ne transmettez jamais vos coordonnées bancaires.</li>
+        <li>Un vrai voyageur connaît votre annonce et pose des questions précises.</li>
+        <li>En cas de doute, gardez l'échange sur la plateforme et signalez le contact.</li>
+      </ul>
+    </details>
+    <div class="vv-foot">Le contenu des messages n'est pas conservé. Les numéros et emails vérifiés sont enregistrés pour la détection communautaire.<br>Analyse indicative pour vous aider à décider — ne constitue pas un verdict définitif sur une personne.</div>
+  </div>`;
+
+  const LABEL = { red: 'Très suspect', orange: 'Prudence', green: 'Fiable' };
+  const SUB = {
+    red: 'Ne donnez pas suite sans vérifier davantage.',
+    orange: 'Des signaux invitent à la prudence.',
+    green: "Aucun signal d'arnaque détecté."
+  };
+
+  function fieldHtml(mode) {
+    if (mode === 'message') return '<label>Message reçu</label><textarea id="vv-input" placeholder="Collez ici le message reçu..."></textarea>';
+    if (mode === 'email') return '<label>Adresse email</label><input id="vv-input" type="text" placeholder="exemple@email.com">';
+    return '<label>Numéro de téléphone</label><input id="vv-input" type="text" placeholder="+33 6 12 34 56 78">';
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  async function callVerify(type, value) {
+    if (window.AuthHelper && window.AuthHelper.init) { await window.AuthHelper.init(); }
+    const headers = Object.assign(
+      { 'Content-Type': 'application/json' },
+      (window.AuthHelper ? window.AuthHelper.getAuthHeaders() : {})
+    );
+    const res = await fetch(`${window.CONFIG.API_URL}/verify-contact`, {
+      method: 'POST', headers, body: JSON.stringify({ type, value })
+    });
+    if (res.status === 401) throw new Error('AUTH');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  function init() {
+    const mount = document.getElementById(MOUNT_ID);
+    if (!mount || mount.dataset.vvReady) return;
+    mount.dataset.vvReady = '1';
+
+    if (!document.getElementById('vv-style')) {
+      const st = document.createElement('style');
+      st.id = 'vv-style'; st.textContent = STYLE;
+      document.head.appendChild(st);
+    }
+    mount.innerHTML = TEMPLATE;
+
+    let mode = 'phone';
+    const field = mount.querySelector('#vv-field');
+    const res = mount.querySelector('#vv-res');
+    const tag = mount.querySelector('#vv-tag');
+    const sub = mount.querySelector('#vv-sub');
+    const why = mount.querySelector('#vv-why');
+    const go = mount.querySelector('#vv-go');
+
+    function renderField() { field.innerHTML = fieldHtml(mode); res.classList.remove('vv-show'); }
+    renderField();
+
+    mount.querySelectorAll('.vv-seg button').forEach(b => b.addEventListener('click', () => {
+      mount.querySelectorAll('.vv-seg button').forEach(x => x.classList.remove('vv-on'));
+      b.classList.add('vv-on');
+      mode = b.dataset.mode;
+      renderField();
+    }));
+
+    function showResult(result) {
+      res.className = 'vv-res vv-show vv-' + result.verdict;
+      tag.textContent = LABEL[result.verdict] || '';
+      sub.textContent = SUB[result.verdict] || '';
+      why.innerHTML = (result.reasons || []).map(r =>
+        `<li><span class="vv-dot ${r.level}"></span><span>${esc(r.text)}</span></li>`).join('');
+    }
+    function showMessage(text) {
+      res.className = 'vv-res vv-show vv-orange';
+      tag.textContent = 'Info'; sub.textContent = '';
+      why.innerHTML = `<li><span class="vv-dot orange"></span><span>${esc(text)}</span></li>`;
+    }
+
+    go.addEventListener('click', async () => {
+      const input = mount.querySelector('#vv-input');
+      const value = (input && input.value || '').trim();
+      if (!value) { showMessage('Veuillez saisir un élément à vérifier.'); return; }
+      go.disabled = true; const label = go.textContent; go.textContent = 'Analyse...';
+      try {
+        const result = await callVerify(mode, value);
+        showResult(result);
+      } catch (err) {
+        if (err.message === 'AUTH') showMessage('Vous devez être connecté pour utiliser cet outil.');
+        else showMessage('Une erreur est survenue, veuillez réessayer.');
+      } finally {
+        go.disabled = false; go.textContent = label;
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  window.VerifVoyageur = { init };
+})();
