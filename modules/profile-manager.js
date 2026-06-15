@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.063 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.064 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1130,7 +1130,7 @@ window.ProfileManager = ProfileManager;
   const MOUNT_ID = 'verif-voyageur-app';
 
   const STYLE = `
-  .vv-wrap{font-family:inherit;color:#1d2421;max-width:520px}
+  .vv-wrap{font-family:inherit;color:#1d2421;max-width:570px}
   .vv-seg{display:flex;gap:6px;background:#EFF0F0;padding:5px;border-radius:12px;margin-bottom:16px}
   .vv-seg button{flex:1;border:0;background:transparent;padding:10px;border-radius:9px;cursor:pointer;font:inherit;font-weight:600;color:#6b7672}
   .vv-seg button.vv-on{background:#fff;color:#235B59;box-shadow:0 1px 3px rgba(0,0,0,.08)}
