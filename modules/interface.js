@@ -1,4 +1,4 @@
-// LOG production V1.38.34
+// LOG production V1.38.36
 // Page google
 class InterfaceManager {
   constructor() {
@@ -35,6 +35,7 @@ class InterfaceManager {
     this.setupImmatriculation();
     this.setupTelephone();
     this.setupEmail();
+    this.applyContactVisibility();
     this.setupPlatformLinks();
     this.setupPopins();
   }
@@ -2003,10 +2004,14 @@ setupImmatriculation() {
     return this._hostContactPromise;
   }
 
-  // Affiche l'email au chargement (injecté en JS → absent du HTML brut)
-  async setupEmail() {
+    // Affiche l'email au chargement (injecté en JS → absent du HTML brut)
+  async setupEmail() {                                    // ← C2
     const emailElement = document.getElementById('email-hote');
     if (!emailElement) return;
+
+    const contact = await this.getHostContact();
+    // 🆕 Email masqué par l'hôte → on n'injecte RIEN dans le DOM
+    if (contact.masquer_email) return;
 
     // Fallback : data-email encore présent (AVANT la C3)
     const emailAttr = emailElement.getAttribute('data-email');
@@ -2015,12 +2020,11 @@ setupImmatriculation() {
       return;
     }
 
-    const contact = await this.getHostContact();
     if (contact.email) emailElement.textContent = contact.email;
   }
 
   // Téléphone au clic — réutilise le contact déjà récupéré (0 appel en plus)
-  setupTelephone() {
+  setupTelephone() {                                      // ← C3
     const boutonTel = document.querySelector('.bouton-tel');
     const numeroHoteElement = document.getElementById('numero-hote');
     if (!boutonTel || !numeroHoteElement) return;
@@ -2029,6 +2033,10 @@ setupImmatriculation() {
     boutonTel.addEventListener('click', async (e) => {
       e.preventDefault();
 
+      // 🆕 Sécurité : si masqué, on ne révèle jamais le numéro
+      const contact = await this.getHostContact();
+      if (contact.masquer_telephone) return;
+
       // Fallback : data-telephone encore présent (AVANT la C3)
       const telAttr = document.querySelector('[data-telephone]')?.getAttribute('data-telephone');
       if (telAttr && telAttr.trim() !== '') {
@@ -2036,10 +2044,36 @@ setupImmatriculation() {
         return;
       }
 
-      numeroHoteElement.textContent = '…';
-      const contact = await this.getHostContact();
       numeroHoteElement.textContent = contact.telephone || 'Non disponible';
     });
+  }
+
+    // 🆕 Applique le choix d'affichage des coordonnées de l'hôte
+  async applyContactVisibility() {
+    const contact = await this.getHostContact();
+    const masquerEmail = !!contact.masquer_email;
+    const masquerTel = !!contact.masquer_telephone;
+
+    // Les DEUX masqués → on cache tout le bloc
+    if (masquerEmail && masquerTel) {
+      const bloc = document.querySelector('.bloc-coordonnees');
+      if (bloc) bloc.style.display = 'none';
+      return;
+    }
+    if (masquerEmail) {
+      const blocEmail = document.getElementById('bloc-email');
+      if (blocEmail) blocEmail.style.display = 'none';
+    }
+    if (masquerTel) {
+      const boutonTel = document.querySelector('.bouton-tel');
+      if (boutonTel) boutonTel.style.display = 'none';
+    }
+
+    // 🆕 Un seul des deux reste affiché → on retire aussi le séparateur
+    if (masquerEmail || masquerTel) {
+      const separateur = document.getElementById('separateur-infos');
+      if (separateur) separateur.style.display = 'none';
+    }
   }
 
   // Gestion des liens vers plateformes
