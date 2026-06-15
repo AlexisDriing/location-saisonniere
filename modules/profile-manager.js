@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.067 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.068 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1149,7 +1149,8 @@ window.ProfileManager = ProfileManager;
   .vv-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:6px;color:#fff;margin-bottom:8px}
   .vv-red .vv-tag{background:#b42318}.vv-amber .vv-tag{background:#9a6a08}.vv-ok .vv-tag{background:#235B59}
   .vv-title{margin:0;font-size:14px;font-weight:600}
-  .vv-red .vv-title{color:#b42318}.vv-amber .vv-title{color:#7a5406}.vv-ok .vv-title{color:#235B59}
+    .vv-red .vv-title{color:#b42318}.vv-amber .vv-title{color:#7a5406}.vv-ok .vv-title{color:#235B59}
+  .vv-count{margin-top:10px;font-size:13px;font-weight:600;color:#1d2421;background:#fff;border:1px solid #e2e5e4;border-radius:8px;padding:7px 10px;display:none}
   .vv-why{list-style:none;padding:0;margin:12px 0 0}
   .vv-why li{display:flex;gap:8px;padding:8px 0;border-top:1px solid rgba(0,0,0,.06);font-size:13px;line-height:1.45}
   .vv-dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;margin-top:6px}
@@ -1176,6 +1177,7 @@ window.ProfileManager = ProfileManager;
     <div class="vv-res" id="vv-res">
       <span class="vv-tag" id="vv-tag"></span>
       <p class="vv-title" id="vv-title"></p>
+      <div class="vv-count" id="vv-count"></div>
       <ul class="vv-why" id="vv-why"></ul>
     </div>
     <div class="vv-foot">Messages non conservés. Numéros et emails enregistrés pour la détection communautaire. Analyse indicative, pas un verdict définitif.</div>
@@ -1252,6 +1254,13 @@ window.ProfileManager = ProfileManager;
       res.className = 'vv-res vv-show vv-' + (r.verdict === 'red' ? 'red' : r.verdict === 'orange' ? 'amber' : 'ok');
       tagEl.textContent = buildTag(r, mode);
       titleEl.textContent = buildTitle(r, mode);
+      const countEl = mount.querySelector('#vv-count');
+      if (typeof r.count === 'number') {
+        countEl.style.display = 'block';
+        countEl.textContent = 'Vérifié par ' + r.count + (r.count > 1 ? ' hôtes' : ' hôte');
+      } else {
+        countEl.style.display = 'none';
+      }
       why.innerHTML = (r.reasons || []).map(x => `<li><span class="vv-dot ${x.level}"></span><span>${esc(x.text)}</span></li>`).join('');
     }
 
