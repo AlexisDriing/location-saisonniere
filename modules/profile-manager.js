@@ -1186,7 +1186,6 @@ window.ProfileManager = ProfileManager;
         <li>Elle vous « envoie » de l'argent via ce lien. Mais pour le « recevoir », on vous demande de <b>saisir vos identifiants bancaires</b>.</li>
         <li>C'est là le piège : ces identifiants ne servent pas à recevoir un paiement, mais à <b>accéder à votre compte</b>.</li>
       </ol>
-      <div class="vv-rule"><b>La règle d'or :</b> on ne saisit jamais ses identifiants bancaires pour recevoir de l'argent. Un acompte légitime arrive par virement classique, sans aucune manipulation de votre part.</div>
       <div class="vv-contact">Un doute ? Contactez-nous et on regarde ensemble.</div>
     </div>
     <div class="vv-foot">Messages non conservés. Numéros et emails enregistrés pour la détection communautaire. Analyse indicative, pas un verdict définitif.</div>
