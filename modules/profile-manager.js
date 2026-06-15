@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.065 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.066 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1194,6 +1194,7 @@ window.ProfileManager = ProfileManager;
   function buildTag(r, mode) {
     if (mode === 'message' && r.known) return 'Arnaque connue';
     if (mode !== 'message' && r.confirmed) return 'Répertorié';
+    if (mode !== 'message' && r.trusted) return 'Voyageur vérifié';
     return r.verdict === 'red' ? 'Très suspect' : r.verdict === 'orange' ? 'Prudence' : 'Fiable';
   }
   function buildTitle(r, mode) {
@@ -1205,6 +1206,7 @@ window.ProfileManager = ProfileManager;
       return "Aucun signal d'arnaque détecté, ce message ressemble à une vraie demande. Restez tout de même vigilant et contactez-nous au moindre doute.";
     }
     if (r.confirmed) return "Ce " + label + " est répertorié comme frauduleux par l'équipe driing. Ne donnez pas suite et arrêtez tout échange avec ces coordonnées. Au moindre doute, contactez-nous.";
+    if (r.trusted) return "Ce " + label + " correspond à un voyageur déjà vérifié par l'équipe driing. Vous pouvez procéder en confiance.";
     if (r.verdict === 'red') return "Ce " + label + " a déjà été signalé par plusieurs hôtes, c'est un signal fort d'arnaque. Soyez très prudent. " + CONSEIL;
     if (r.verdict === 'orange') return "Ce " + label + " a déjà été vérifié par d'autres hôtes. Restez prudent et contactez-nous au moindre doute.";
     return "Ce " + label + " n'est pas connu de notre base. Aucun signal pour l'instant, restez vigilant et contactez-nous au moindre doute.";
