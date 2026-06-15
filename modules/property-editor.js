@@ -1,4 +1,4 @@
-// LOG production V1.94 - chambres d'hôtes v1.065
+// LOG production V1.94 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -5073,7 +5073,36 @@ prefillComplexFields() {
       }
     }
   });
+  // APRÈS
   this.initialValues.mode_paiement = modesPaiementArray;
+
+  // 🆕 AFFICHAGE COORDONNÉES — cases "Afficher pour les voyageurs"
+  // Le champ CMS stocke ce qui est MASQUÉ. Coché = affiché = NON présent dans la liste.
+  const ordreCoords = ['email', 'telephone'];
+  const masquesCoords = (this.propertyData.affichage_coordonnees || '')
+    .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const affichageMapping = {
+    email: 'checkbox-afficher-email',
+    telephone: 'checkbox-afficher-telephone'
+  };
+  Object.entries(affichageMapping).forEach(([cle, id]) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = !masquesCoords.includes(cle); // coché = affiché
+      const checkboxDiv = checkbox.previousElementSibling;
+      if (checkboxDiv && checkboxDiv.classList.contains('w-checkbox-input')) {
+        if (checkbox.checked) {
+          checkboxDiv.classList.add('w--redirected-checked');
+        } else {
+          checkboxDiv.classList.remove('w--redirected-checked');
+        }
+      }
+      checkbox.addEventListener('change', () => this.enableButtons());
+    }
+  });
+  this.initialValues.affichage_coordonnees =
+    ordreCoords.filter(k => masquesCoords.includes(k)).join(', ');
+
   this.prefillCautionAcompte();
   this.prefillTailleMaison();
 }
@@ -7772,7 +7801,19 @@ setBlockState(element, isActive) {
       selectedModesPaiement.push(value);
     }
   });
+  // APRÈS
   currentValues.mode_paiement = selectedModesPaiement;
+
+  // 🆕 Affichage coordonnées : case décochée = coordonnée MASQUÉE (ordre fixe pour comparaison fiable)
+  const ordreCoords = ['email', 'telephone'];
+  const coordsCheckboxes = {
+    email: 'checkbox-afficher-email',
+    telephone: 'checkbox-afficher-telephone'
+  };
+  currentValues.affichage_coordonnees = ordreCoords.filter(cle => {
+    const cb = document.getElementById(coordsCheckboxes[cle]);
+    return cb ? !cb.checked : false; // décochée = masquée
+  }).join(', ');
     
   // NOUVEAU : Reconstituer la chaîne taille maison
   const voyageurs = document.getElementById('voyageurs-input')?.value || '0';
