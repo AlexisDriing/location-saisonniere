@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.066 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.067 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -1177,16 +1177,6 @@ window.ProfileManager = ProfileManager;
       <span class="vv-tag" id="vv-tag"></span>
       <p class="vv-title" id="vv-title"></p>
       <ul class="vv-why" id="vv-why"></ul>
-    </div>
-    <div class="vv-info">
-      <h3>Comment se déroule une arnaque (pour la reconnaître)</h3>
-      <ol>
-        <li>La personne demande un <b>contrat de location</b> pour « officialiser » la réservation.</li>
-        <li>Elle vous envoie ensuite un <b>lien Wero</b> (ou un autre service de paiement) en prétendant vouloir verser un <b>acompte</b>.</li>
-        <li>Elle vous « envoie » de l'argent via ce lien. Mais pour le « recevoir », on vous demande de <b>saisir vos identifiants bancaires</b>.</li>
-        <li>C'est là le piège : ces identifiants ne servent pas à recevoir un paiement, mais à <b>accéder à votre compte</b>.</li>
-      </ol>
-      <div class="vv-contact">Un doute ? Contactez-nous et on regarde ensemble.</div>
     </div>
     <div class="vv-foot">Messages non conservés. Numéros et emails enregistrés pour la détection communautaire. Analyse indicative, pas un verdict définitif.</div>
   </div>`;
