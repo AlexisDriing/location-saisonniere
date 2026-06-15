@@ -1,4 +1,4 @@
-// LOG production V1.38.35
+// LOG production V1.38.36
 // Page google
 class InterfaceManager {
   constructor() {
@@ -2048,7 +2048,7 @@ setupImmatriculation() {
     });
   }
 
-  // 🆕 Applique le choix d'affichage des coordonnées de l'hôte   // ← C4 (méthode NOUVELLE)
+    // 🆕 Applique le choix d'affichage des coordonnées de l'hôte
   async applyContactVisibility() {
     const contact = await this.getHostContact();
     const masquerEmail = !!contact.masquer_email;
@@ -2067,6 +2067,12 @@ setupImmatriculation() {
     if (masquerTel) {
       const boutonTel = document.querySelector('.bouton-tel');
       if (boutonTel) boutonTel.style.display = 'none';
+    }
+
+    // 🆕 Un seul des deux reste affiché → on retire aussi le séparateur
+    if (masquerEmail || masquerTel) {
+      const separateur = document.getElementById('separateur-infos');
+      if (separateur) separateur.style.display = 'none';
     }
   }
 
