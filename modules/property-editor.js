@@ -1,4 +1,4 @@
-// LOG production V1.94 - chambres d'hôtes v1.066
+// LOG production V1.95 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -405,8 +405,12 @@ prefillRoomEquipements() {
 // ================================
 
 initRoomImageManagement() {
-  this.roomOriginalPhotos = JSON.parse(JSON.stringify(this.roomData.photos || []));
-  this.roomCurrentPhotos = JSON.parse(JSON.stringify(this.roomData.photos || []));
+  // 🆕 Nettoyer les entrées corrompues (null/vides/sans url)
+  const cleanRoomPhotos = (this.roomData.photos || []).filter(
+    p => (typeof p === 'string' && p.trim()) || (p && typeof p === 'object' && p.url)
+  );
+  this.roomOriginalPhotos = JSON.parse(JSON.stringify(cleanRoomPhotos));
+  this.roomCurrentPhotos = JSON.parse(JSON.stringify(cleanRoomPhotos));
   this.initialValues.room_photos = JSON.parse(JSON.stringify(this.roomOriginalPhotos));
   
   this.displayRoomEditableGallery();
@@ -645,19 +649,44 @@ async loadImageCompressionLib() {
 }
 
 async compressImage(file) {
+  const SERVER_MAX_BYTES = 200 * 1024; // doit rester < limite serveur /stage-photos
   const baseOptions = {
     maxSizeMB: 0.08,
     maxWidthOrHeight: 1920,
     useWebWorker: true,
     initialQuality: 0.8
   };
+
+  let result = null;
+
+  // 1) AVIF (Chrome / Firefox / Edge récents — jamais Safari ni WebKit iOS)
   try {
     const avif = await window.imageCompression(file, { ...baseOptions, fileType: 'image/avif' });
-    if (avif && avif.type === 'image/avif') return avif;
+    if (avif && avif.type === 'image/avif') result = avif;
   } catch (e) {
-    console.warn('Encodage AVIF indisponible, bascule en WebP :', e.message);
+    console.warn('Encodage AVIF indisponible :', e?.message);
   }
-  return await window.imageCompression(file, { ...baseOptions, fileType: 'image/webp' });
+
+  // 2) WebP (échoue sur Safari ≤ 16 et anciens WebView)
+  if (!result) {
+    try {
+      const webp = await window.imageCompression(file, { ...baseOptions, fileType: 'image/webp' });
+      if (webp && webp.type === 'image/webp') result = webp;
+    } catch (e) {
+      console.warn('Encodage WebP indisponible :', e?.message);
+    }
+  }
+
+  // 3) Filet UNIVERSEL : JPEG (encodable par TOUS les navigateurs). ~92 Ko en 1600px.
+  if (!result || result.size > SERVER_MAX_BYTES) {
+    result = await window.imageCompression(file, {
+      ...baseOptions,
+      fileType: 'image/jpeg',
+      maxWidthOrHeight: 1600
+    });
+  }
+
+  return result;
 }
 
 fileToBase64(file) {
@@ -669,6 +698,30 @@ fileToBase64(file) {
   });
 }
 
+// 🆕 Valide qu'un fichier est une image d'un format autorisé ET réellement décodable.
+async isValidImageFile(file) {
+  if (!file) return false;
+  const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+  // Si un type MIME est annoncé, il doit être autorisé (type vide : on laisse le décodage trancher)
+  if (file.type && !ALLOWED.has(file.type)) return false;
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      if (bitmap.close) bitmap.close();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload  = () => { URL.revokeObjectURL(url); resolve(true); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
+    img.src = url;
+  });
+}
+  
 async handlePhotoSelection(type) {
   const isRoom = type === 'chambre';
   const max = isRoom ? 5 : 20;
@@ -687,8 +740,8 @@ async handlePhotoSelection(type) {
   input.style.display = 'none';
   document.body.appendChild(input);
 
-  input.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files || []);
+    input.addEventListener('change', async (e) => {
+    let files = Array.from(e.target.files || []);
     document.body.removeChild(input);
     if (files.length === 0) return;
 
@@ -698,14 +751,30 @@ async handlePhotoSelection(type) {
       return;
     }
 
+    // 🆕 Ne garder que les fichiers d'un format autorisé ET réellement décodables
+    const validFiles = [];
+    const rejected = [];
+    for (const f of files) {
+      if (await this.isValidImageFile(f)) validFiles.push(f);
+      else rejected.push(f.name);
+    }
+    if (rejected.length) {
+      this.showNotification('error',
+        `Format non supporté ou fichier illisible : ${rejected.join(', ')}. Utilisez des images JPEG, PNG, WebP ou AVIF valides.`);
+    }
+    if (validFiles.length === 0) return;
+    files = validFiles;
+
+    // 🔧 galleryContainer déclaré AVANT le try pour rester accessible dans le catch
+    const galleryContainer = document.querySelector(isRoom ? '.images-grid.chambre' : '.images-grid');
+
     try {
       this.ensureSkeletonStyles();
       await this.loadImageCompressionLib();
-    
+
       // 🆕 Bloquer tous les boutons delete pendant l'upload (évite race condition splice/index)
-      const galleryContainer = document.querySelector(isRoom ? '.images-grid.chambre' : '.images-grid');
       if (galleryContainer) galleryContainer.classList.add('gallery-uploading');
-    
+
       // Phase 1 — Insérer N squelettes dans la galerie
       const SKELETON_SRC = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
       const startIdx = gallery.length;
@@ -731,10 +800,19 @@ async handlePhotoSelection(type) {
       this.applyLoadingStateToBlocks(isRoom, startIdx, files.length);
 
       // Phase 2 — Compresser chaque fichier et remplacer le squelette correspondant
+      const failedNames = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const compressed = await this.compressImage(file);
-        const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+        let compressed;
+        try {
+          compressed = await this.compressImage(file);
+        } catch (e) {
+          console.warn('Compression échouée pour', file.name, e?.message);
+          gallery[startIdx + i] = null;
+          failedNames.push(file.name);
+          continue;
+        }
+        const ext = (compressed.type && compressed.type.split('/')[1]) || 'jpg';
         const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
         const blobUrl = URL.createObjectURL(compressed);
 
@@ -757,13 +835,32 @@ async handlePhotoSelection(type) {
         }
       }
 
+      // 🆕 Retirer les squelettes des fichiers qui ont échoué (aucune entrée fantôme)
+      if (failedNames.length) {
+        for (let i = gallery.length - 1; i >= 0; i--) {
+          if (gallery[i] === null) gallery.splice(i, 1);
+        }
+        this.showNotification('error', `Impossible de traiter : ${failedNames.join(', ')}. Image(s) ignorée(s).`);
+        if (isRoom) {
+          this.displayRoomEditableGallery();
+          if (window.innerWidth > 768) this.initRoomSortable();
+          this.updateRoomAddPhotosButtonState();
+        } else {
+          this.displayEditableGallery();
+          if (window.innerWidth > 768) this.initSortable();
+          this.updateAddPhotosButtonState();
+        }
+      }
+
       // 🆕 Upload terminé : réactiver les boutons delete
       if (galleryContainer) galleryContainer.classList.remove('gallery-uploading');
 
       this.enableButtons();
-      this.showNotification('success', `${files.length} photo(s) ajoutée(s). Cliquez sur Enregistrer pour valider.`);
+      const addedCount = files.length - failedNames.length;
+      if (addedCount > 0) {
+        this.showNotification('success', `${addedCount} photo(s) ajoutée(s). Cliquez sur Enregistrer pour valider.`);
+      }
     } catch (err) {
-      // 🆕 En cas d'erreur, réactiver aussi
       if (galleryContainer) galleryContainer.classList.remove('gallery-uploading');
       console.error('Erreur sélection photos :', err);
       this.showNotification('error', 'Erreur : ' + err.message);
@@ -777,7 +874,7 @@ async uploadStagedPhotos(gallery, type) {
   const stagedIndices = [];
   const stagedFiles = [];
   for (let i = 0; i < gallery.length; i++) {
-    if (gallery[i]._staged) {
+    if (gallery[i] && gallery[i]._staged) {
       stagedIndices.push(i);
       stagedFiles.push(gallery[i]);
     }
@@ -829,11 +926,28 @@ async uploadStagedPhotos(gallery, type) {
     gallery[idx] = { url: result.tempUrls[i] };
   }
 
-    // 🔧 Fix du bug delete : re-render pour synchroniser DOM et tableau
+        // 🔧 Re-render synchronisé : on remet d'abord les blocs dans l'ordre de leurs ID
+    // (SortableJS a pu les déplacer pendant un drag) avant de réafficher → plus de flash.
   if (type === 'chambre') {
+    if (this.roomSortableInstance) { this.roomSortableInstance.destroy(); this.roomSortableInstance = null; }
+    const roomContainer = document.querySelector('.images-grid.chambre');
+    if (roomContainer) {
+      for (let i = 1; i <= 5; i++) {
+        const block = document.getElementById(`image-block-${i}-chambre`);
+        if (block) roomContainer.appendChild(block);
+      }
+    }
     this.displayRoomEditableGallery();
     if (window.innerWidth > 768) this.initRoomSortable();
   } else {
+    if (this.sortableInstance) { this.sortableInstance.destroy(); this.sortableInstance = null; }
+    const container = document.querySelector('.images-grid');
+    if (container) {
+      for (let i = 1; i <= 20; i++) {
+        const block = document.getElementById(`image-block-${i}`);
+        if (block) container.appendChild(block);
+      }
+    }
     this.displayEditableGallery();
     if (window.innerWidth > 768) this.initSortable();
   }
@@ -868,17 +982,24 @@ async handleProfilePhotoSelection() {
   input.style.display = 'none';
   document.body.appendChild(input);
   
-  input.addEventListener('change', async (e) => {
+    input.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     document.body.removeChild(input);
     if (!file) return;
-    
+
+    // 🆕 Même validation que pour la galerie
+    if (!(await this.isValidImageFile(file))) {
+      this.showNotification('error',
+        'Format non supporté ou fichier illisible. Utilisez une image JPEG, PNG, WebP ou AVIF valide.');
+      return;
+    }
+
     try {
       await this.loadImageCompressionLib();
       this.showNotification('success', 'Compression de la photo...');
       
       const compressed = await this.compressImage(file);
-      const ext = compressed.type === 'image/avif' ? 'avif' : 'webp';
+      const ext = (compressed.type && compressed.type.split('/')[1]) || 'jpg';
       const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo-profil';
       const blobUrl = URL.createObjectURL(compressed);
       
@@ -3173,7 +3294,7 @@ async saveRoomModifications() {
   
     // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
   try {
-    if (this.roomCurrentPhotos.some(p => p._staged)) {
+    if (this.roomCurrentPhotos.some(p => p && p._staged)) {
       this.showNotification('success', 'Envoi des photos en cours...');
       await this.uploadStagedPhotos(this.roomCurrentPhotos, 'chambre');
     }
@@ -6574,9 +6695,14 @@ generateExtrasString() {
 
 initImageManagement() {
   
+  // 🆕 Nettoyer les entrées corrompues (null/vides/sans url)
+  const cleanGallery = (this.propertyData.images_gallery || []).filter(
+    p => (typeof p === 'string' && p.trim()) || (p && typeof p === 'object' && p.url)
+  );
+
   // Copier l'état initial
-  this.originalImagesGallery = JSON.parse(JSON.stringify(this.propertyData.images_gallery || []));
-  this.currentImagesGallery = JSON.parse(JSON.stringify(this.propertyData.images_gallery || []));
+  this.originalImagesGallery = JSON.parse(JSON.stringify(cleanGallery));
+  this.currentImagesGallery = JSON.parse(JSON.stringify(cleanGallery));
   
   // Sauvegarder dans initialValues pour le système de cancel
   this.initialValues.images_gallery = JSON.parse(JSON.stringify(this.originalImagesGallery));
@@ -8037,7 +8163,7 @@ setBlockState(element, isActive) {
 
   // 🆕 Upload des photos en staging vers des URLs temporaires (si applicable)
   try {
-    if (this.currentImagesGallery.some(p => p._staged)) {
+    if (this.currentImagesGallery.some(p => p && p._staged)) {
       this.showNotification('success', 'Envoi des photos en cours...');
       await this.uploadStagedPhotos(this.currentImagesGallery, 'logement');
     }
