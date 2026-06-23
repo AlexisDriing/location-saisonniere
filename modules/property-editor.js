@@ -1,4 +1,4 @@
-// LOG production V1.95 - chambres d'hôtes v1.066
+// LOG production V1.96 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -505,7 +505,7 @@ displayRoomEditableGallery() {
       if (imageUrl) {
         const imgElement = imageBlock.querySelector('img');
         if (imgElement) {
-          imgElement.src = imageUrl;
+          if (imgElement.src !== imageUrl) imgElement.src = imageUrl;
           imgElement.alt = `Image chambre ${i + 1}`;
         }
         
@@ -6815,7 +6815,7 @@ displayEditableGallery() {
         const imgElement = imageBlock.querySelector('img');
         
         if (imgElement) {
-          imgElement.src = imageUrl;
+          if (imgElement.src !== imageUrl) imgElement.src = imageUrl;
           imgElement.alt = `Image ${i + 1}`;
           
           if (i > 3) {
