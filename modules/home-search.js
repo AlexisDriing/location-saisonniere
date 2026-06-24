@@ -1,4 +1,4 @@
-// Gestionnaire de recherche pour la page d'accueil - LOG production 26/09
+// Gestionnaire de recherche pour la page d'accueil - LOG production V1.01
 class HomeSearch {
   constructor() {
     // Protection contre double initialisation
@@ -302,33 +302,36 @@ class HomeSearch {
     }
   }
 
-  handleSearch(isMobile = false) {    
-    // Récupérer le lieu selon la version
-    let location = null;
+    handleSearch(isMobile = false) {    
     const searchInput = document.getElementById(isMobile ? 'search-input-home-mobile' : 'search-input-home');
-    if (searchInput && searchInput.value.trim()) {
-      // SearchMapManager aura déjà géocodé via getCurrentSearch()
-      location = window.searchMapManager?.getCurrentSearch();
-      
-      // Si pas de coordonnées mais un texte, on garde le texte pour géocoder côté liste
-      if (!location && searchInput.value.trim()) {
-        location = { name: searchInput.value.trim(), needsGeocoding: true };
-      }
+
+    // 🆕 Récupérer la sélection mémorisée (coordonnées exactes) si elle correspond
+    // toujours au texte affiché. Si l'utilisateur a retapé autre chose après avoir
+    // cliqué une suggestion, on retombe sur null → re-géocodage côté liste (secours).
+    let selectedLocation = null;
+    const stored = window.searchMapManager?.lastSelectedLocation;
+    if (stored && searchInput && stored.text.trim() === searchInput.value.trim()) {
+      selectedLocation = {
+        coordinates: stored.coordinates,
+        searchType: stored.searchType,
+        zoneInfo: stored.zoneInfo
+      };
     }
-    
+
     // Construire l'objet de données selon la version
     const searchData = {
       locationText: searchInput ? searchInput.value : '',
+      location: selectedLocation, // 🆕 coordonnées exactes (ou null si saisie libre)
       startDate: isMobile ? this.startDateMobile : this.startDate,
       endDate: isMobile ? this.endDateMobile : this.endDate,
       adultes: isMobile ? this.adultesMobile : this.adultes,
       enfants: isMobile ? this.enfantsMobile : this.enfants,
       timestamp: Date.now()
     };
-        
+
     // Sauvegarder dans localStorage
     localStorage.setItem('home_search_data', JSON.stringify(searchData));
-    
+
     // Rediriger vers la page liste
     window.location.href = '/locations-vacances-sans-commission';
   }
