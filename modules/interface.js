@@ -1,4 +1,4 @@
-// LOG production V1.38.39
+// LOG production V1.38.40
 // Page google
 class InterfaceManager {
   constructor() {
@@ -307,7 +307,7 @@ setupConditionsAnnulation() {
         if (/\s*sur\s+demande\s*$/i.test(textWithoutEmoji)) {
           // 🆕 Extra "sur demande" : pas de prix numérique
           title = textWithoutEmoji.replace(/\s*sur\s+demande\s*$/i, '').trim();
-          price = 'Sur demande';
+          price = 'Prix sur demande';
         } else {
           const match = textWithoutEmoji.match(/(.+?)(\d+(?:[.,]\d+)?€)$/);
           if (!match) return;
