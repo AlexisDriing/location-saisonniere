@@ -1,4 +1,4 @@
-// LOG production V1.96 - chambres d'hôtes v1.066
+// LOG production V1.97 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -6350,12 +6350,12 @@ parseExtrasString(extrasString) {
     // Retirer l'emoji du début
     const withoutEmoji = part.replace(emoji, '');
     
-    // Chercher le prix (dernier nombre suivi de €)
-    const priceMatch = withoutEmoji.match(/(\d+)€/);
-    const price = priceMatch ? priceMatch[1] : '';
+    // Chercher le prix (nombre éventuellement décimal, point ou virgule, suivi de €)
+    const priceMatch = withoutEmoji.match(/(\d+(?:[.,]\d+)?)€/);
+    const price = priceMatch ? priceMatch[1].replace(',', '.') : ''; // normaliser en point
     
     // Le nom est ce qui reste après avoir retiré le prix
-    const name = withoutEmoji.replace(/\d+€.*$/, '').trim();
+    const name = withoutEmoji.replace(/\d+(?:[.,]\d+)?€.*$/, '').trim();
     
     return { emoji, name, price };
   }).filter(extra => extra.name); // Filtrer les entrées vides
@@ -6414,7 +6414,8 @@ displayExtras() {
       }
       if (nameInput) nameInput.value = extra.name || '';
       if (priceInput) {
-        priceInput.value = extra.price || '';
+        // extra.price est stocké avec un point → on affiche en virgule (FR)
+        priceInput.value = (extra.price || '').replace('.', ',');
         priceInput.setAttribute('data-raw-value', extra.price || '');
       }
       
@@ -6509,6 +6510,28 @@ removeExtra(index) {
   this.enableButtons();
 }
 
+// Normalise un prix d'extra : accepte le point OU la virgule comme séparateur décimal.
+// Retourne { canonical, display } :
+//   - canonical : avec un POINT, pour le stockage (ex. "25.5") — la virgule reste le séparateur d'items
+//   - display   : avec une VIRGULE, pour l'affichage FR (ex. "25,5")
+sanitizeExtraPrice(rawInput) {
+  let s = String(rawInput == null ? '' : rawInput).replace(/[^\d.,]/g, '');
+  const sepIndex = s.search(/[.,]/);
+  if (sepIndex !== -1) {
+    let intPart = s.slice(0, sepIndex).replace(/[.,]/g, '');
+    const decPart = s.slice(sepIndex + 1).replace(/[.,]/g, '').slice(0, 2); // max 2 décimales
+    if (decPart) {
+      if (intPart === '') intPart = '0';   // ,5 / .5 → 0.5  (jamais ".5")
+      s = `${intPart}.${decPart}`;
+    } else {
+      s = intPart;                          // "25," → "25" ; "," → "" (ignoré)
+    }
+  }
+  const canonical = s;
+  const display = canonical.replace('.', ',');
+  return { canonical, display };
+}
+  
 setupExtraListeners(blocElement, index) {
   const emojiInput = blocElement.querySelector('[data-extra="emoji"]');
   const nameInput = blocElement.querySelector('[data-extra="name"]');
@@ -6535,29 +6558,44 @@ setupExtraListeners(blocElement, index) {
     });
   }
   
-  if (priceInput) {
+    if (priceInput) {
+    // Saisie : chiffres + 1 séparateur décimal (point ou virgule), max 2 décimales.
+    // Affichage en virgule (FR), stockage normalisé avec un point.
     priceInput.addEventListener('input', (e) => {
-      const value = e.target.value.replace(/[^\d]/g, '');
-      this.extras[index].price = value;
+      let v = e.target.value.replace(/[^\d.,]/g, '');
+      const i = v.search(/[.,]/);
+      if (i !== -1) {
+        let intPart = v.slice(0, i).replace(/[.,]/g, '');
+        if (intPart === '') intPart = '0';   // ,5 → 0,5 dès la frappe
+        const decPart = v.slice(i + 1).replace(/[.,]/g, '').slice(0, 2);
+        v = intPart + ',' + decPart; // garde le séparateur visible pendant la frappe
+      }
+      e.target.value = v;
+      this.extras[index].price = v.replace(',', '.').replace(/\.$/, ''); // stockage : point, sans séparateur final
       this.enableButtons();
     });
-    
-    // Formatage au blur : ajouter €
-    priceInput.addEventListener('blur', function() {
-      const value = this.value.replace(/[^\d]/g, '');
-      if (value) {
-        this.setAttribute('data-raw-value', value);
-        this.value = value + '€';
+
+    // Formatage au blur : normaliser puis ajouter €
+    priceInput.addEventListener('blur', () => {
+      const { canonical, display } = this.sanitizeExtraPrice(priceInput.value);
+      if (canonical) {
+        priceInput.setAttribute('data-raw-value', canonical);
+        priceInput.value = display + '€';
+        this.extras[index].price = canonical;
+      } else {
+        priceInput.removeAttribute('data-raw-value');
+        priceInput.value = '';
+        this.extras[index].price = '';
       }
     });
-    
-    // Retirer le suffixe au focus
-    priceInput.addEventListener('focus', function() {
-      const rawValue = this.getAttribute('data-raw-value');
+
+    // Retirer le suffixe € au focus (affichage en virgule pour l'édition)
+    priceInput.addEventListener('focus', () => {
+      const rawValue = priceInput.getAttribute('data-raw-value');
       if (rawValue) {
-        this.value = rawValue;
+        priceInput.value = rawValue.replace('.', ',');
       } else {
-        this.value = this.value.replace(/[^\d]/g, '');
+        priceInput.value = priceInput.value.replace(/[^\d.,]/g, '');
       }
     });
   }
