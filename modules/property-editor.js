@@ -1,4 +1,4 @@
-// LOG production V1.99.1 - chambres d'hôtes v1.066
+// LOG production V1.99.2 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -6323,16 +6323,10 @@ parseAndDisplayExtras() {
   // Récupérer la valeur du champ extras
   const extrasValue = this.propertyData.extras || '';
   
-  if (!extrasValue) {
-    console.log('❌ Aucun extra à afficher');
-    this.extras = [];
-    return;
-  }
-  
-  // Parser le format "🚴Location de vélos10€/jour, ⏰Départ tardif5€"
-  this.extras = this.parseExtrasString(extrasValue);
+  // Parser (tableau vide si aucun extra)
+  this.extras = extrasValue ? this.parseExtrasString(extrasValue) : [];
     
-  // Afficher chaque extra
+  // Afficher (displayExtras masque d'abord TOUS les blocs, puis réaffiche)
   this.displayExtras();
 }
 
@@ -6365,6 +6359,14 @@ parseExtrasString(extrasString) {
   }).filter(extra => extra.name); // Filtrer les entrées vides
 }
 
+// Coche/décoche une checkbox Webflow par programmation (état logique + visuel)
+syncWebflowCheckbox(checkboxInput, checked) {
+  if (!checkboxInput) return;
+  checkboxInput.checked = checked;
+  const visual = checkboxInput.closest('.w-checkbox')?.querySelector('.w-checkbox-input');
+  if (visual) visual.classList.toggle('w--redirected-checked', checked);
+}
+  
 displayExtras() {
   
   // Masquer tous les blocs d'abord
@@ -6433,7 +6435,7 @@ displayExtras() {
         }
       }
       const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
-      if (onRequestCheckbox) onRequestCheckbox.checked = (extra.price === 'Sur demande');
+      if (onRequestCheckbox) this.syncWebflowCheckbox(onRequestCheckbox, extra.price === 'Sur demande');
       
       // Ajouter les listeners pour modifications
       this.setupExtraListeners(blocElement, index);
@@ -6497,7 +6499,7 @@ addExtra() {
       priceInput.style.webkitTextFillColor = '';             // 🆕 reset
     }
     const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
-    if (onRequestCheckbox) onRequestCheckbox.checked = false;
+    if (onRequestCheckbox) this.syncWebflowCheckbox(onRequestCheckbox, false);
     
     // Ajouter les listeners
     this.setupExtraListeners(blocElement, newIndex);
