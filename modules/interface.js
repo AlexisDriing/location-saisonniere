@@ -1,4 +1,4 @@
-// LOG production V1.38.37
+// LOG production V1.38.38
 // Page google
 class InterfaceManager {
   constructor() {
@@ -307,7 +307,14 @@ setupConditionsAnnulation() {
         if (!match) return;
         
         const title = match[1].trim();
-        const price = match[2].trim().replace('.', ','); // affichage FR : 25.5€ → 25,5€
+        // Prix FR : 2 décimales si présentes (12.7€ → 12,70€), entier inchangé (25€ → 25€)
+        let price = match[2].trim();
+        const pm = price.match(/^(\d+)(?:[.,](\d+))?€$/);
+        if (pm) {
+          price = pm[2] !== undefined
+            ? `${pm[1]},${(pm[2] + '0').slice(0, 2)}€`
+            : `${pm[1]}€`;
+        }
         
         const extraElement = exampleElement.cloneNode(true);
         const emojiElement = extraElement.querySelector("#emoji");
