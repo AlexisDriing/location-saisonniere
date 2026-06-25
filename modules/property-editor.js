@@ -1,4 +1,4 @@
-// LOG production V1.98 - chambres d'hôtes v1.066
+// LOG production V1.99 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -6349,8 +6349,13 @@ parseExtrasString(extrasString) {
     
     // Retirer l'emoji du début
     const withoutEmoji = part.replace(emoji, '');
-    
-    // Chercher le prix (nombre éventuellement décimal, point ou virgule, suivi de €)
+
+    // 🆕 Cas "sur demande" : pas de prix numérique
+    if (/\s*sur\s+demande\s*$/i.test(withoutEmoji)) {
+      const name = withoutEmoji.replace(/\s*sur\s+demande\s*$/i, '').trim();
+      return { emoji, name, price: 'Sur demande' };
+    }
+
     const priceMatch = withoutEmoji.match(/(\d+(?:[.,]\d+)?)€/);
     const price = priceMatch ? this.sanitizeExtraPrice(priceMatch[1]).canonical : ''; // normalisé + padé
     
@@ -6413,10 +6418,18 @@ displayExtras() {
       }
       if (nameInput) nameInput.value = extra.name || '';
       if (priceInput) {
-        // extra.price est stocké avec un point → on affiche en virgule (FR)
-        priceInput.value = (extra.price || '').replace('.', ',');
-        priceInput.setAttribute('data-raw-value', extra.price || '');
+        if (extra.price === 'Sur demande') {
+          priceInput.value = 'Sur demande';
+          priceInput.disabled = true;
+          priceInput.removeAttribute('data-raw-value');
+        } else {
+          priceInput.disabled = false;
+          priceInput.value = (extra.price || '').replace('.', ',');
+          priceInput.setAttribute('data-raw-value', extra.price || '');
+        }
       }
+      const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
+      if (onRequestCheckbox) onRequestCheckbox.checked = (extra.price === 'Sur demande');
       
       // Ajouter les listeners pour modifications
       this.setupExtraListeners(blocElement, index);
@@ -6474,8 +6487,11 @@ addExtra() {
     }
     if (priceInput) {
       priceInput.value = '';
+      priceInput.disabled = false;
       priceInput.removeAttribute('data-raw-value');
     }
+    const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
+    if (onRequestCheckbox) onRequestCheckbox.checked = false;
     
     // Ajouter les listeners
     this.setupExtraListeners(blocElement, newIndex);
@@ -6589,13 +6605,36 @@ setupExtraListeners(blocElement, index) {
     });
 
     // Retirer le suffixe € au focus (affichage en virgule pour l'édition)
-    priceInput.addEventListener('focus', () => {
+        priceInput.addEventListener('focus', () => {
       const rawValue = priceInput.getAttribute('data-raw-value');
       if (rawValue) {
         priceInput.value = rawValue.replace('.', ',');
       } else {
         priceInput.value = priceInput.value.replace(/[^\d.,]/g, '');
       }
+    });
+  }
+
+  // 🆕 Checkbox "Sur demande"
+  const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
+  if (onRequestCheckbox) {
+    onRequestCheckbox.addEventListener('change', () => {
+      const priceInput = blocElement.querySelector('[data-extra="price"]');
+      if (onRequestCheckbox.checked) {
+        this.extras[index].price = 'Sur demande';
+        if (priceInput) {
+          priceInput.value = 'Sur demande';
+          priceInput.disabled = true;
+          priceInput.removeAttribute('data-raw-value');
+        }
+      } else {
+        this.extras[index].price = '';
+        if (priceInput) {
+          priceInput.disabled = false;
+          priceInput.value = '';
+        }
+      }
+      this.enableButtons();
     });
   }
 }
@@ -6720,7 +6759,9 @@ generateExtrasString() {
   return this.extras
     .filter(extra => extra.name && extra.price && extra.emoji) // Ignorer les extras incomplets
     .map(extra => {
-      return `${extra.emoji}${extra.name}${extra.price}€`;
+      return extra.price === 'Sur demande'
+        ? `${extra.emoji}${extra.name}Sur demande`
+        : `${extra.emoji}${extra.name}${extra.price}€`;
     })
     .join(', ');
 }
