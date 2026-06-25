@@ -1,4 +1,4 @@
-// LOG production V1.38.38
+// LOG production V1.38.39
 // Page google
 class InterfaceManager {
   constructor() {
@@ -302,19 +302,25 @@ setupConditionsAnnulation() {
         
         const emoji = emojiMatch[0];
         const textWithoutEmoji = extra.substring(emoji.length).trim();
-        const match = textWithoutEmoji.match(/(.+?)(\d+(?:[.,]\d+)?€)$/);
-        
-        if (!match) return;
-        
-        const title = match[1].trim();
-        // Prix FR : 2 décimales si présentes (12.7€ → 12,70€), entier inchangé (25€ → 25€)
-        let price = match[2].trim();
-        const pm = price.match(/^(\d+)(?:[.,](\d+))?€$/);
-        if (pm) {
-          price = pm[2] !== undefined
-            ? `${pm[1]},${(pm[2] + '0').slice(0, 2)}€`
-            : `${pm[1]}€`;
+
+        let title, price;
+        if (/\s*sur\s+demande\s*$/i.test(textWithoutEmoji)) {
+          // 🆕 Extra "sur demande" : pas de prix numérique
+          title = textWithoutEmoji.replace(/\s*sur\s+demande\s*$/i, '').trim();
+          price = 'Sur demande';
+        } else {
+          const match = textWithoutEmoji.match(/(.+?)(\d+(?:[.,]\d+)?€)$/);
+          if (!match) return;
+          title = match[1].trim();
+          price = match[2].trim();
+          const pm = price.match(/^(\d+)(?:[.,](\d+))?€$/);
+          if (pm) {
+            price = pm[2] !== undefined
+              ? `${pm[1]},${(pm[2] + '0').slice(0, 2)}€`
+              : `${pm[1]}€`;
+          }
         }
+        if (!title) return;
         
         const extraElement = exampleElement.cloneNode(true);
         const emojiElement = extraElement.querySelector("#emoji");
