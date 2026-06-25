@@ -1,4 +1,4 @@
-// LOG production V1.97 - chambres d'hôtes v1.066
+// LOG production V1.98 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -6352,9 +6352,8 @@ parseExtrasString(extrasString) {
     
     // Chercher le prix (nombre éventuellement décimal, point ou virgule, suivi de €)
     const priceMatch = withoutEmoji.match(/(\d+(?:[.,]\d+)?)€/);
-    const price = priceMatch ? priceMatch[1].replace(',', '.') : ''; // normaliser en point
+    const price = priceMatch ? this.sanitizeExtraPrice(priceMatch[1]).canonical : ''; // normalisé + padé
     
-    // Le nom est ce qui reste après avoir retiré le prix
     const name = withoutEmoji.replace(/\d+(?:[.,]\d+)?€.*$/, '').trim();
     
     return { emoji, name, price };
@@ -6521,10 +6520,10 @@ sanitizeExtraPrice(rawInput) {
     let intPart = s.slice(0, sepIndex).replace(/[.,]/g, '');
     const decPart = s.slice(sepIndex + 1).replace(/[.,]/g, '').slice(0, 2); // max 2 décimales
     if (decPart) {
-      if (intPart === '') intPart = '0';   // ,5 / .5 → 0.5  (jamais ".5")
-      s = `${intPart}.${decPart}`;
+      if (intPart === '') intPart = '0';                 // ,5 → 0,5
+      s = `${intPart}.${(decPart + '0').slice(0, 2)}`;   // ⬅️ pad à 2 décimales : "7" → "70"
     } else {
-      s = intPart;                          // "25," → "25" ; "," → "" (ignoré)
+      s = intPart;                                       // "25," → "25" ; "," → ""
     }
   }
   const canonical = s;
