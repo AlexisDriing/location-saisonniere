@@ -1,4 +1,4 @@
-// LOG production V1.99 - chambres d'hôtes v1.066
+// LOG production V1.99.1 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -6422,10 +6422,14 @@ displayExtras() {
           priceInput.value = 'Sur demande';
           priceInput.disabled = true;
           priceInput.removeAttribute('data-raw-value');
+          priceInput.style.color = '#778183';                // 🆕
+          priceInput.style.webkitTextFillColor = '#778183';  // 🆕
         } else {
           priceInput.disabled = false;
           priceInput.value = (extra.price || '').replace('.', ',');
           priceInput.setAttribute('data-raw-value', extra.price || '');
+          priceInput.style.color = '';                       // 🆕 reset
+          priceInput.style.webkitTextFillColor = '';         // 🆕 reset
         }
       }
       const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
@@ -6489,6 +6493,8 @@ addExtra() {
       priceInput.value = '';
       priceInput.disabled = false;
       priceInput.removeAttribute('data-raw-value');
+      priceInput.style.color = '';                           // 🆕 reset
+      priceInput.style.webkitTextFillColor = '';             // 🆕 reset
     }
     const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
     if (onRequestCheckbox) onRequestCheckbox.checked = false;
@@ -6626,12 +6632,16 @@ setupExtraListeners(blocElement, index) {
           priceInput.value = 'Sur demande';
           priceInput.disabled = true;
           priceInput.removeAttribute('data-raw-value');
+          priceInput.style.color = '#778183';                // 🆕
+          priceInput.style.webkitTextFillColor = '#778183';  // 🆕 (input désactivé)
         }
       } else {
         this.extras[index].price = '';
         if (priceInput) {
           priceInput.disabled = false;
           priceInput.value = '';
+          priceInput.style.color = '';                       // 🆕 reset
+          priceInput.style.webkitTextFillColor = '';         // 🆕 reset
         }
       }
       this.enableButtons();
