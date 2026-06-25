@@ -1,4 +1,4 @@
-// LOG production V1.38.36
+// LOG production V1.38.37
 // Page google
 class InterfaceManager {
   constructor() {
@@ -302,12 +302,12 @@ setupConditionsAnnulation() {
         
         const emoji = emojiMatch[0];
         const textWithoutEmoji = extra.substring(emoji.length).trim();
-        const match = textWithoutEmoji.match(/(.+?)(\d+€)$/);
+        const match = textWithoutEmoji.match(/(.+?)(\d+(?:[.,]\d+)?€)$/);
         
         if (!match) return;
         
         const title = match[1].trim();
-        const price = match[2].trim();
+        const price = match[2].trim().replace('.', ','); // affichage FR : 25.5€ → 25,5€
         
         const extraElement = exampleElement.cloneNode(true);
         const emojiElement = extraElement.querySelector("#emoji");
