@@ -1,4 +1,4 @@
-// LOG production V1.18
+// LOG production V1.19
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -132,16 +132,19 @@ class ReservationDataManager {
     let prixDetails = {};
     let caution = null;
     let acompte = null;
+    let arrhes = null;
     
     if (window.priceCalculator) {
       if (window.priceCalculator.pricingData) {
         caution = window.priceCalculator.pricingData.caution;
         acompte = window.priceCalculator.pricingData.acompte;
+        arrhes = window.priceCalculator.pricingData.arrhes;
       }
-      // Pour les chambres d'hôtes, caution/acompte sont stockés séparément
+      // Pour les chambres d'hôtes, caution/acompte/arrhes sont stockés séparément
       if (window.priceCalculator._parentCautionAcompte) {
         caution = window.priceCalculator._parentCautionAcompte.caution;
         acompte = window.priceCalculator._parentCautionAcompte.acompte;
+        arrhes = window.priceCalculator._parentCautionAcompte.arrhes;
       }
     }
 
@@ -195,6 +198,7 @@ class ReservationDataManager {
       prix: prixDetails,
       caution,
       acompte,
+      arrhes,
       dateReservation: new Date().toISOString(),
       hoteEmail: document.getElementById("email-hote")?.getAttribute("data-email") || "",
       isChambreHote: !!selectedRoom,
