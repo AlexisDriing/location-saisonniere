@@ -1,4 +1,4 @@
-// LOG production V1.38.40
+// LOG production V1.38.41
 // Page google
 class InterfaceManager {
   constructor() {
@@ -136,10 +136,9 @@ class InterfaceManager {
     // Il y a du contenu, afficher le bloc
     blocConditions.style.display = 'bloc';
     
-    // Vérifier si on a "Caution" ET "Acompte" dans le texte
-    if (conditionsText.includes('Caution') && conditionsText.includes('Acompte')) {
-      const htmlContent = conditionsText.replace(/\n/g, '<br>');
-      conditionsElement.innerHTML = htmlContent;
+    // Convertir les sauts de ligne en <br> (Caution / Acompte / Arrhes sur plusieurs lignes)
+    if (conditionsText.includes('\n')) {
+      conditionsElement.innerHTML = conditionsText.replace(/\n/g, '<br>');
     }
   }
 
