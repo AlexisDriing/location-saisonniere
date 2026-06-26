@@ -1,4 +1,4 @@
-// LOG production V1.99.3 - chambres d'hôtes v1.066
+// LOG production V1.99.4 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -5247,16 +5247,23 @@ prefillCautionAcompte() {
     cautionInput.setAttribute('data-suffix', 'euro');
   }
   
-  if (acompteInput) {
-    acompteInput.value = acompte;
-    acompteInput.setAttribute('data-raw-value', acompte);
-    // S'assurer que l'attribut est là pour votre système
+    if (acompteInput) {
+    acompteInput.value = acompte ? acompte : '';
+    if (acompte) {
+      acompteInput.setAttribute('data-raw-value', acompte);
+    } else {
+      acompteInput.removeAttribute('data-raw-value');
+    }
     acompteInput.setAttribute('data-suffix', 'pourcent');
   }
   
   if (arrhesInput) {
-    arrhesInput.value = arrhes;
-    arrhesInput.setAttribute('data-raw-value', arrhes);
+    arrhesInput.value = arrhes ? arrhes : '';
+    if (arrhes) {
+      arrhesInput.setAttribute('data-raw-value', arrhes);
+    } else {
+      arrhesInput.removeAttribute('data-raw-value');
+    }
     arrhesInput.setAttribute('data-suffix', 'pourcent');
   }
   
@@ -7806,7 +7813,6 @@ setBlockState(element, isActive) {
     this.prefillTailleMaison();
     this.prefillHoraires();
     this.prefillCancellationPolicy();
-    this.prefillCautionAcompte();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
       // 🔧 COPIE PROFONDE pour éviter les références
@@ -7823,6 +7829,9 @@ setBlockState(element, isActive) {
         arrhes: 0
       };
     }
+    // ✅ Pré-remplir caution/acompte/arrhes APRÈS avoir restauré le JSON
+    this.prefillCautionAcompte();
+    this.formatAllSuffixFields();
     
     // Réafficher les saisons
     this.hideAllSeasonBlocks();
