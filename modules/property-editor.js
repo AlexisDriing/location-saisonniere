@@ -1,4 +1,4 @@
-// LOG production V1.99.2 - chambres d'hôtes v1.066
+// LOG production V1.99.3 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -4032,7 +4032,8 @@ setupTallyButton() {
       discounts: [],
       capacity: 0,
       caution: '',
-      acompte: 0
+      acompte: 0,
+      arrhes: 0
     };
   }
   
@@ -5228,14 +5229,16 @@ prefillComplexFields() {
   this.prefillTailleMaison();
 }
 
-  prefillCautionAcompte() {  
+prefillCautionAcompte() {  
   // Récupérer les valeurs depuis le JSON pricing
   const caution = this.pricingData?.caution || '';
   const acompte = this.pricingData?.acompte || 0;
+  const arrhes = this.pricingData?.arrhes || 0;
   
   // Remplir les inputs
   const cautionInput = document.getElementById('caution-input');
   const acompteInput = document.getElementById('acompte-input');
+  const arrhesInput = document.getElementById('arrhes-input');
   
   if (cautionInput) {
     cautionInput.value = caution;
@@ -5251,12 +5254,48 @@ prefillComplexFields() {
     acompteInput.setAttribute('data-suffix', 'pourcent');
   }
   
+  if (arrhesInput) {
+    arrhesInput.value = arrhes;
+    arrhesInput.setAttribute('data-raw-value', arrhes);
+    arrhesInput.setAttribute('data-suffix', 'pourcent');
+  }
+  
   // Sauvegarder la valeur initiale du champ texte
   this.initialValues.conditions_reservation = this.propertyData.conditions_reservation || '';
   this.initialValues.caution = caution;
   this.initialValues.acompte = acompte;
+  this.initialValues.arrhes = arrhes;
+  
+  // Appliquer l'exclusivité acompte / arrhes au chargement
+  this.updateAcompteArrhesExclusivity();
   
 }
+
+// Exclusivité : si l'un est > 0, l'autre est désactivé + opacité 50%
+updateAcompteArrhesExclusivity() {
+    const acompteInput = document.getElementById('acompte-input');
+    const arrhesInput = document.getElementById('arrhes-input');
+    if (!acompteInput || !arrhesInput) return;
+
+    const acompteVal = parseInt(this.getRawValue(acompteInput)) || 0;
+    const arrhesVal  = parseInt(this.getRawValue(arrhesInput)) || 0;
+
+    const setDisabled = (input, disabled) => {
+      input.disabled = disabled;
+      input.style.opacity = disabled ? '0.5' : '1';
+    };
+
+    if (acompteVal > 0) {
+      setDisabled(arrhesInput, true);
+      setDisabled(acompteInput, false);
+    } else if (arrhesVal > 0) {
+      setDisabled(acompteInput, true);
+      setDisabled(arrhesInput, false);
+    } else {
+      setDisabled(acompteInput, false);
+      setDisabled(arrhesInput, false);
+    }
+  }
   
 prefillTailleMaison() {  
   const tailleStr = this.propertyData.taille_maison || '';
@@ -7146,8 +7185,8 @@ setupFieldListeners() {
     }
   });
 
-  // NOUVEAU : Listeners pour caution et acompte avec synchronisation JSON
-  const cautionAcompteIds = ['caution-input', 'acompte-input'];
+    // NOUVEAU : Listeners pour caution, acompte et arrhes avec synchronisation JSON
+  const cautionAcompteIds = ['caution-input', 'acompte-input', 'arrhes-input'];
   // Version simplifiée :
 cautionAcompteIds.forEach(id => {
   const input = document.getElementById(id);
@@ -7157,8 +7196,8 @@ cautionAcompteIds.forEach(id => {
       const cleanValue = e.target.value.replace(/[^\d]/g, '');
       let rawValue = parseInt(cleanValue) || 0;
       
-      // Limitation pour l'acompte (1-100%)
-      if (id === 'acompte-input' && rawValue > 0) {
+      // Limitation pour acompte ET arrhes (1-100%)
+      if ((id === 'acompte-input' || id === 'arrhes-input') && rawValue > 0) {
         if (rawValue > 100) {
           rawValue = 100;
           e.target.value = '100';
@@ -7180,6 +7219,15 @@ cautionAcompteIds.forEach(id => {
         if (this.pricingData) {
           this.pricingData.acompte = rawValue;
         }
+      } else if (id === 'arrhes-input') {
+        if (this.pricingData) {
+          this.pricingData.arrhes = rawValue;
+        }
+      }
+      
+      // Exclusivité acompte / arrhes
+      if (id === 'acompte-input' || id === 'arrhes-input') {
+        this.updateAcompteArrhesExclusivity();
       }
       
       this.enableButtons();
@@ -7771,7 +7819,8 @@ setBlockState(element, isActive) {
         discounts: [],
         capacity: 4,
         caution: 0,
-        acompte: 30
+        acompte: 0,
+        arrhes: 0
       };
     }
     
@@ -8088,15 +8137,19 @@ setBlockState(element, isActive) {
   
   currentValues.address = adresseComplete;
     
-  // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
+    // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
   const cautionInput = document.getElementById('caution-input');
   const acompteInput = document.getElementById('acompte-input');
+  const arrhesInput = document.getElementById('arrhes-input');
   
   if (cautionInput && document.activeElement === cautionInput) {
     cautionInput.blur();
   }
   if (acompteInput && document.activeElement === acompteInput) {
     acompteInput.blur();
+  }
+  if (arrhesInput && document.activeElement === arrhesInput) {
+    arrhesInput.blur();
   }
   
   // Petit délai pour laisser le blur se terminer
@@ -8105,6 +8158,7 @@ setBlockState(element, isActive) {
   // MAINTENANT récupérer les valeurs
   const cautionValue = this.getRawValue(cautionInput) || '0';
   const acompteValue = this.getRawValue(acompteInput) || '0';
+  const arrhesValue = this.getRawValue(arrhesInput) || '0';
   
   let conditionsTexte = '';
   
@@ -8117,6 +8171,13 @@ setBlockState(element, isActive) {
     conditionsTexte = conditionsTexte 
       ? conditionsTexte + '\n' + acompteTexte 
       : acompteTexte;
+  }
+  
+  if (parseInt(arrhesValue) > 0) {
+    const arrhesTexte = `Arrhes : ${arrhesValue}% du montant total sont demandés à titre d’arrhes pour confirmer la réservation. En cas d’annulation, le voyageur perd les arrhes versées et l’hôte qui annule les restitue au double (article 1590 du Code civil).`;
+    conditionsTexte = conditionsTexte 
+      ? conditionsTexte + '\n' + arrhesTexte 
+      : arrhesTexte;
   }
   
   currentValues.conditions_reservation = conditionsTexte;
@@ -8198,12 +8259,13 @@ setBlockState(element, isActive) {
     updates.pricing_data = this.pricingData;
   }
 
-  // Si caution ou acompte a changé, forcer l'envoi du JSON
+  // Si caution, acompte ou arrhes a changé, forcer l'envoi du JSON
   const cautionChanged = parseInt(cautionValue) !== this.initialValues.caution;
   const acompteChanged = parseInt(acompteValue) !== this.initialValues.acompte;
+  const arrhesChanged = parseInt(arrhesValue) !== this.initialValues.arrhes;
   
   if ((updates.taille_maison && updates.taille_maison.includes('voyageur')) || 
-      cautionChanged || acompteChanged) {
+      cautionChanged || acompteChanged || arrhesChanged) {
     updates.pricing_data = this.pricingData;
   }
     
