@@ -1,4 +1,4 @@
-// LOG production V1.38.41
+// LOG production V1.38.42
 // Page google
 class InterfaceManager {
   constructor() {
@@ -138,7 +138,7 @@ class InterfaceManager {
     
     // Convertir les sauts de ligne en <br> (Caution / Acompte / Arrhes sur plusieurs lignes)
     if (conditionsText.includes('\n')) {
-      conditionsElement.innerHTML = conditionsText.replace(/\n/g, '<br>');
+      conditionsElement.innerHTML = conditionsText.replace(/\n/g, '<br><br>');
     }
   }
 
