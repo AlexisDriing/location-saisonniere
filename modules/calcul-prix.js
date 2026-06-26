@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.129
+// Calculateur de prix principal - LOG production V1.130
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -65,7 +65,8 @@ class PriceCalculator {
         if (typeElement && typeElement.getAttribute('data-mode-location') === "Chambre d'hôtes") {
           this._parentCautionAcompte = {
             caution: parsedData.caution || null,
-            acompte: parsedData.acompte || null
+            acompte: parsedData.acompte || null,
+            arrhes: parsedData.arrhes || null
           };
           this.pricingData = null;
           return;
