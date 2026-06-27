@@ -1,4 +1,4 @@
-// LOG production V1.99.4 - chambres d'hôtes v1.066
+// LOG production V1.99.5 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -4033,7 +4033,8 @@ setupTallyButton() {
       capacity: 0,
       caution: '',
       acompte: 0,
-      arrhes: 0
+      arrhes: 0,
+      villegiature: false
     };
   }
   
@@ -5257,7 +5258,7 @@ prefillCautionAcompte() {
     acompteInput.setAttribute('data-suffix', 'pourcent');
   }
   
-  if (arrhesInput) {
+    if (arrhesInput) {
     arrhesInput.value = arrhes ? arrhes : '';
     if (arrhes) {
       arrhesInput.setAttribute('data-raw-value', arrhes);
@@ -5267,11 +5268,25 @@ prefillCautionAcompte() {
     arrhesInput.setAttribute('data-suffix', 'pourcent');
   }
   
+  // 🆕 Villégiature (radio oui/non), false par défaut
+  const villegiature = this.pricingData?.villegiature === true;
+  const villegiatureOui = document.getElementById('villegiature-oui');
+  const villegiatureNon = document.getElementById('villegiature-non');
+  const labelVillegiatureOui = document.getElementById('label-villegiature-oui');
+  const labelVillegiatureNon = document.getElementById('label-villegiature-non');
+  if (villegiatureOui && villegiatureNon) {
+    villegiatureOui.checked = villegiature;
+    villegiatureNon.checked = !villegiature;
+    labelVillegiatureOui?.querySelector('.w-radio-input')?.classList.toggle('w--redirected-checked', villegiature);
+    labelVillegiatureNon?.querySelector('.w-radio-input')?.classList.toggle('w--redirected-checked', !villegiature);
+  }
+  
   // Sauvegarder la valeur initiale du champ texte
   this.initialValues.conditions_reservation = this.propertyData.conditions_reservation || '';
   this.initialValues.caution = caution;
   this.initialValues.acompte = acompte;
   this.initialValues.arrhes = arrhes;
+  this.initialValues.villegiature = villegiature;
   
   // Appliquer l'exclusivité acompte / arrhes au chargement
   this.updateAcompteArrhesExclusivity();
@@ -7242,6 +7257,28 @@ cautionAcompteIds.forEach(id => {
   }
 });
   
+    // 🆕 NOUVEAU : Listeners pour villégiature (radio oui/non)
+  const villegiatureOui = document.getElementById('villegiature-oui');
+  const villegiatureNon = document.getElementById('villegiature-non');
+  const labelVillegiatureOui = document.getElementById('label-villegiature-oui');
+  const labelVillegiatureNon = document.getElementById('label-villegiature-non');
+  if (villegiatureOui && villegiatureNon) {
+    villegiatureOui.addEventListener('change', () => {
+      if (!villegiatureOui.checked) return;
+      if (this.pricingData) this.pricingData.villegiature = true;
+      labelVillegiatureOui?.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      labelVillegiatureNon?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      this.enableButtons();
+    });
+    villegiatureNon.addEventListener('change', () => {
+      if (!villegiatureNon.checked) return;
+      if (this.pricingData) this.pricingData.villegiature = false;
+      labelVillegiatureNon?.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      labelVillegiatureOui?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      this.enableButtons();
+    });
+  }
+  
   // NOUVEAU : Listeners pour les checkboxes options
   const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
   optionIds.forEach(id => {
@@ -7826,7 +7863,8 @@ setBlockState(element, isActive) {
         capacity: 4,
         caution: 0,
         acompte: 0,
-        arrhes: 0
+        arrhes: 0,
+        villegiature: false
       };
     }
     // ✅ Pré-remplir caution/acompte/arrhes APRÈS avoir restauré le JSON
@@ -8182,12 +8220,23 @@ setBlockState(element, isActive) {
       : acompteTexte;
   }
   
-  if (parseInt(arrhesValue) > 0) {
+    if (parseInt(arrhesValue) > 0) {
     const arrhesTexte = `Arrhes : ${arrhesValue}% du montant total sont demandés à titre d’arrhes pour confirmer la réservation. En cas d’annulation, le voyageur perd les arrhes versées et l’hôte qui annule les restitue au double (article 1590 du Code civil).`;
     conditionsTexte = conditionsTexte 
       ? conditionsTexte + '\n' + arrhesTexte 
       : arrhesTexte;
   }
+  
+  // 🆕 Villégiature : toujours une phrase (Oui ou Non)
+  const villegiatureOui = document.getElementById('villegiature-oui');
+  const villegiatureObligatoire = !!(villegiatureOui && villegiatureOui.checked);
+  if (this.pricingData) this.pricingData.villegiature = villegiatureObligatoire;
+  const villegiatureTexte = villegiatureObligatoire
+    ? `L’assurance villégiature est obligatoire pour réserver ce logement.`
+    : `L’assurance villégiature n’est pas obligatoire pour réserver ce logement.`;
+  conditionsTexte = conditionsTexte 
+    ? conditionsTexte + '\n' + villegiatureTexte 
+    : villegiatureTexte;
   
   currentValues.conditions_reservation = conditionsTexte;
 
@@ -8268,13 +8317,14 @@ setBlockState(element, isActive) {
     updates.pricing_data = this.pricingData;
   }
 
-  // Si caution, acompte ou arrhes a changé, forcer l'envoi du JSON
+    // Si caution, acompte, arrhes ou villégiature a changé, forcer l'envoi du JSON
   const cautionChanged = parseInt(cautionValue) !== this.initialValues.caution;
   const acompteChanged = parseInt(acompteValue) !== this.initialValues.acompte;
   const arrhesChanged = parseInt(arrhesValue) !== this.initialValues.arrhes;
+  const villegiatureChanged = villegiatureObligatoire !== this.initialValues.villegiature;
   
   if ((updates.taille_maison && updates.taille_maison.includes('voyageur')) || 
-      cautionChanged || acompteChanged || arrhesChanged) {
+      cautionChanged || acompteChanged || arrhesChanged || villegiatureChanged) {
     updates.pricing_data = this.pricingData;
   }
     
