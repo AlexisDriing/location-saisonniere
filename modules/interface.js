@@ -1,4 +1,4 @@
-// LOG production V1.38.43
+// LOG production V1.38.44
 // Page google
 class InterfaceManager {
   constructor() {
@@ -147,8 +147,9 @@ class InterfaceManager {
       conditionsText = conditionsText ? conditionsText + '\n' + phraseVillegiature : phraseVillegiature;
     }
     
-    // Le texte n'est jamais vide (au minimum la villégiature) → toujours afficher
+   // Le texte n'est jamais vide (au minimum la villégiature) → toujours afficher
     blocConditions.style.display = 'bloc';
+    conditionsElement.classList.remove('w-dyn-bind-empty'); // 🆕 Webflow masque les champs CMS vides
     conditionsElement.innerHTML = conditionsText.replace(/\n/g, '<br><br>');
   }
 
