@@ -1,4 +1,4 @@
-// LOG production V1.38.42
+// LOG production V1.38.43
 // Page google
 class InterfaceManager {
   constructor() {
@@ -117,7 +117,7 @@ class InterfaceManager {
   }
 
   // Nouvelle méthode à ajouter dans la classe :
-  setupConditionsReservation() {
+    setupConditionsReservation() {
     const conditionsElement = document.querySelector('[data-conditions-reservation]');
     const blocConditions = document.getElementById('bloc-conditions');
     
@@ -125,21 +125,31 @@ class InterfaceManager {
       return;
     }
     
-    const conditionsText = conditionsElement.textContent.trim();
+    let conditionsText = conditionsElement.textContent.trim();
     
-    // Si le texte est vide, masquer le bloc entier
-    if (!conditionsText || conditionsText === '') {
-      blocConditions.style.display = 'none';
-      return;
+    // 🆕 Fallback villégiature : si le texte ne la mentionne pas déjà
+    // (anciennes annonces non ré-enregistrées) → on ajoute la phrase.
+    // Rien dans le JSON = considéré comme "non".
+    if (!/villégiature/i.test(conditionsText)) {
+      let villegiatureObligatoire = false;
+      const jsonEl = document.querySelector('[data-json-tarifs-line], [data-json-tarifs]');
+      if (jsonEl) {
+        try {
+          const raw = jsonEl.getAttribute('data-json-tarifs-line') || jsonEl.getAttribute('data-json-tarifs');
+          if (raw && raw.trim() !== '') {
+            villegiatureObligatoire = JSON.parse(raw).villegiature === true;
+          }
+        } catch (e) {}
+      }
+      const phraseVillegiature = villegiatureObligatoire
+        ? 'L’assurance villégiature est obligatoire pour réserver ce logement.'
+        : 'L’assurance villégiature n’est pas obligatoire pour réserver ce logement.';
+      conditionsText = conditionsText ? conditionsText + '\n' + phraseVillegiature : phraseVillegiature;
     }
     
-    // Il y a du contenu, afficher le bloc
+    // Le texte n'est jamais vide (au minimum la villégiature) → toujours afficher
     blocConditions.style.display = 'bloc';
-    
-    // Convertir les sauts de ligne en <br> (Caution / Acompte / Arrhes sur plusieurs lignes)
-    if (conditionsText.includes('\n')) {
-      conditionsElement.innerHTML = conditionsText.replace(/\n/g, '<br><br>');
-    }
+    conditionsElement.innerHTML = conditionsText.replace(/\n/g, '<br><br>');
   }
 
 setupConditionsAnnulation() {
@@ -408,59 +418,34 @@ setupConditionsAnnulation() {
   }
 
   // Gestion des options d'accueil
-  setupOptionsAccueil() {
-    
-    // Mapping entre les noms d'options et leurs IDs
+    setupOptionsAccueil() {
+    // id = la chip (toujours affichée) ; textId = le texte à modifier ; negatif = texte si non coché
     const optionsMapping = {
-      'Animaux autorisés': 'animaux',
-      'Accès PMR': 'pmr',
-      'Fumeurs autorisés': 'fumeurs'
+      'Animaux autorisés': { id: 'animaux', textId: 'animaux-text', negatif: 'Animaux non autorisés' },
+      'Accès PMR':         { id: 'pmr',     textId: 'pmr-text',     negatif: 'Accès PMR non disponible' },
+      'Fumeurs autorisés': { id: 'fumeurs', textId: 'fumeurs-text', negatif: 'Fumeurs non autorisés' }
     };
-    
-    // Masquer toutes les options au départ
-    Object.values(optionsMapping).forEach(elementId => {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.style.display = 'none';
-      }
-    });
-    
-    // Chercher l'élément qui contient les options
+
+    // Options cochées (peut être vide ou absent)
     const optionsElement = document.querySelector('[data-option-accueil]');
-    
-    if (!optionsElement) {
-      console.warn('⚠️ Élément data-option-accueil non trouvé');
-      return;
-    }
-    
-    // Récupérer la valeur du champ
-    const optionsString = optionsElement.getAttribute('data-option-accueil');
-    
-    if (!optionsString || optionsString.trim() === '') {
-      return;
-    }
-    
-    // Parser les options (séparées par des virgules)
-    const options = optionsString.split(',').map(opt => opt.trim());
-    
-    // Afficher chaque option trouvée
-    let optionsAffichees = 0;
-    options.forEach(option => {
-      const elementId = optionsMapping[option];
-      
-      if (elementId) {
-        const element = document.getElementById(elementId);
-        if (element) {
-          element.style.display = ''; // Utiliser le display par défaut
-          optionsAffichees++;
-        } else {
-          console.warn(`⚠️ Élément non trouvé pour l'ID: ${elementId}`);
-        }
-      } else {
-        console.warn(`⚠️ Option non reconnue: "${option}"`);
+    const optionsString = optionsElement ? (optionsElement.getAttribute('data-option-accueil') || '') : '';
+    const options = optionsString.split(',').map(o => o.trim());
+
+    Object.keys(optionsMapping).forEach(label => {
+      const conf = optionsMapping[label];
+      const isChecked = options.includes(label);
+
+      // Toujours afficher la chip
+      const el = document.getElementById(conf.id);
+      if (el) el.style.display = '';
+
+      // Coché → on garde le texte positif existant (on ne touche à rien)
+      // Non coché → on remplace par le texte négatif
+      if (!isChecked) {
+        const textEl = document.getElementById(conf.textId);
+        if (textEl) textEl.textContent = conf.negatif;
       }
     });
-    
   }
 
     // Gestion de l'affichage conditionnel pour Chambre d'hôtes
