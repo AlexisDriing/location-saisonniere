@@ -56,10 +56,17 @@
       #map-logements .mapboxgl-popup-close-button {
         font-size: 20px; color: #fff; right: 6px; top: 4px; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,.5);
       }
-      .cl-popup img { width: 100%; height: 130px; object-fit: cover; display: block; background: #eee; }
+      .cl-popup img, .cl-popup .cl-noimg { width: 100%; height: 140px; object-fit: cover; display: block; background: #e6e4e0; }
       .cl-popup .infos { padding: 10px 12px 12px; }
-      .cl-popup .titre { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #1a1a1a; }
-      .cl-popup .prix { font-size: 13px; margin: 0; color: #1a1a1a; }
+      .cl-popup .lieu { font-size: 12px; color: #778183; margin: 0 0 2px; }
+      .cl-popup .titre { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #272A2B;
+        display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+      .cl-popup .hote { font-size: 12px; color: #778183; margin: 0 0 8px; }
+      .cl-popup .prix { font-size: 13px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+      .cl-popup .prix del { color: #778183; }
+      .cl-popup .prix b { font-weight: 600; }
+      .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 12px;
+        border-radius: 6px; padding: 2px 6px; margin-left: auto; }
     `;
     document.head.appendChild(s);
   }
@@ -218,6 +225,26 @@
     el.textContent = `${n} logement${n > 1 ? 's' : ''} dans cette zone`;
   }
 
+  // Calcule prix barré + % de réduction à partir des données tarifaires,
+  // comme sur les cartes de la liste (prix "Dès" = prix direct minimum).
+  function prixAffichage(pd, prixDirect) {
+    let barre = null, reduc = null;
+    if (pd) {
+      if (pd.platformPricing && pd.platformPricing.defaultDiscount > 0) {
+        reduc = pd.platformPricing.defaultDiscount;
+        barre = Math.round(prixDirect / (1 - reduc / 100));
+      } else if (pd.defaultPricing && pd.defaultPricing.platformPrices) {
+        const vals = Object.values(pd.defaultPricing.platformPrices).filter(v => v > 0);
+        if (vals.length) {
+          barre = Math.max(...vals);
+          if (barre > prixDirect) reduc = Math.round((barre - prixDirect) / barre * 100);
+          else barre = null;
+        }
+      }
+    }
+    return { barre, reduc };
+  }
+
   async function ouvrirFiche(id, prix, coords, el) {
     if (pillActive) pillActive.classList.remove('actif');
     el.classList.add('actif'); pillActive = el;
@@ -229,18 +256,32 @@
         try {
           const r = await fetch(`${API}/property-metadata/${encodeURIComponent(id)}`);
           if (r.ok) { fiche = await r.json(); cacheFiches.set(id, fiche); }
-        } catch (e) { /* fiche minimale */ }
+        } catch (e) { /* fiche minimale : on affiche quand même le prix */ }
       }
     }
+
     const img = fiche.image || fiche.image1 || '';
+    const direct = fiche.price || prix;
+    const { barre, reduc } = prixAffichage(fiche.pricing_data, direct);
+    const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
+
+    const contenu = `
+      ${img ? `<img src="${img}" alt="" loading="lazy" />` : `<div class="cl-noimg"></div>`}
+      <div class="infos">
+        ${fiche.address ? `<p class="lieu">${fiche.address}</p>` : ''}
+        <p class="titre">${fiche.name || 'Logement'}</p>
+        ${fiche.host_name ? `<p class="hote">Hôte : ${fiche.host_name}</p>` : ''}
+        <p class="prix">
+          Dès ${barre ? `<del>${euros(barre)}</del>` : ''} <b>${euros(direct)}</b> / nuit
+          ${reduc ? `<span class="badge">-${reduc}%</span>` : ''}
+        </p>
+      </div>`;
+
     new mapboxgl.Popup({ offset: 18 })
       .setLngLat(coords)
-      .setHTML(`<div class="cl-popup">
-          ${img ? `<img src="${img}" alt="" loading="lazy" />` : ''}
-          <div class="infos">
-            <p class="titre">${fiche.name || 'Logement'}</p>
-            <p class="prix"><b>${euros(prix)}</b> / nuit</p>
-          </div></div>`)
+      .setHTML(lien
+        ? `<a class="cl-popup" href="${lien}" target="_blank" style="text-decoration:none;display:block">${contenu}</a>`
+        : `<div class="cl-popup">${contenu}</div>`)
       .addTo(map);
   }
 
