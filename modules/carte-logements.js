@@ -24,11 +24,7 @@
     const s = document.createElement('style');
     s.id = 'carte-logements-styles';
     s.textContent = `
-      body { padding-right: 44vw; }
-      #map-logements {
-        position: fixed; top: 0; right: 0; width: 44vw; height: 100vh; z-index: 40;
-        background: #eceae6;
-      }
+      #map-logements { position: relative; background: #eceae6; }
       #map-logements .cl-compteur {
         position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 3;
         background: #fff; border: 1px solid rgba(0,0,0,.08); box-shadow: 0 2px 10px rgba(0,0,0,.15);
@@ -64,7 +60,6 @@
       .cl-popup .infos { padding: 10px 12px 12px; }
       .cl-popup .titre { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #1a1a1a; }
       .cl-popup .prix { font-size: 13px; margin: 0; color: #1a1a1a; }
-      @media (max-width: 767px) { body { padding-right: 0; } #map-logements { display: none; } }
     `;
     document.head.appendChild(s);
   }
@@ -127,7 +122,7 @@
     compteur.textContent = '…';
     conteneur.appendChild(compteur);
 
-    map = new mapboxgl.Map({ container: 'map-logements', style: STYLE, center: [2.2, 46.6], zoom: 5 });
+    map = new mapboxgl.Map({ container: 'map-logements', style: STYLE, projection: 'mercator', center: [2.2, 46.6], zoom: 5 });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
     const limites = new mapboxgl.LngLatBounds();
@@ -152,9 +147,29 @@
       map.on('moveend', synchroniser);
       map.on('idle', synchroniser);
       map.on('moveend', () => majCompteur(compteur));
+      map.on('moveend', filtrerListeParCarte); // ← la liste suit la carte
       synchroniser();
       majCompteur(compteur);
     });
+  }
+
+  // Fait suivre la liste de gauche au rectangle visible de la carte,
+  // en réutilisant le filtrage par bbox déjà géré par ton serveur.
+  function filtrerListeParCarte() {
+    if (!window.propertyManager) return;
+    const b = map.getBounds();
+    const c = map.getCenter();
+    window.propertyManager.setSearchLocation(
+      { lat: c.lat, lng: c.lng },
+      'region',
+      {
+        polygon_source: 'bbox',
+        bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+        geo_feature_name: null,
+        geo_feature_code: null
+      }
+    );
+    window.propertyManager.applyFilters(true);
   }
 
   function synchroniser() {
