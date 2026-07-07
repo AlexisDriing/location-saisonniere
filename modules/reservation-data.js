@@ -1,4 +1,4 @@
-// LOG production V1.19
+// LOG production V1.20
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -149,9 +149,12 @@ class ReservationDataManager {
     }
 
     
-    if (window.priceCalculator && window.priceCalculator.startDate) {
+  if (window.priceCalculator && window.priceCalculator.startDate) {
     const ligneSupplement = Utils.getElementByIdWithFallback("ligne-supplement-voyageurs");
     const supplementVisible = ligneSupplement && ligneSupplement.style.display !== "none";
+    // 🆕 Taxe de séjour
+    const ligneTaxe = Utils.getElementByIdWithFallback("ligne-taxe-sejour");
+    const taxeVisible = ligneTaxe && ligneTaxe.style.display !== "none";
   
     prixDetails = {
       calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
@@ -160,6 +163,8 @@ class ReservationDataManager {
       prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
       prixSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("prix-supplement")?.textContent || "") : "",
       calculSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("calcul-supplement")?.textContent || "") : "",
+      prixTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("prix-taxe")?.textContent || "") : "",
+      calculTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("calcul-taxe")?.textContent || "") : "",
       totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
       dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
       dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
