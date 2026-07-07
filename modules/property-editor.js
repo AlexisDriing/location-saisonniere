@@ -1,4 +1,4 @@
-// LOG production V1.99.6 - chambres d'hôtes v1.066
+// LOG production V1.99.7 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -5599,6 +5599,13 @@ prefillWeekendOptions() {
 prefillTouristTaxOptions() {
   const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
   const suffix = isChambreHote ? '-parent' : '';
+  
+  // 🆕 Le bloc "parent" ne concerne que les chambres d'hôtes :
+  // le masquer explicitement pour les gîtes / logements entiers
+  if (!isChambreHote) {
+    const blocTaxeParent = document.getElementById('bloc-taxe-sejour-parent');
+    if (blocTaxeParent) blocTaxeParent.style.display = 'none';
+  }
   
   const yesRadio = document.getElementById('taxe-oui' + suffix);
   const noRadio = document.getElementById('taxe-non' + suffix);
