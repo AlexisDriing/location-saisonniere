@@ -1,4 +1,4 @@
-// Gestionnaire de profil - chambres d'hôtes  v1.068 - LOG production
+// Gestionnaire de profil - chambres d'hôtes  v1.069 - LOG production
 class ProfileManager {
   constructor() {
     this.currentUser = null;
@@ -416,6 +416,7 @@ setupDisableButton(property, targetElement = document) {
         headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           propertyId: propertyId,
+          propertyName: property.name || '',
           email: userEmail,
           returnUrl: returnUrl
         })
