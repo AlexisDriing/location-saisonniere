@@ -384,31 +384,58 @@ setupDisableButton(property, targetElement = document) {
     
   }
 
-  setupPaymentButton(property, targetElement = document) {
-  
-  // Chercher le bouton de paiement (adaptez le sélecteur selon votre HTML)
-  const paymentBtn = targetElement.querySelector('[data-stripe-payment]'); // ou autre sélecteur
-  
+    setupPaymentButton(property, targetElement = document) {
+
+  // Chercher le bouton de paiement
+  const paymentBtn = targetElement.querySelector('[data-stripe-payment]');
+
   if (!paymentBtn) {
     return;
   }
-  
-  // Configuration simple : juste ajouter le lien Stripe avec l'ID du logement
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/8x228q9kP0gp2tqbpYdEs0M';
+
   const propertyId = property.webflow_item_id;
   const userEmail = this.currentUser?.email || '';
-  
-  // Construire l'URL
-  const stripeUrl = new URL(STRIPE_PAYMENT_LINK);
-  stripeUrl.searchParams.set('client_reference_id', propertyId);
-  if (userEmail) {
-    stripeUrl.searchParams.set('prefilled_email', userEmail);
-  }
-  
-  // Simple listener
-  paymentBtn.addEventListener('click', function(e) {
+
+  paymentBtn.addEventListener('click', async (e) => {
     e.preventDefault();
-    window.location.href = stripeUrl.toString();
+
+    // Anti double-clic
+    if (paymentBtn.dataset.loading === '1') return;
+    paymentBtn.dataset.loading = '1';
+
+    const isInput = paymentBtn.tagName === 'INPUT';
+    const originalText = isInput ? paymentBtn.value : paymentBtn.textContent;
+    if (isInput) paymentBtn.value = 'Redirection...';
+    else paymentBtn.textContent = 'Redirection...';
+
+    try {
+      // On appelle NOTRE serveur : client Stripe unique + étiquette property_id
+      const returnUrl = window.location.origin + window.location.pathname;
+      const response = await fetch(`${window.CONFIG.API_URL}/create-checkout-session`, {
+        method: 'POST',
+        headers: window.AuthHelper.getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          propertyId: propertyId,
+          email: userEmail,
+          returnUrl: returnUrl
+        })
+      });
+
+      if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
+
+      const data = await response.json();
+      if (!data.url) throw new Error('URL de paiement manquante');
+
+      // Redirection vers la page de paiement Stripe
+      window.location.href = data.url;
+
+    } catch (error) {
+      console.error('❌ Erreur paiement Stripe:', error);
+      alert('Une erreur est survenue, veuillez réessayer.');
+      paymentBtn.dataset.loading = '0';
+      if (isInput) paymentBtn.value = originalText;
+      else paymentBtn.textContent = originalText;
+    }
   });
 }
 // 🆕 NOUVELLE MÉTHODE : Configurer le bouton pour voir le logement
