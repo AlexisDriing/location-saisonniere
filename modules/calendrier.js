@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.03
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.04
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -587,8 +587,9 @@ class ICalManager {
     eventStrings.forEach((eventString, index) => {
       if (index === 0) return;
       
-      const eventStart = eventString.match(/DTSTART(?:;VALUE=DATE)?:(\d{8})/);
-      const eventEnd = eventString.match(/DTEND(?:;VALUE=DATE)?:(\d{8})/);
+      // 🆕 Tolère tous les paramètres (TZID, VALUE=DATE…) et capture la date (8 chiffres)
+      const eventStart = eventString.match(/DTSTART[^:\r\n]*:(\d{8})/);
+      const eventEnd = eventString.match(/DTEND[^:\r\n]*:(\d{8})/);
       
       if (eventStart && eventEnd) {
         const eventStartDate = moment(eventStart[1], 'YYYYMMDD');

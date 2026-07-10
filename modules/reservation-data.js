@@ -1,4 +1,4 @@
-// LOG production V1.18
+// LOG production V1.20
 // Gestion des données de réservation et récupération des informations
 class ReservationDataManager {
   constructor() {
@@ -132,23 +132,29 @@ class ReservationDataManager {
     let prixDetails = {};
     let caution = null;
     let acompte = null;
+    let arrhes = null;
     
     if (window.priceCalculator) {
       if (window.priceCalculator.pricingData) {
         caution = window.priceCalculator.pricingData.caution;
         acompte = window.priceCalculator.pricingData.acompte;
+        arrhes = window.priceCalculator.pricingData.arrhes;
       }
-      // Pour les chambres d'hôtes, caution/acompte sont stockés séparément
+      // Pour les chambres d'hôtes, caution/acompte/arrhes sont stockés séparément
       if (window.priceCalculator._parentCautionAcompte) {
         caution = window.priceCalculator._parentCautionAcompte.caution;
         acompte = window.priceCalculator._parentCautionAcompte.acompte;
+        arrhes = window.priceCalculator._parentCautionAcompte.arrhes;
       }
     }
 
     
-    if (window.priceCalculator && window.priceCalculator.startDate) {
+  if (window.priceCalculator && window.priceCalculator.startDate) {
     const ligneSupplement = Utils.getElementByIdWithFallback("ligne-supplement-voyageurs");
     const supplementVisible = ligneSupplement && ligneSupplement.style.display !== "none";
+    // 🆕 Taxe de séjour
+    const ligneTaxe = Utils.getElementByIdWithFallback("ligne-taxe-sejour");
+    const taxeVisible = ligneTaxe && ligneTaxe.style.display !== "none";
   
     prixDetails = {
       calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
@@ -157,6 +163,8 @@ class ReservationDataManager {
       prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
       prixSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("prix-supplement")?.textContent || "") : "",
       calculSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("calcul-supplement")?.textContent || "") : "",
+      prixTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("prix-taxe")?.textContent || "") : "",
+      calculTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("calcul-taxe")?.textContent || "") : "",
       totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
       dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
       dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
@@ -195,6 +203,7 @@ class ReservationDataManager {
       prix: prixDetails,
       caution,
       acompte,
+      arrhes,
       dateReservation: new Date().toISOString(),
       hoteEmail: document.getElementById("email-hote")?.getAttribute("data-email") || "",
       isChambreHote: !!selectedRoom,

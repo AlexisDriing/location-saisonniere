@@ -1,4 +1,4 @@
-// LOG production V1.1
+// LOG production V1.11
 // Fonctions utilitaires partagées
 class Utils {
   static getElementByIdWithFallback(baseId) {
@@ -8,7 +8,8 @@ class Utils {
       "prix-taxe", "prix-menage", "total-prix", "adultes-moins", 
       "chiffres-adultes", "adultes-plus", "enfants-moins", "chiffres-enfants", 
       "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction",
-      "ligne-supplement-voyageurs", "calcul-supplement", "prix-supplement"
+      "ligne-supplement-voyageurs", "calcul-supplement", "prix-supplement",
+      "ligne-taxe-sejour", "calcul-taxe"
     ];
     
     let element = document.getElementById(baseId);
@@ -25,7 +26,8 @@ class Utils {
       "prix-taxe", "prix-menage", "total-prix", "adultes-moins", 
       "chiffres-adultes", "adultes-plus", "enfants-moins", "chiffres-enfants", 
       "enfants-plus", "bebes-moins", "chiffres-bebes", "bebes-plus", "bloc-reduction",
-      "ligne-supplement-voyageurs", "calcul-supplement", "prix-supplement"
+      "ligne-supplement-voyageurs", "calcul-supplement", "prix-supplement",
+      "ligne-taxe-sejour", "calcul-taxe"
     ];
     
     const elements = [];

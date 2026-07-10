@@ -1,4 +1,4 @@
-// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.3
+// Gestionnaire de recherche géographique avec Mapbox - LOG production map V2.4
 class SearchMapManager {
   constructor() {
     // 🔒 CLÉS API SUPPRIMÉES - Maintenant côté serveur pour la sécurité
@@ -280,6 +280,16 @@ class SearchMapManager {
       }
     }
     
+    // 🆕 Mémoriser la sélection (coords + type + zone) pour que la page d'accueil
+    // puisse la transmettre telle quelle. Sur l'accueil, propertyManager n'existe pas,
+    // donc sans ça les coordonnées exactes du POI/ville étaient perdues.
+    this.lastSelectedLocation = {
+      text: suggestion.context,
+      coordinates,
+      searchType,
+      zoneInfo
+    };
+
     if (window.propertyManager) {
       window.propertyManager.setSearchLocation(coordinates, searchType, zoneInfo);
       window.propertyManager.applyFilters();

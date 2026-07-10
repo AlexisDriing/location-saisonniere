@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.26
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.27
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -1244,7 +1244,7 @@ if (hostImageElement) {
         return;
     }
       
-    // 🆕 NOUVEAU : Mettre le texte du lieu dans l'input et lancer la recherche
+        // 🆕 Mettre le texte du lieu dans l'input
     if (data.locationText) {
       const searchInput = document.getElementById('search-input');
       const searchInputMobile = document.getElementById('search-input-mobile');
@@ -1257,32 +1257,45 @@ if (hostImageElement) {
         searchInputMobile.value = data.locationText;
       }
       
-      // Indiquer qu'on attend le géocodage (évite le bug des 0km)
-      this._waitingForGeocode = true;
-      
-      // Sécurité : remettre à false au bout de 5s max (évite un blocage permanent)
-      this._geocodeTimeout = setTimeout(() => {
-        if (this._waitingForGeocode) {
-          console.warn('⚠️ Timeout géocodage atteint, flag remis à false');
-          this._waitingForGeocode = false;
-        }
-      }, 5000);
-      
-      // Déclencher la recherche après un court délai
-      setTimeout(() => {
-        if (window.searchMapManager) {
-          const activeInput = searchInputMobile && window.innerWidth < 768 ? searchInputMobile : searchInput;
-          if (activeInput) {
-            window.searchMapManager.handleSearch(activeInput);
+      if (data.location && data.location.coordinates) {
+        // ✅ CHEMIN RAPIDE : coordonnées exactes déjà transmises par l'accueil
+        // (une suggestion a été choisie). On les applique directement, SANS re-géocoder.
+        // Pas de _waitingForGeocode : la localisation est posée AVANT l'applyFilters()
+        // initial de init(), qui l'utilisera directement (donc pas de "bug 0km" possible).
+        this.setSearchLocation(
+          data.location.coordinates,
+          data.location.searchType,
+          data.location.zoneInfo
+        );
+      } else {
+        // ⚠️ CHEMIN DE SECOURS : texte tapé à la main sans cliquer de suggestion
+        // → on re-géocode le texte (comportement historique).
+        this._waitingForGeocode = true;
+        
+        // Sécurité : remettre à false au bout de 5s max (évite un blocage permanent)
+        this._geocodeTimeout = setTimeout(() => {
+          if (this._waitingForGeocode) {
+            console.warn('⚠️ Timeout géocodage atteint, flag remis à false');
+            this._waitingForGeocode = false;
           }
-        } else {
-          // Si searchMapManager n'existe pas, remettre le flag à false
-          this._waitingForGeocode = false;
-          if (this._geocodeTimeout) {
-            clearTimeout(this._geocodeTimeout);
+        }, 5000);
+        
+        // Déclencher la recherche après un court délai
+        setTimeout(() => {
+          if (window.searchMapManager) {
+            const activeInput = searchInputMobile && window.innerWidth < 768 ? searchInputMobile : searchInput;
+            if (activeInput) {
+              window.searchMapManager.handleSearch(activeInput);
+            }
+          } else {
+            // Si searchMapManager n'existe pas, remettre le flag à false
+            this._waitingForGeocode = false;
+            if (this._geocodeTimeout) {
+              clearTimeout(this._geocodeTimeout);
+            }
           }
-        }
-      }, 1000);
+        }, 1000);
+      }
     }
     
     // 2. Appliquer les dates (INCHANGÉ)

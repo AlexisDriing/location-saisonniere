@@ -1,4 +1,4 @@
-// LOG production V1.96 - chambres d'hôtes v1.066
+// LOG production V1.99.7 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -201,6 +201,11 @@ async setupParentChambreHoteDisplay() {
   // 1. Masquer la tab 3 (tarification)
   const tabTarification = document.getElementById('tab-tarification');
   if (tabTarification) tabTarification.style.display = 'none';
+  
+  // 🆕 Afficher le bloc taxe de séjour dédié au parent chambres d'hôtes
+  // (masqué par défaut dans Webflow, la tab tarification étant cachée en mode B&B)
+  const blocTaxeParent = document.getElementById('bloc-taxe-sejour-parent');
+  if (blocTaxeParent) blocTaxeParent.style.display = 'block';
   
   // 2. Masquer le bloc taille maison
   const blocTailleMaison = document.getElementById('bloc-taille-maison');
@@ -3888,6 +3893,8 @@ setupTimeFormatters() {
     // NOUVEAU : Pré-remplir l'option prix week-end
     this.prefillWeekendOptions();
     this.prefillExtraGuestsOptions();
+    // 🆕 Pré-remplir la taxe de séjour
+    this.prefillTouristTaxOptions();
     this.prefillHoraires();
     this.prefillCancellationPolicy();
     this.prefillComplexFields();
@@ -4032,7 +4039,9 @@ setupTallyButton() {
       discounts: [],
       capacity: 0,
       caution: '',
-      acompte: 0
+      acompte: 0,
+      arrhes: 0,
+      villegiature: false
     };
   }
   
@@ -5228,14 +5237,16 @@ prefillComplexFields() {
   this.prefillTailleMaison();
 }
 
-  prefillCautionAcompte() {  
+prefillCautionAcompte() {  
   // Récupérer les valeurs depuis le JSON pricing
   const caution = this.pricingData?.caution || '';
   const acompte = this.pricingData?.acompte || 0;
+  const arrhes = this.pricingData?.arrhes || 0;
   
   // Remplir les inputs
   const cautionInput = document.getElementById('caution-input');
   const acompteInput = document.getElementById('acompte-input');
+  const arrhesInput = document.getElementById('arrhes-input');
   
   if (cautionInput) {
     cautionInput.value = caution;
@@ -5244,19 +5255,76 @@ prefillComplexFields() {
     cautionInput.setAttribute('data-suffix', 'euro');
   }
   
-  if (acompteInput) {
-    acompteInput.value = acompte;
-    acompteInput.setAttribute('data-raw-value', acompte);
-    // S'assurer que l'attribut est là pour votre système
+    if (acompteInput) {
+    acompteInput.value = acompte ? acompte : '';
+    if (acompte) {
+      acompteInput.setAttribute('data-raw-value', acompte);
+    } else {
+      acompteInput.removeAttribute('data-raw-value');
+    }
     acompteInput.setAttribute('data-suffix', 'pourcent');
+  }
+  
+    if (arrhesInput) {
+    arrhesInput.value = arrhes ? arrhes : '';
+    if (arrhes) {
+      arrhesInput.setAttribute('data-raw-value', arrhes);
+    } else {
+      arrhesInput.removeAttribute('data-raw-value');
+    }
+    arrhesInput.setAttribute('data-suffix', 'pourcent');
+  }
+  
+  // 🆕 Villégiature (radio oui/non), false par défaut
+  const villegiature = this.pricingData?.villegiature === true;
+  const villegiatureOui = document.getElementById('villegiature-oui');
+  const villegiatureNon = document.getElementById('villegiature-non');
+  const labelVillegiatureOui = document.getElementById('label-villegiature-oui');
+  const labelVillegiatureNon = document.getElementById('label-villegiature-non');
+  if (villegiatureOui && villegiatureNon) {
+    villegiatureOui.checked = villegiature;
+    villegiatureNon.checked = !villegiature;
+    labelVillegiatureOui?.querySelector('.w-radio-input')?.classList.toggle('w--redirected-checked', villegiature);
+    labelVillegiatureNon?.querySelector('.w-radio-input')?.classList.toggle('w--redirected-checked', !villegiature);
   }
   
   // Sauvegarder la valeur initiale du champ texte
   this.initialValues.conditions_reservation = this.propertyData.conditions_reservation || '';
   this.initialValues.caution = caution;
   this.initialValues.acompte = acompte;
+  this.initialValues.arrhes = arrhes;
+  this.initialValues.villegiature = villegiature;
+  
+  // Appliquer l'exclusivité acompte / arrhes au chargement
+  this.updateAcompteArrhesExclusivity();
   
 }
+
+// Exclusivité : si l'un est > 0, l'autre est désactivé + opacité 50%
+updateAcompteArrhesExclusivity() {
+    const acompteInput = document.getElementById('acompte-input');
+    const arrhesInput = document.getElementById('arrhes-input');
+    if (!acompteInput || !arrhesInput) return;
+
+    const acompteVal = parseInt(this.getRawValue(acompteInput)) || 0;
+    const arrhesVal  = parseInt(this.getRawValue(arrhesInput)) || 0;
+
+    const setDisabled = (input, disabled) => {
+      input.disabled = disabled;
+      input.style.opacity = disabled ? '0.5' : '1';
+    };
+
+    if (acompteVal > 0) {
+      setDisabled(arrhesInput, true);
+      setDisabled(acompteInput, false);
+    } else if (arrhesVal > 0) {
+      setDisabled(acompteInput, true);
+      setDisabled(arrhesInput, false);
+    } else {
+      setDisabled(acompteInput, false);
+      setDisabled(arrhesInput, false);
+    }
+  }
   
 prefillTailleMaison() {  
   const tailleStr = this.propertyData.taille_maison || '';
@@ -5525,6 +5593,64 @@ prefillWeekendOptions() {
   this.initialValues.weekendPrice = weekend?.price || 0;
 }
 
+// 🆕 Pré-remplir l'option taxe de séjour
+// Deux blocs Webflow existent : IDs standards (tab tarification, gîtes)
+// et IDs suffixés "-parent" (section informations, parent chambres d'hôtes)
+prefillTouristTaxOptions() {
+  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+  const suffix = isChambreHote ? '-parent' : '';
+  
+  // 🆕 Le bloc "parent" ne concerne que les chambres d'hôtes :
+  // le masquer explicitement pour les gîtes / logements entiers
+  if (!isChambreHote) {
+    const blocTaxeParent = document.getElementById('bloc-taxe-sejour-parent');
+    if (blocTaxeParent) blocTaxeParent.style.display = 'none';
+  }
+  
+  const yesRadio = document.getElementById('taxe-oui' + suffix);
+  const noRadio = document.getElementById('taxe-non' + suffix);
+  const priceInput = document.getElementById('taxe-price-input' + suffix);
+  
+  if (!yesRadio || !noRadio || !priceInput) {
+    console.warn('⚠️ Éléments taxe de séjour non trouvés dans le DOM');
+    return;
+  }
+  
+  // Récupérer les labels Webflow
+  const yesLabel = document.getElementById('label-taxe-oui' + suffix);
+  const noLabel = document.getElementById('label-taxe-non' + suffix);
+  
+  const touristTax = this.pricingData.touristTax;
+  
+  if (touristTax && touristTax.enabled) {
+    // Activer "Oui"
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (touristTax.amount) {
+      priceInput.value = String(touristTax.amount).replace('.', ',') + ' €';
+      priceInput.setAttribute('data-raw-value', touristTax.amount);
+    }
+  } else {
+    // "Non" par défaut
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+    priceInput.removeAttribute('data-raw-value');
+  }
+  
+  // Sauvegarder l'état initial
+  this.initialValues.touristTaxEnabled = touristTax?.enabled ?? false;
+  this.initialValues.touristTaxAmount = touristTax?.amount || 0;
+}
+
   // 🆕 Pré-remplir les options de supplément voyageurs
 prefillExtraGuestsOptions() {
   const yesRadio = document.getElementById('extra-guests-oui');
@@ -5715,6 +5841,100 @@ setupWeekendListeners() {
       this.pricingData.defaultPricing.weekend = {};
     }
     this.pricingData.defaultPricing.weekend.price = price;
+    this.enableButtons();
+  });
+}
+
+// 🆕 Listeners pour la taxe de séjour
+setupTouristTaxListeners() {
+  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+  const suffix = isChambreHote ? '-parent' : '';
+  
+  const yesRadio = document.getElementById('taxe-oui' + suffix);
+  const noRadio = document.getElementById('taxe-non' + suffix);
+  const yesLabel = document.getElementById('label-taxe-oui' + suffix);
+  const noLabel = document.getElementById('label-taxe-non' + suffix);
+  const priceInput = document.getElementById('taxe-price-input' + suffix);
+  
+  if (!yesRadio || !noRadio || !priceInput) return;
+  
+  // Parse décimal : accepte "0,88", "0.88", "0,88 €"
+  const parseTaxAmount = (value) => {
+    const cleaned = String(value).replace(',', '.').replace(/[^\d.]/g, '');
+    const amount = parseFloat(cleaned);
+    return isNaN(amount) ? 0 : Math.round(amount * 100) / 100;
+  };
+  
+  // Listener sur le radio "Oui"
+  yesRadio.addEventListener('change', () => {
+    if (yesRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      
+      priceInput.style.display = 'block';
+      setTimeout(() => priceInput.focus(), 100);
+      
+      if (!this.pricingData.touristTax) {
+        this.pricingData.touristTax = { enabled: true, mode: 'per_adult_night', amount: 0 };
+      }
+      this.pricingData.touristTax.enabled = true;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Listener sur le radio "Non"
+  noRadio.addEventListener('change', () => {
+    if (noRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      
+      priceInput.style.display = 'none';
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+      
+      if (!this.pricingData.touristTax) {
+        this.pricingData.touristTax = { mode: 'per_adult_night' };
+      }
+      this.pricingData.touristTax.enabled = false;
+      this.pricingData.touristTax.amount = 0;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Saisie : n'autoriser que chiffres, virgule et point
+  priceInput.addEventListener('input', () => {
+    const cleaned = priceInput.value.replace(/[^\d.,]/g, '');
+    if (priceInput.value !== cleaned) priceInput.value = cleaned;
+    priceInput.setAttribute('data-raw-value', parseTaxAmount(cleaned));
+  });
+  
+  // Au focus : réafficher la valeur brute (sans le €)
+  priceInput.addEventListener('focus', () => {
+    const rawValue = priceInput.getAttribute('data-raw-value');
+    if (rawValue) {
+      priceInput.value = String(rawValue).replace('.', ',');
+    }
+  });
+  
+  // Au blur : formater et enregistrer
+  priceInput.addEventListener('blur', () => {
+    const amount = parseTaxAmount(priceInput.value);
+    
+    if (amount > 0) {
+      priceInput.setAttribute('data-raw-value', amount);
+      priceInput.value = String(amount).replace('.', ',') + ' €';
+    } else {
+      priceInput.removeAttribute('data-raw-value');
+      priceInput.value = '';
+    }
+    
+    if (!this.pricingData.touristTax) {
+      this.pricingData.touristTax = { enabled: true, mode: 'per_adult_night' };
+    }
+    this.pricingData.touristTax.amount = amount;
+    
     this.enableButtons();
   });
 }
@@ -6323,16 +6543,10 @@ parseAndDisplayExtras() {
   // Récupérer la valeur du champ extras
   const extrasValue = this.propertyData.extras || '';
   
-  if (!extrasValue) {
-    console.log('❌ Aucun extra à afficher');
-    this.extras = [];
-    return;
-  }
-  
-  // Parser le format "🚴Location de vélos10€/jour, ⏰Départ tardif5€"
-  this.extras = this.parseExtrasString(extrasValue);
+  // Parser (tableau vide si aucun extra)
+  this.extras = extrasValue ? this.parseExtrasString(extrasValue) : [];
     
-  // Afficher chaque extra
+  // Afficher (displayExtras masque d'abord TOUS les blocs, puis réaffiche)
   this.displayExtras();
 }
 
@@ -6349,18 +6563,30 @@ parseExtrasString(extrasString) {
     
     // Retirer l'emoji du début
     const withoutEmoji = part.replace(emoji, '');
+
+    // 🆕 Cas "sur demande" : pas de prix numérique
+    if (/\s*sur\s+demande\s*$/i.test(withoutEmoji)) {
+      const name = withoutEmoji.replace(/\s*sur\s+demande\s*$/i, '').trim();
+      return { emoji, name, price: 'Sur demande' };
+    }
+
+    const priceMatch = withoutEmoji.match(/(\d+(?:[.,]\d+)?)€/);
+    const price = priceMatch ? this.sanitizeExtraPrice(priceMatch[1]).canonical : ''; // normalisé + padé
     
-    // Chercher le prix (dernier nombre suivi de €)
-    const priceMatch = withoutEmoji.match(/(\d+)€/);
-    const price = priceMatch ? priceMatch[1] : '';
-    
-    // Le nom est ce qui reste après avoir retiré le prix
-    const name = withoutEmoji.replace(/\d+€.*$/, '').trim();
+    const name = withoutEmoji.replace(/\d+(?:[.,]\d+)?€.*$/, '').trim();
     
     return { emoji, name, price };
   }).filter(extra => extra.name); // Filtrer les entrées vides
 }
 
+// Coche/décoche une checkbox Webflow par programmation (état logique + visuel)
+syncWebflowCheckbox(checkboxInput, checked) {
+  if (!checkboxInput) return;
+  checkboxInput.checked = checked;
+  const visual = checkboxInput.closest('.w-checkbox')?.querySelector('.w-checkbox-input');
+  if (visual) visual.classList.toggle('w--redirected-checked', checked);
+}
+  
 displayExtras() {
   
   // Masquer tous les blocs d'abord
@@ -6414,9 +6640,22 @@ displayExtras() {
       }
       if (nameInput) nameInput.value = extra.name || '';
       if (priceInput) {
-        priceInput.value = extra.price || '';
-        priceInput.setAttribute('data-raw-value', extra.price || '');
+        if (extra.price === 'Sur demande') {
+          priceInput.value = 'Sur demande';
+          priceInput.disabled = true;
+          priceInput.removeAttribute('data-raw-value');
+          priceInput.style.color = '#778183';                // 🆕
+          priceInput.style.webkitTextFillColor = '#778183';  // 🆕
+        } else {
+          priceInput.disabled = false;
+          priceInput.value = (extra.price || '').replace('.', ',');
+          priceInput.setAttribute('data-raw-value', extra.price || '');
+          priceInput.style.color = '';                       // 🆕 reset
+          priceInput.style.webkitTextFillColor = '';         // 🆕 reset
+        }
       }
+      const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
+      if (onRequestCheckbox) this.syncWebflowCheckbox(onRequestCheckbox, extra.price === 'Sur demande');
       
       // Ajouter les listeners pour modifications
       this.setupExtraListeners(blocElement, index);
@@ -6474,8 +6713,13 @@ addExtra() {
     }
     if (priceInput) {
       priceInput.value = '';
+      priceInput.disabled = false;
       priceInput.removeAttribute('data-raw-value');
+      priceInput.style.color = '';                           // 🆕 reset
+      priceInput.style.webkitTextFillColor = '';             // 🆕 reset
     }
+    const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
+    if (onRequestCheckbox) this.syncWebflowCheckbox(onRequestCheckbox, false);
     
     // Ajouter les listeners
     this.setupExtraListeners(blocElement, newIndex);
@@ -6509,6 +6753,28 @@ removeExtra(index) {
   this.enableButtons();
 }
 
+// Normalise un prix d'extra : accepte le point OU la virgule comme séparateur décimal.
+// Retourne { canonical, display } :
+//   - canonical : avec un POINT, pour le stockage (ex. "25.5") — la virgule reste le séparateur d'items
+//   - display   : avec une VIRGULE, pour l'affichage FR (ex. "25,5")
+sanitizeExtraPrice(rawInput) {
+  let s = String(rawInput == null ? '' : rawInput).replace(/[^\d.,]/g, '');
+  const sepIndex = s.search(/[.,]/);
+  if (sepIndex !== -1) {
+    let intPart = s.slice(0, sepIndex).replace(/[.,]/g, '');
+    const decPart = s.slice(sepIndex + 1).replace(/[.,]/g, '').slice(0, 2); // max 2 décimales
+    if (decPart) {
+      if (intPart === '') intPart = '0';                 // ,5 → 0,5
+      s = `${intPart}.${(decPart + '0').slice(0, 2)}`;   // ⬅️ pad à 2 décimales : "7" → "70"
+    } else {
+      s = intPart;                                       // "25," → "25" ; "," → ""
+    }
+  }
+  const canonical = s;
+  const display = canonical.replace('.', ',');
+  return { canonical, display };
+}
+  
 setupExtraListeners(blocElement, index) {
   const emojiInput = blocElement.querySelector('[data-extra="emoji"]');
   const nameInput = blocElement.querySelector('[data-extra="name"]');
@@ -6535,30 +6801,72 @@ setupExtraListeners(blocElement, index) {
     });
   }
   
-  if (priceInput) {
+    if (priceInput) {
+    // Saisie : chiffres + 1 séparateur décimal (point ou virgule), max 2 décimales.
+    // Affichage en virgule (FR), stockage normalisé avec un point.
     priceInput.addEventListener('input', (e) => {
-      const value = e.target.value.replace(/[^\d]/g, '');
-      this.extras[index].price = value;
+      let v = e.target.value.replace(/[^\d.,]/g, '');
+      const i = v.search(/[.,]/);
+      if (i !== -1) {
+        let intPart = v.slice(0, i).replace(/[.,]/g, '');
+        if (intPart === '') intPart = '0';   // ,5 → 0,5 dès la frappe
+        const decPart = v.slice(i + 1).replace(/[.,]/g, '').slice(0, 2);
+        v = intPart + ',' + decPart; // garde le séparateur visible pendant la frappe
+      }
+      e.target.value = v;
+      this.extras[index].price = v.replace(',', '.').replace(/\.$/, ''); // stockage : point, sans séparateur final
       this.enableButtons();
     });
-    
-    // Formatage au blur : ajouter €
-    priceInput.addEventListener('blur', function() {
-      const value = this.value.replace(/[^\d]/g, '');
-      if (value) {
-        this.setAttribute('data-raw-value', value);
-        this.value = value + '€';
+
+    // Formatage au blur : normaliser puis ajouter €
+    priceInput.addEventListener('blur', () => {
+      const { canonical, display } = this.sanitizeExtraPrice(priceInput.value);
+      if (canonical) {
+        priceInput.setAttribute('data-raw-value', canonical);
+        priceInput.value = display + '€';
+        this.extras[index].price = canonical;
+      } else {
+        priceInput.removeAttribute('data-raw-value');
+        priceInput.value = '';
+        this.extras[index].price = '';
       }
     });
-    
-    // Retirer le suffixe au focus
-    priceInput.addEventListener('focus', function() {
-      const rawValue = this.getAttribute('data-raw-value');
+
+    // Retirer le suffixe € au focus (affichage en virgule pour l'édition)
+        priceInput.addEventListener('focus', () => {
+      const rawValue = priceInput.getAttribute('data-raw-value');
       if (rawValue) {
-        this.value = rawValue;
+        priceInput.value = rawValue.replace('.', ',');
       } else {
-        this.value = this.value.replace(/[^\d]/g, '');
+        priceInput.value = priceInput.value.replace(/[^\d.,]/g, '');
       }
+    });
+  }
+
+  // 🆕 Checkbox "Sur demande"
+  const onRequestCheckbox = blocElement.querySelector('[data-extra="on-request"]');
+  if (onRequestCheckbox) {
+    onRequestCheckbox.addEventListener('change', () => {
+      const priceInput = blocElement.querySelector('[data-extra="price"]');
+      if (onRequestCheckbox.checked) {
+        this.extras[index].price = 'Sur demande';
+        if (priceInput) {
+          priceInput.value = 'Sur demande';
+          priceInput.disabled = true;
+          priceInput.removeAttribute('data-raw-value');
+          priceInput.style.color = '#778183';                // 🆕
+          priceInput.style.webkitTextFillColor = '#778183';  // 🆕 (input désactivé)
+        }
+      } else {
+        this.extras[index].price = '';
+        if (priceInput) {
+          priceInput.disabled = false;
+          priceInput.value = '';
+          priceInput.style.color = '';                       // 🆕 reset
+          priceInput.style.webkitTextFillColor = '';         // 🆕 reset
+        }
+      }
+      this.enableButtons();
     });
   }
 }
@@ -6683,7 +6991,9 @@ generateExtrasString() {
   return this.extras
     .filter(extra => extra.name && extra.price && extra.emoji) // Ignorer les extras incomplets
     .map(extra => {
-      return `${extra.emoji}${extra.name}${extra.price}€`;
+      return extra.price === 'Sur demande'
+        ? `${extra.emoji}${extra.name}Sur demande`
+        : `${extra.emoji}${extra.name}${extra.price}€`;
     })
     .join(', ');
 }
@@ -7056,8 +7366,8 @@ setupFieldListeners() {
     }
   });
 
-  // NOUVEAU : Listeners pour caution et acompte avec synchronisation JSON
-  const cautionAcompteIds = ['caution-input', 'acompte-input'];
+    // NOUVEAU : Listeners pour caution, acompte et arrhes avec synchronisation JSON
+  const cautionAcompteIds = ['caution-input', 'acompte-input', 'arrhes-input'];
   // Version simplifiée :
 cautionAcompteIds.forEach(id => {
   const input = document.getElementById(id);
@@ -7067,8 +7377,8 @@ cautionAcompteIds.forEach(id => {
       const cleanValue = e.target.value.replace(/[^\d]/g, '');
       let rawValue = parseInt(cleanValue) || 0;
       
-      // Limitation pour l'acompte (1-100%)
-      if (id === 'acompte-input' && rawValue > 0) {
+      // Limitation pour acompte ET arrhes (1-100%)
+      if ((id === 'acompte-input' || id === 'arrhes-input') && rawValue > 0) {
         if (rawValue > 100) {
           rawValue = 100;
           e.target.value = '100';
@@ -7090,12 +7400,43 @@ cautionAcompteIds.forEach(id => {
         if (this.pricingData) {
           this.pricingData.acompte = rawValue;
         }
+      } else if (id === 'arrhes-input') {
+        if (this.pricingData) {
+          this.pricingData.arrhes = rawValue;
+        }
+      }
+      
+      // Exclusivité acompte / arrhes
+      if (id === 'acompte-input' || id === 'arrhes-input') {
+        this.updateAcompteArrhesExclusivity();
       }
       
       this.enableButtons();
     });
   }
 });
+  
+    // 🆕 NOUVEAU : Listeners pour villégiature (radio oui/non)
+  const villegiatureOui = document.getElementById('villegiature-oui');
+  const villegiatureNon = document.getElementById('villegiature-non');
+  const labelVillegiatureOui = document.getElementById('label-villegiature-oui');
+  const labelVillegiatureNon = document.getElementById('label-villegiature-non');
+  if (villegiatureOui && villegiatureNon) {
+    villegiatureOui.addEventListener('change', () => {
+      if (!villegiatureOui.checked) return;
+      if (this.pricingData) this.pricingData.villegiature = true;
+      labelVillegiatureOui?.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      labelVillegiatureNon?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      this.enableButtons();
+    });
+    villegiatureNon.addEventListener('change', () => {
+      if (!villegiatureNon.checked) return;
+      if (this.pricingData) this.pricingData.villegiature = false;
+      labelVillegiatureNon?.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      labelVillegiatureOui?.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      this.enableButtons();
+    });
+  }
   
   // NOUVEAU : Listeners pour les checkboxes options
   const optionIds = ['checkbox-animaux', 'checkbox-pmr', 'checkbox-fumeurs'];
@@ -7198,6 +7539,7 @@ cautionAcompteIds.forEach(id => {
   this.setupCleaningListeners();
   this.setupWeekendListeners();
   this.setupExtraGuestsListeners();
+  this.setupTouristTaxListeners();
   // 🆕 AJOUTER les gestionnaires d'opacité
   this.setupPriceOpacityHandlers();
 }
@@ -7668,7 +8010,6 @@ setBlockState(element, isActive) {
     this.prefillTailleMaison();
     this.prefillHoraires();
     this.prefillCancellationPolicy();
-    this.prefillCautionAcompte();
     // Restaurer les saisons d'origine
     if (this.propertyData.pricing_data) {
       // 🔧 COPIE PROFONDE pour éviter les références
@@ -7681,9 +8022,14 @@ setBlockState(element, isActive) {
         discounts: [],
         capacity: 4,
         caution: 0,
-        acompte: 30
+        acompte: 0,
+        arrhes: 0,
+        villegiature: false
       };
     }
+    // ✅ Pré-remplir caution/acompte/arrhes APRÈS avoir restauré le JSON
+    this.prefillCautionAcompte();
+    this.formatAllSuffixFields();
     
     // Réafficher les saisons
     this.hideAllSeasonBlocks();
@@ -7696,6 +8042,7 @@ setBlockState(element, isActive) {
     this.prefillCleaningOptions();
     this.prefillWeekendOptions();
     this.prefillExtraGuestsOptions();
+    this.prefillTouristTaxOptions();
     // Réinitialiser les iCals depuis les valeurs initiales
     for (let i = 1; i <= 4; i++) {
       const input = document.getElementById(`ical-url-${i}`);
@@ -7998,15 +8345,19 @@ setBlockState(element, isActive) {
   
   currentValues.address = adresseComplete;
     
-  // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
+    // NOUVEAU : Forcer le blur pour capturer les valeurs avec data-raw-value
   const cautionInput = document.getElementById('caution-input');
   const acompteInput = document.getElementById('acompte-input');
+  const arrhesInput = document.getElementById('arrhes-input');
   
   if (cautionInput && document.activeElement === cautionInput) {
     cautionInput.blur();
   }
   if (acompteInput && document.activeElement === acompteInput) {
     acompteInput.blur();
+  }
+  if (arrhesInput && document.activeElement === arrhesInput) {
+    arrhesInput.blur();
   }
   
   // Petit délai pour laisser le blur se terminer
@@ -8015,6 +8366,7 @@ setBlockState(element, isActive) {
   // MAINTENANT récupérer les valeurs
   const cautionValue = this.getRawValue(cautionInput) || '0';
   const acompteValue = this.getRawValue(acompteInput) || '0';
+  const arrhesValue = this.getRawValue(arrhesInput) || '0';
   
   let conditionsTexte = '';
   
@@ -8028,6 +8380,24 @@ setBlockState(element, isActive) {
       ? conditionsTexte + '\n' + acompteTexte 
       : acompteTexte;
   }
+  
+    if (parseInt(arrhesValue) > 0) {
+    const arrhesTexte = `Arrhes : ${arrhesValue}% du montant total sont demandés à titre d’arrhes pour confirmer la réservation. En cas d’annulation, le voyageur perd les arrhes versées et l’hôte qui annule les restitue au double (article 1590 du Code civil).`;
+    conditionsTexte = conditionsTexte 
+      ? conditionsTexte + '\n' + arrhesTexte 
+      : arrhesTexte;
+  }
+  
+  // 🆕 Villégiature : toujours une phrase (Oui ou Non)
+  const villegiatureOui = document.getElementById('villegiature-oui');
+  const villegiatureObligatoire = !!(villegiatureOui && villegiatureOui.checked);
+  if (this.pricingData) this.pricingData.villegiature = villegiatureObligatoire;
+  const villegiatureTexte = villegiatureObligatoire
+    ? `L’assurance villégiature est obligatoire pour réserver ce logement.`
+    : `L’assurance villégiature n’est pas obligatoire pour réserver ce logement.`;
+  conditionsTexte = conditionsTexte 
+    ? conditionsTexte + '\n' + villegiatureTexte 
+    : villegiatureTexte;
   
   currentValues.conditions_reservation = conditionsTexte;
 
@@ -8108,12 +8478,14 @@ setBlockState(element, isActive) {
     updates.pricing_data = this.pricingData;
   }
 
-  // Si caution ou acompte a changé, forcer l'envoi du JSON
+    // Si caution, acompte, arrhes ou villégiature a changé, forcer l'envoi du JSON
   const cautionChanged = parseInt(cautionValue) !== this.initialValues.caution;
   const acompteChanged = parseInt(acompteValue) !== this.initialValues.acompte;
+  const arrhesChanged = parseInt(arrhesValue) !== this.initialValues.arrhes;
+  const villegiatureChanged = villegiatureObligatoire !== this.initialValues.villegiature;
   
   if ((updates.taille_maison && updates.taille_maison.includes('voyageur')) || 
-      cautionChanged || acompteChanged) {
+      cautionChanged || acompteChanged || arrhesChanged || villegiatureChanged) {
     updates.pricing_data = this.pricingData;
   }
     
