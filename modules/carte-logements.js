@@ -18,6 +18,57 @@
   const marqueurs = new Map();
   const cacheFiches = new Map();
   let pillActive = null;
+  let compteurEl = null;
+  let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
+  let pointsEnAttente = null;  // points reçus avant que la carte soit prête
+
+  function enGeoJSON(points) {
+    return {
+      type: 'FeatureCollection',
+      features: points.map(p => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+        properties: { id: p.id, prix: p.prix }
+      }))
+    };
+  }
+
+  // Reçoit les logements filtrés (mêmes filtres que la liste) et met à jour les pastilles
+  function majPointsCarte(points) {
+    tousLesPoints = points;
+    const src = map && map.getSource('logements');
+    if (!src) { pointsEnAttente = points; return; }
+    src.setData(enGeoJSON(points));
+    if (compteurEl) majCompteur(compteurEl);
+  }
+
+  // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
+  window.addEventListener('driing:resultats-filtres', (e) => {
+    const pts = e.detail && e.detail.map_points;
+    if (Array.isArray(pts)) majPointsCarte(pts);
+  });
+
+  // 🔗 La recherche de lieu déplace la carte (on enrobe setSearchLocation sans modifier le module)
+  function brancherRecherche() {
+    const attente = setInterval(() => {
+      if (!window.propertyManager) return;
+      clearInterval(attente);
+      const pm = window.propertyManager;
+      const originale = pm.setSearchLocation.bind(pm);
+      pm.setSearchLocation = function (location, searchType, zoneInfo) {
+        originale(location, searchType, zoneInfo);
+        if (moveDepuisCarte || !map || !location) return;
+        const bbox = zoneInfo && zoneInfo.bbox
+          ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
+          : null;
+        if (bbox && bbox.length === 4 && bbox.every(isFinite)) {
+          map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40 });
+        } else {
+          map.flyTo({ center: [location.lng, location.lat], zoom: 11 });
+        }
+      };
+    }, 200);
+  }
 
   // ── Mise en page : carte fixée à droite, contenu de la page décalé à gauche ──
   function poserStyles() {
@@ -124,10 +175,10 @@
     }
     if (!tousLesPoints.length) { message('Aucun logement géolocalisé pour le moment.'); return; }
 
-    const compteur = document.createElement('div');
-    compteur.className = 'cl-compteur';
-    compteur.textContent = '…';
-    conteneur.appendChild(compteur);
+    compteurEl = document.createElement('div');
+    compteurEl.className = 'cl-compteur';
+    compteurEl.textContent = '…';
+    conteneur.appendChild(compteurEl);
 
     map = new mapboxgl.Map({ container: 'map-logements', style: STYLE, projection: 'mercator', center: [2.2, 46.6], zoom: 5 });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
@@ -139,10 +190,7 @@
     map.on('load', () => {
       map.addSource('logements', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: tousLesPoints.map(p => ({
-          type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-          properties: { id: p.id, prix: p.prix }
-        })) },
+        data: enGeoJSON(tousLesPoints),
         cluster: true, clusterMaxZoom: 13, clusterRadius: 55
       });
       map.addLayer({ id: 'ancre-clusters', type: 'circle', source: 'logements',
@@ -153,11 +201,16 @@
       // Synchronisation en fin de déplacement uniquement → pastilles fixes
       map.on('moveend', synchroniser);
       map.on('idle', synchroniser);
-      map.on('moveend', () => majCompteur(compteur));
+      map.on('moveend', () => majCompteur(compteurEl));
       map.on('moveend', filtrerListeParCarte); // ← la liste suit la carte
       synchroniser();
-      majCompteur(compteur);
+      majCompteur(compteurEl);
+
+      // Des résultats filtrés sont arrivés avant que la carte soit prête ?
+      if (pointsEnAttente) { majPointsCarte(pointsEnAttente); pointsEnAttente = null; }
     });
+
+    brancherRecherche();
   }
 
   // Fait suivre la liste de gauche au rectangle visible de la carte,
@@ -166,6 +219,7 @@
     if (!window.propertyManager) return;
     const b = map.getBounds();
     const c = map.getCenter();
+    moveDepuisCarte = true; // ne pas re-déclencher un flyTo : c'est la carte qui parle
     window.propertyManager.setSearchLocation(
       { lat: c.lat, lng: c.lng },
       'region',
@@ -176,6 +230,7 @@
         geo_feature_code: null
       }
     );
+    moveDepuisCarte = false;
     window.propertyManager.applyFilters(true);
   }
 
@@ -225,6 +280,20 @@
     el.textContent = `${n} logement${n > 1 ? 's' : ''} dans cette zone`;
   }
 
+  // Première image du champ "photos du logement" (même logique que la liste),
+  // avec repli sur image/image1 pour les anciens logements.
+  function premiereImage(fiche) {
+    const galerie = fiche.images_gallery;
+    if (Array.isArray(galerie) && galerie.length > 0) {
+      const premiere = galerie[0];
+      let url = null;
+      if (premiere && typeof premiere === 'object' && premiere.url) url = premiere.url;
+      else if (typeof premiere === 'string') url = premiere;
+      if (url && url.startsWith('http')) return url;
+    }
+    return fiche.image || fiche.image1 || '';
+  }
+
   // Calcule prix barré + % de réduction à partir des données tarifaires,
   // comme sur les cartes de la liste (prix "Dès" = prix direct minimum).
   function prixAffichage(pd, prixDirect) {
@@ -260,7 +329,7 @@
       }
     }
 
-    const img = fiche.image || fiche.image1 || '';
+    const img = premiereImage(fiche);
     const direct = fiche.price || prix;
     const { barre, reduc } = prixAffichage(fiche.pricing_data, direct);
     const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
