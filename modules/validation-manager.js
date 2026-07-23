@@ -1,4 +1,4 @@
-// LOG production V1.58
+// LOG production V1.59
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -507,9 +507,14 @@ class ValidationManager {
         }
         
         hasError = true;
-      } else {
-        // Nettoyer les erreurs si tout est OK
-        this.hideFieldError(price);
+        } else {
+        // Nettoyer les erreurs de cohérence si tout est OK.
+        // On ne touche PAS au champ prix quand il est renseigné : c'est
+        // validatePlatformPrices() (règle des +10%) qui en est responsable,
+        // sinon on efface son message d'erreur juste après l'avoir affiché.
+        if (priceValue === 0) {
+          this.hideFieldError(price);
+        }
         this.hideFieldError(link);
       }
     });
