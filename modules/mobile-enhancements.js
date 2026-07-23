@@ -1,4 +1,4 @@
-// Améliorations spécifiques mobile - LOG production
+// Améliorations spécifiques mobile - LOG production V1.01
 class MobileEnhancementsManager {
   constructor() {
     this.init();
@@ -121,10 +121,10 @@ class MobileEnhancementsManager {
               closeBtn.on("click", (e) => {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                picker.isShowing = false;
-                originalHide.call(picker);
-                document.body.classList.remove("no-scroll");
-                $(picker.container).removeClass('mobile-fullscreen').hide();
+                // ✅ FIX : passer par le hide() complet du picker.
+                // Il restaure endDate quand une seule date est sélectionnée,
+                // ce qui évite le crash de show() (endDate.clone() sur null) à la ré-ouverture.
+                picker.hide();
               });
               
               header.append(closeBtn);
@@ -135,16 +135,17 @@ class MobileEnhancementsManager {
               buttons.addClass('mobile-fixed-buttons');
               
               // Gestionnaires des boutons
-              buttons.find('.applyBtn').off('click').on('click', (e) => {
+              const applyBtn = buttons.find('.applyBtn');
+              applyBtn.prop('disabled', false); // "Fermer" toujours cliquable
+              applyBtn.off('click').on('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (picker.startDate && picker.endDate) {
-                  picker.clickApply();
+                if (picker.startDate && picker.startDate.isValid() &&
+                    picker.endDate && picker.endDate.isValid()) {
+                  picker.clickApply();  // plage complète ET valide : applique + ferme
+                } else {
+                  picker.hide();        // incomplète OU invalide : ferme sans rien enregistrer
                 }
-                picker.isShowing = false;
-                originalHide.call(picker);
-                document.body.classList.remove("no-scroll");
-                $(picker.container).hide();
               });
               
               buttons.find('.cancelBtn').off('click').on('click', (e) => {
@@ -179,6 +180,14 @@ class MobileEnhancementsManager {
           }
         };
         
+        // ✅ FIX : garder le bouton "Fermer" (applyBtn) actif même avec une seule
+        // date (daterangepicker le désactive à chaque updateView sinon)
+        const originalUpdateFormInputs = picker.updateFormInputs;
+        picker.updateFormInputs = function () {
+          originalUpdateFormInputs.call(this);
+          this.container.find('button.applyBtn').prop('disabled', false);
+        };
+
         picker.enhanced = true;
       };
       
