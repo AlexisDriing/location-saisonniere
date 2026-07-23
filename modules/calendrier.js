@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.04
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.05
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -105,8 +105,9 @@ class CalendarManager {
   setupPickerEvents() {
     const $ = jQuery;
     
-    $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
-  if (picker.startDate && picker.endDate) {
+        $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
+  if (picker.startDate && picker.startDate.isValid() &&
+      picker.endDate && picker.endDate.isValid()) {
     $(e.target).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
     this.updateDatesText(picker.startDate, picker.endDate);
     this.nextUnavailableDate = null;
@@ -231,9 +232,30 @@ class CalendarManager {
               !this.picker.endDate) {
             this.updateCalendarUI();
           }
-        }, 50); // 50ms pour laisser le picker se mettre à jour
+                }, 50); // 50ms pour laisser le picker se mettre à jour
       }
     };
+
+    // ✅ FIX : "Fermer" doit fermer le calendrier même avec une seule date.
+    // daterangepicker désactive ce bouton tant que la plage est incomplète →
+    // on le ré-active et on gère nous-mêmes la fermeture.
+    const originalUpdateFormInputs = this.picker.updateFormInputs;
+    this.picker.updateFormInputs = function () {
+      originalUpdateFormInputs.call(this);
+      this.container.find('button.applyBtn').prop('disabled', false);
+    };
+
+    // NB : posé directement sur le bouton (survit au detach() de updateCalendarUI,
+    // s'exécute avant le handler natif délégué).
+    this.picker.container.find('button.applyBtn').on('click', (e) => {
+      // Plage complète ET valide → comportement natif (applique + ferme)
+      if (this.picker.startDate && this.picker.startDate.isValid() &&
+          this.picker.endDate && this.picker.endDate.isValid()) return;
+      // Incomplète OU date invalide (ex. après "Effacer les dates") → on ferme simplement
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      this.picker.hide();
+    });
   }
 
   // À ajouter dans votre CalendarManager après l'initialisation du picker
