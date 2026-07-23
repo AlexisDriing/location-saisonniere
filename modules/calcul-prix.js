@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.131
+// Calculateur de prix principal - LOG production V1.132
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -95,8 +95,9 @@ class PriceCalculator {
 
   listenForDateChanges() {
     if (typeof jQuery !== 'undefined' && jQuery("#input-calendar, #input-calendar-mobile").length) {
-            jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
-        if (picker.startDate && picker.endDate) {
+              jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
+        if (picker.startDate && picker.startDate.isValid() &&
+            picker.endDate && picker.endDate.isValid()) {
           this.startDate = picker.startDate;
           this.endDate = picker.endDate;
           this.calculateAndDisplayPrices();
