@@ -1,4 +1,4 @@
-// LOG production V1.04
+// LOG production V1.05
 // Module : gestion du calendrier de blocage manuel des dates (tab Calendrier)
 // Instancié par PropertyEditor pour les logements ET les chambres
 class CalendarEditor {
@@ -143,6 +143,14 @@ class CalendarEditor {
     return ranges;
   }
 
+  // 🆕 Toutes les nuits occupées : fermetures manuelles + réservations
+  // importées. blockedDates contient déjà des nuits, il n'y a rien à dériver.
+  nightsSet() {
+    const nights = new Set(this.blockedDates);
+    for (const day of this.externalDates.keys()) nights.add(day);
+    return nights;
+  }
+  
   fmtKey(date) {
     return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
   }
@@ -285,7 +293,7 @@ class CalendarEditor {
     });
   }
 
-  renderMonth(grid, year, month) {
+  renderMonth(grid, year, month, nights) {
     grid.innerHTML = '';
     const firstDay = new Date(year, month, 1);
     const offset = (firstDay.getDay() + 6) % 7; // Lun=0
@@ -306,8 +314,15 @@ class CalendarEditor {
       if (this.isPast(date)) cell.classList.add('cale-day--passe');
       if (date.getTime() === this.today.getTime()) cell.classList.add('cale-day--today');
 
+            // 🆕 État des nuits autour de ce jour : c'est ce qui décide des demi-cases
+      const prevKey = this.fmtKey(new Date(year, month, d - 1));
+      const nightTaken = nights.has(key);
+      const prevNightTaken = nights.has(prevKey);
+
       if (this.externalDates.has(key)) {
         cell.classList.add('cale-day--externe');
+        // Première nuit de la réservation : la matinée reste libre au départ
+        if (!prevNightTaken) cell.classList.add('cale-day--depart');
         const lock = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         lock.setAttribute('class', 'cale-lock');
         lock.setAttribute('viewBox', '0 0 24 24');
@@ -320,6 +335,13 @@ class CalendarEditor {
         cell.appendChild(tip);
       } else if (this.blockedDates.has(key) && !this.isPast(date)) {
         cell.classList.add('cale-day--ferme');
+        // Première nuit fermée : la matinée reste libre au départ
+        if (!prevNightTaken) cell.classList.add('cale-day--depart');
+      } else if (!nightTaken && this.blockedDates.has(prevKey) && !this.isPast(date)) {
+        // 🆕 Lendemain de la dernière nuit fermée : la nuit de ce jour est
+        // libre, il reste réservable à l'arrivée. Demi-case inversée pour
+        // que l'hôte voie où sa fermeture s'arrête.
+        cell.classList.add('cale-day--ferme', 'cale-day--arrivee');
       }
 
       if (this.dragSelection.has(key)) cell.classList.add('cale-day--selecting');
@@ -339,8 +361,9 @@ class CalendarEditor {
     this.container.querySelector('[data-role="title-1"]').textContent = CalendarEditor.MONTH_NAMES[m1] + ' ' + y1;
     this.container.querySelector('[data-role="title-2"]').textContent = CalendarEditor.MONTH_NAMES[m2] + ' ' + y2;
 
-    this.renderMonth(this.container.querySelector('[data-role="grid-1"]'), y1, m1);
-    this.renderMonth(this.container.querySelector('[data-role="grid-2"]'), y2, m2);
+    const nights = this.nightsSet();   // 🆕 calculé une seule fois
+    this.renderMonth(this.container.querySelector('[data-role="grid-1"]'), y1, m1, nights);
+    this.renderMonth(this.container.querySelector('[data-role="grid-2"]'), y2, m2, nights);
 
     const prevBtn = this.container.querySelector('[data-action="prev"]');
     const nextBtn = this.container.querySelector('[data-action="next"]');
@@ -438,9 +461,16 @@ class CalendarEditor {
 
   endDrag() {
     if (!this.isDragging) return;
-    for (const k of this.dragSelection) {
-      if (this.dragAction === 'close') this.blockedDates.add(k);
-      else this.blockedDates.delete(k);
+    if (this.dragAction === 'close') {
+      // Le glissement décrit un séjour : la dernière case est le jour de
+      // départ, elle ne consomme pas de nuit et reste réservable à l'arrivée.
+      // Un clic simple ferme la nuit du jour cliqué.
+      const days = Array.from(this.dragSelection).sort();
+      const nights = days.length > 1 ? days.slice(0, -1) : days;
+      for (const k of nights) this.blockedDates.add(k);
+    } else {
+      // Réouverture : on libère toutes les cases survolées
+      for (const k of this.dragSelection) this.blockedDates.delete(k);
     }
     this.isDragging = false;
     this.dragStartDate = null;
