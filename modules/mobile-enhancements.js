@@ -1,4 +1,4 @@
-// Améliorations spécifiques mobile - LOG production V1.01
+// Améliorations spécifiques mobile - LOG production V1.02
 class MobileEnhancementsManager {
   constructor() {
     this.init();
@@ -25,52 +25,14 @@ class MobileEnhancementsManager {
         const picker = mobileCalendar.data('daterangepicker');
         if (!picker || picker.enhanced) return;
         
-        let nextUnavailableDate = null;
-        
-        // Améliorer la validation des dates
-        const originalIsInvalidDate = picker.isInvalidDate;
-        picker.isInvalidDate = function(date) {
-          if (this.startDate && !this.endDate) {
-            if (date.isBefore(this.startDate, 'day')) return true;
-            if (nextUnavailableDate && date.isSameOrAfter(nextUnavailableDate, 'day')) return true;
-          }
-          
-          const result = originalIsInvalidDate.call(this, date);
-          if (result && this.startDate && date.isAfter(this.startDate, 'day') && !nextUnavailableDate) {
-            nextUnavailableDate = date.clone();
-          }
-          return result;
-        };
-        
-        // Améliorer le rendu du calendrier
-        const originalRenderCalendar = picker.renderCalendar;
-        picker.renderCalendar = function(side) {
-          originalRenderCalendar.call(this, side);
-          
-          if (this.startDate && !this.endDate && !nextUnavailableDate) {
-            const calendar = $(this.container).find('.calendar.' + side);
-            const dates = calendar.find('td:not(.off)');
-            let foundStart = false;
-            let foundUnavailable = false;
-            
-            dates.each(function() {
-              const dateStr = $(this).attr('data-date');
-              const date = moment(dateStr, 'YYYY-MM-DD');
-              
-              if (foundStart && !foundUnavailable) {
-                if (originalIsInvalidDate.call(picker, date)) {
-                  foundUnavailable = true;
-                  nextUnavailableDate = date.clone();
-                }
-              }
-              
-              if (picker.startDate && date.isSame(picker.startDate, 'day')) {
-                foundStart = true;
-              }
-            });
-          }
-        };
-        
+                // ❌ La règle de sélection vivait ici en double. Elle est désormais
+        // dans CalendarManager.isDateInvalid() (calendrier.js) et s'applique
+        // au picker mobile via `this`, sans duplication.
+        //
+        // ❌ La boucle de rendu qui suivait lisait un attribut `data-date`
+        // que daterangepicker n'écrit pas (il écrit data-title="rXcY") :
+        // elle ne s'est jamais exécutée. Supprimée.
+
         // Gestion de l'affichage mobile
         const originalHide = picker.hide;
         const originalShow = picker.show;
@@ -152,7 +114,6 @@ class MobileEnhancementsManager {
                 e.preventDefault();
                 e.stopPropagation();
                 picker.clickCancel();
-                nextUnavailableDate = null;
                 picker.isShowing = false;
                 originalHide.call(picker);
                 document.body.classList.remove("no-scroll");
@@ -165,7 +126,6 @@ class MobileEnhancementsManager {
         // Gestion des dates
         const originalSetStartDate = picker.setStartDate;
         picker.setStartDate = function(date) {
-          nextUnavailableDate = null;
           originalSetStartDate.call(this, date);
           if (this.startDate) {
             this.updateView();
