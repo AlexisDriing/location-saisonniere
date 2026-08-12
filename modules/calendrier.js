@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.04
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.07
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -35,17 +35,28 @@ class CalendarManager {
     
       
       // Initialiser le DateRangePicker
+            const manager = this;
+
       $('#input-calendar, #input-calendar-mobile').daterangepicker({
         autoApply: false,
         opens: 'left',
         autoUpdateInput: false,
-        isInvalidDate: (date) => {
-          if (this.picker && this.picker.startDate && !this.picker.endDate) {
-            const startDate = this.picker.startDate;
-            if (date.isBefore(startDate, 'day')) return true;
-            if (this.nextUnavailableDate && date.isSameOrAfter(this.nextUnavailableDate, 'day')) return true;
+        // ⚠️ fonction classique et non fléchée : daterangepicker appelle
+        // isInvalidDate avec `this` = le picker concerné. C'est ce qui permet
+        // au desktop et au mobile de partager exactement la même règle.
+        isInvalidDate: function (date) {
+          return manager.isDateInvalid(date, this);
+        },
+        // Marque les jours « départ uniquement ». La lib ajoute elle-même
+        // la classe retournée sur la cellule, aucun DOM à parcourir.
+        isCustomDate: function (date) {
+          // Une plage complète est posée : ses extrémités gardent leur
+          // surlignage de sélection, pas de demi-case par-dessus.
+          if (this.endDate && this.endDate.isAfter(this.startDate, 'day')) {
+            if (date.isSame(this.startDate, 'day')) return false;
+            if (date.isSame(this.endDate, 'day')) return false;
           }
-          return this.icalManager.isDateUnavailable(date);
+          return manager.getCustomDateClass(date, this);
         },
         locale: {
           format: 'DD/MM/YYYY',
@@ -105,8 +116,9 @@ class CalendarManager {
   setupPickerEvents() {
     const $ = jQuery;
     
-    $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
-  if (picker.startDate && picker.endDate) {
+        $('#input-calendar, #input-calendar-mobile').on('apply.daterangepicker', (e, picker) => {
+  if (picker.startDate && picker.startDate.isValid() &&
+      picker.endDate && picker.endDate.isValid()) {
     $(e.target).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
     this.updateDatesText(picker.startDate, picker.endDate);
     this.nextUnavailableDate = null;
@@ -231,9 +243,41 @@ class CalendarManager {
               !this.picker.endDate) {
             this.updateCalendarUI();
           }
-        }, 50); // 50ms pour laisser le picker se mettre à jour
+                }, 50); // 50ms pour laisser le picker se mettre à jour
       }
     };
+
+    // ✅ FIX : "Fermer" doit fermer le calendrier même avec une seule date.
+    // daterangepicker désactive ce bouton tant que la plage est incomplète →
+    // on le ré-active et on gère nous-mêmes la fermeture.
+    const originalUpdateFormInputs = this.picker.updateFormInputs;
+    this.picker.updateFormInputs = function () {
+      originalUpdateFormInputs.call(this);
+      this.container.find('button.applyBtn').prop('disabled', false);
+    };
+
+    // Infobulle « Départ uniquement » au doigt : pas de survol sur mobile.
+    // Délégué sur document → couvre le picker desktop ET le picker mobile.
+    jQuery(document).off('click.drpTip').on('click.drpTip', '.daterangepicker td.drp-depart-only', function () {
+      const $cell = jQuery(this);
+      // En phase « départ » la case est cliquable : le clic sélectionne
+      if ($cell.hasClass('available')) return;
+      const wasOpen = $cell.hasClass('drp-tip-open');
+      jQuery('.daterangepicker td.drp-tip-open').removeClass('drp-tip-open');
+      if (!wasOpen) $cell.addClass('drp-tip-open');
+    });
+    
+    // NB : posé directement sur le bouton (survit au detach() de updateCalendarUI,
+    // s'exécute avant le handler natif délégué).
+    this.picker.container.find('button.applyBtn').on('click', (e) => {
+      // Plage complète ET valide → comportement natif (applique + ferme)
+      if (this.picker.startDate && this.picker.startDate.isValid() &&
+          this.picker.endDate && this.picker.endDate.isValid()) return;
+      // Incomplète OU date invalide (ex. après "Effacer les dates") → on ferme simplement
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      this.picker.hide();
+    });
   }
 
   // À ajouter dans votre CalendarManager après l'initialisation du picker
@@ -376,6 +420,54 @@ enhancePickerPositioning() {
     }
   }
 
+
+  // ===== Règle de sélection : on raisonne en NUITS, pas en jours =====
+  // Un séjour [arrivée, départ] consomme les nuits arrivée … départ-1.
+  // Le jour de départ ne consomme aucune nuit : il reste donc atteignable
+  // même si une autre réservation commence ce jour-là.
+
+  hasOccupiedNight(startDate, endDate) {
+    const cursor = moment(startDate).startOf('day');
+    const end = moment(endDate).startOf('day');
+    while (cursor.isBefore(end, 'day')) {
+      if (this.icalManager.isDateUnavailable(cursor)) return true;
+      cursor.add(1, 'day');
+    }
+    return false;
+  }
+
+  // ⚠️ La condition de phase repose volontairement sur la simple véracité de
+  // picker.endDate. Ne pas la « durcir » avec .isValid() : après « Effacer les
+  // dates », endDate est un moment invalide mais truthy et startDate vaut
+  // aujourd'hui — on basculerait en phase départ avec une arrivée fictive, et
+  // si la nuit d'aujourd'hui est occupée le calendrier s'éteindrait en entier.
+  isDateInvalid(date, picker) {
+    // Phase « départ » : une arrivée est posée, on attend la date de sortie
+    if (picker && picker.startDate && !picker.endDate) {
+      if (date.isSameOrBefore(picker.startDate, 'day')) return true;
+      return this.hasOccupiedNight(picker.startDate, date);
+    }
+    // Phase « arrivée » : il faut pouvoir dormir la nuit de ce jour-là
+    return this.icalManager.isDateUnavailable(date);
+  }
+
+  getCustomDateClass(date, picker) {
+    // ⚠️ renvoyer false et non '' : la lib teste `isCustom !== false`
+    if (!this.icalManager.isDepartureOnly(date)) return false;
+
+    // Phase « départ » : la demi-case ne garde son sens que sur les jours
+    // réellement atteignables depuis l'arrivée choisie. Un jour dont le
+    // chemin est coupé redevient un jour fermé ordinaire, barré comme
+    // les autres.
+    if (picker && picker.startDate && !picker.endDate
+        && this.isDateInvalid(date, picker)) {
+      return false;
+    }
+
+    return 'drp-depart-only';
+  }
+  
+  
   findNextUnavailableDate(startDate) {
     this.nextUnavailableDate = null;
     if (!startDate || !startDate.isValid()) return null;
@@ -677,8 +769,19 @@ class ICalManager {
     }
   }
 
-  isDateUnavailable(date) {
+    isDateUnavailable(date) {
     return this.unavailableDates.has(date.format('YYYY-MM-DD'));
+  }
+
+  // 🆕 Nuit occupée dont la veille est libre : la matinée reste libre,
+  // ce jour est donc un départ possible → demi-case.
+  isDepartureOnly(date) {
+    if (!this.isDateUnavailable(date)) return false;
+    if (this.isDateUnavailable(moment(date).subtract(1, 'day'))) return false;
+    // Aujourd'hui : personne ne peut en partir (minDate interdit d'arriver
+    // avant), la demi-case n'aurait aucun sens.
+    if (date.isSameOrBefore(moment(), 'day')) return false;
+    return true;
   }
 
   getLastError() {
