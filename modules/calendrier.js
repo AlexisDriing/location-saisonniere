@@ -1,4 +1,4 @@
-// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.06
+// Gestion complète du calendrier : iCal + DateRangePicker - LOG production V1.07
 class CalendarManager {
   constructor() {
     this.UPDATE_INTERVAL = window.CONFIG.UPDATE_INTERVAL;
@@ -52,14 +52,11 @@ class CalendarManager {
         isCustomDate: function (date) {
           // Une plage complète est posée : ses extrémités gardent leur
           // surlignage de sélection, pas de demi-case par-dessus.
-          // ⚠️ isAfter et non la simple véracité : au démarrage la lib
-          // initialise endDate à aujourd'hui, et après setEndDate(null)
-          // endDate est un moment invalide — donc truthy dans les deux cas.
           if (this.endDate && this.endDate.isAfter(this.startDate, 'day')) {
             if (date.isSame(this.startDate, 'day')) return false;
             if (date.isSame(this.endDate, 'day')) return false;
           }
-          return manager.getCustomDateClass(date);
+          return manager.getCustomDateClass(date, this);
         },
         locale: {
           format: 'DD/MM/YYYY',
@@ -454,9 +451,20 @@ enhancePickerPositioning() {
     return this.icalManager.isDateUnavailable(date);
   }
 
-  getCustomDateClass(date) {
+  getCustomDateClass(date, picker) {
     // ⚠️ renvoyer false et non '' : la lib teste `isCustom !== false`
-    return this.icalManager.isDepartureOnly(date) ? 'drp-depart-only' : false;
+    if (!this.icalManager.isDepartureOnly(date)) return false;
+
+    // Phase « départ » : la demi-case ne garde son sens que sur les jours
+    // réellement atteignables depuis l'arrivée choisie. Un jour dont le
+    // chemin est coupé redevient un jour fermé ordinaire, barré comme
+    // les autres.
+    if (picker && picker.startDate && !picker.endDate
+        && this.isDateInvalid(date, picker)) {
+      return false;
+    }
+
+    return 'drp-depart-only';
   }
   
   
