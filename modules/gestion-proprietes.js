@@ -1,4 +1,4 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.27
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.28
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
@@ -541,13 +541,16 @@ class PropertyManager {
       const cacheKey = this.buildCacheKey(filters);
       const cachedData = this.getFromCache(cacheKey);
       
-      if (cachedData) {
+     if (cachedData) {
         this.displayFilteredProperties(cachedData.properties);
         this.totalResults = cachedData.total || 0;
         this.totalPages = cachedData.total_pages || 1;
         this.currentPage = cachedData.page || 1;
         this.renderPagination();
-        
+
+        // 🗺️ Prévenir la carte des logements filtrés (même jeu de filtres)
+        window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: cachedData.map_points || [] } }));
+
         // Mettre à jour les prix si des dates sont sélectionnées
         if (filters.start && filters.end) {
           this.updatePricesForDates(filters.start, filters.end);
@@ -619,7 +622,10 @@ class PropertyManager {
       
       // Mettre en cache la réponse
       this.setInCache(cacheKey, data);
-      
+
+      // 🗺️ Prévenir la carte des logements filtrés (même jeu de filtres)
+      window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: data.map_points || [] } }));
+
       // Mettre à jour les informations de pagination
       this.totalResults = data.total || 0;
       this.totalPages = data.total_pages || 1;
