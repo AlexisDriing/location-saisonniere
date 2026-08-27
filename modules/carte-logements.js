@@ -21,6 +21,8 @@
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
   let pointsEnAttente = null;  // points reçus avant que la carte soit prête
+  let rechercheEnCours = false; // une recherche de lieu repositionne la carte : on laisse la carte piloter
+  let rechercheTimeout = null;
 
   function enGeoJSON(points) {
     return {
@@ -49,15 +51,18 @@
   });
 
   // 🔗 La recherche de lieu déplace la carte (on enrobe setSearchLocation sans modifier le module)
-  function brancherRecherche() {
+    function brancherRecherche() {
     const attente = setInterval(() => {
       if (!window.propertyManager) return;
       clearInterval(attente);
       const pm = window.propertyManager;
-      const originale = pm.setSearchLocation.bind(pm);
+
+      // 1) La recherche de lieu repositionne la carte
+      const setOrig = pm.setSearchLocation.bind(pm);
       pm.setSearchLocation = function (location, searchType, zoneInfo) {
-        originale(location, searchType, zoneInfo);
+        setOrig(location, searchType, zoneInfo);
         if (moveDepuisCarte || !map || !location) return;
+        rechercheEnCours = true; // la carte va bouger : c'est elle qui fera l'unique chargement
         const bbox = zoneInfo && zoneInfo.bbox
           ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
           : null;
@@ -66,6 +71,17 @@
         } else {
           map.flyTo({ center: [location.lng, location.lat], zoom: 11 });
         }
+        // Filet de sécurité si la carte ne bouge pas (déjà au bon endroit)
+        clearTimeout(rechercheTimeout);
+        rechercheTimeout = setTimeout(() => { if (rechercheEnCours) filtrerListeParCarte(); }, 900);
+      };
+
+      // 2) On neutralise le chargement "100 km" que la recherche déclenche elle-même :
+      //    seul le déplacement de carte (bbox) fera le chargement → plus de double affichage.
+      const applyOrig = pm.applyFilters.bind(pm);
+      pm.applyFilters = function (reset) {
+        if (rechercheEnCours && !moveDepuisCarte) return Promise.resolve();
+        return applyOrig(reset);
       };
     }, 200);
   }
@@ -217,6 +233,8 @@
   // en réutilisant le filtrage par bbox déjà géré par ton serveur.
   function filtrerListeParCarte() {
     if (!window.propertyManager) return;
+    rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
+    clearTimeout(rechercheTimeout);
     const b = map.getBounds();
     const c = map.getCenter();
     moveDepuisCarte = true; // ne pas re-déclencher un flyTo : c'est la carte qui parle
