@@ -1,4 +1,4 @@
-// LOG production V1.99.7 - chambres d'hôtes v1.066
+// LOG production V1.99.8 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -1750,7 +1750,11 @@ displayRoomDiscounts() {
       const percentageInput = blocElement.querySelector('[data-discount="percentage"]');
       
       if (nightsInput) nightsInput.value = discount.nights || '';
-      if (percentageInput) percentageInput.value = discount.percentage || '';
+      if (percentageInput) {
+        percentageInput.value = this.formatDiscountValue(discount);
+        percentageInput.setAttribute('data-raw-value', this.getDiscountValue(discount));
+        this.attachDiscountUnitToggle(percentageInput, discount, index, true);
+      }
       
       this.setupRoomDiscountListeners(blocElement, index);
       
@@ -1783,7 +1787,8 @@ addRoomDiscount() {
   }
   
   const newIndex = this.roomPricingData.discounts.length;
-  this.roomPricingData.discounts.push({ nights: 0, percentage: 0 });
+  const newDiscount = { nights: 0, percentage: 0 };
+  this.roomPricingData.discounts.push(newDiscount);
   
   const blocElement = this.getRoomDiscountBloc(newIndex);
   
@@ -1800,6 +1805,7 @@ addRoomDiscount() {
     if (percentageInput) {
       percentageInput.value = '';
       percentageInput.removeAttribute('data-raw-value');
+      this.attachDiscountUnitToggle(percentageInput, newDiscount, newIndex, true);
     }
     
     this.setupRoomDiscountListeners(blocElement, newIndex);
@@ -1837,26 +1843,31 @@ setupRoomDiscountListeners(blocElement, index) {
   }
 
   
-  if (percentageInput) {
+    if (percentageInput) {
     percentageInput.oninput = (e) => {
+      const discount = this.roomPricingData.discounts[index];
       let value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
-      if (value > 100) {
+
+      if (this.getDiscountUnit(discount) === 'percentage' && value > 100) {
         value = 100;
         e.target.value = '100';
       }
-      this.roomPricingData.discounts[index].percentage = value;
+
+      if (this.getDiscountUnit(discount) === 'amount') {
+        discount.amount = value;
+      } else {
+        discount.percentage = value;
+      }
+      e.target.setAttribute('data-raw-value', value);
       this.enableButtons();
     };
-    
-    percentageInput.onblur = function() {
-      const value = this.value.replace(/[^\d]/g, '');
-      if (value) {
-        this.value = value + ' %';
-      }
+
+    percentageInput.onblur = (e) => {
+      e.target.value = this.formatDiscountValue(this.roomPricingData.discounts[index]);
     };
-    
-    percentageInput.onfocus = function() {
-      this.value = this.value.replace(/[^\d]/g, '');
+
+    percentageInput.onfocus = (e) => {
+      e.target.value = e.target.value.replace(/[^\d]/g, '');
     };
   }
 }
@@ -3773,6 +3784,46 @@ setupTimeFormatters() {
   const currentValue = input.value.replace(/[^\d]/g, '');
   return currentValue || '';
 }
+
+// 🆕 Unité d'une réduction : "amount" (€) ou "percentage" (%)
+// Une réduction sans clé "type" est un pourcentage → annonces existantes intactes
+getDiscountUnit(discount) {
+  return (discount && discount.type === 'amount') ? 'amount' : 'percentage';
+}
+
+getDiscountValue(discount) {
+  if (!discount) return 0;
+  return (this.getDiscountUnit(discount) === 'amount' ? discount.amount : discount.percentage) || 0;
+}
+
+// Bascule l'unité et vide la valeur (10 % ≠ 10 €)
+setDiscountUnit(discount, unit) {
+  if (unit === 'amount') {
+    discount.type = 'amount';
+    discount.amount = 0;
+    delete discount.percentage;
+  } else {
+    delete discount.type;
+    delete discount.amount;
+    discount.percentage = 0;
+  }
+}
+
+formatDiscountValue(discount) {
+  const value = this.getDiscountValue(discount);
+  if (!value) return '';
+  return value + (this.getDiscountUnit(discount) === 'amount' ? ' €' : ' %');
+}
+
+// 🆕 Taxe de séjour : "amount" (€ fixe) ou "percentage" (% de la nuitée)
+getTouristTaxUnit(tax) {
+  return (tax && tax.mode === 'percent_per_adult_night') ? 'percentage' : 'amount';
+}
+
+getTouristTaxValue(tax) {
+  if (!tax) return 0;
+  return (this.getTouristTaxUnit(tax) === 'percentage' ? tax.rate : tax.amount) || 0;
+}
   
   getDateValue(input) {
     const dateValue = input.getAttribute('data-date-value');
@@ -4153,7 +4204,9 @@ setupTallyButton() {
           
           // Prendre la première (qui sera la plus élevée après le tri)
           const weekDiscount = applicableDiscounts[0];
-          weekPrice = weekPrice * (1 - weekDiscount.percentage / 100);
+          weekPrice -= (weekDiscount.type === 'amount')
+            ? Math.min(weekDiscount.amount || 0, weekPrice)
+            : weekPrice * (weekDiscount.percentage || 0) / 100;
         }
       }
       
@@ -5621,6 +5674,13 @@ prefillTouristTaxOptions() {
   const noLabel = document.getElementById('label-taxe-non' + suffix);
   
   const touristTax = this.pricingData.touristTax;
+  const taxUnit = this.getTouristTaxUnit(touristTax);
+  
+  // 🆕 Greffer le sélecteur AVANT de gérer l'affichage : le wrapper doit déjà
+  // exister pour être masqué avec le champ (sinon les boutons € / % restent
+  // visibles alors que la taxe est sur "Non")
+  this.attachTouristTaxUnitToggle(priceInput, taxUnit);
+  const priceField = priceInput.closest('.unit-toggle-wrap') || priceInput;
   
   if (touristTax && touristTax.enabled) {
     // Activer "Oui"
@@ -5629,10 +5689,11 @@ prefillTouristTaxOptions() {
     if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
     if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
     
-    priceInput.style.display = 'block';
-    if (touristTax.amount) {
-      priceInput.value = String(touristTax.amount).replace('.', ',') + ' €';
-      priceInput.setAttribute('data-raw-value', touristTax.amount);
+    priceField.style.display = 'block';
+    const taxValue = this.getTouristTaxValue(touristTax);
+    if (taxValue) {
+      priceInput.value = String(taxValue).replace('.', ',') + (taxUnit === 'percentage' ? ' %' : ' €');
+      priceInput.setAttribute('data-raw-value', taxValue);
     }
   } else {
     // "Non" par défaut
@@ -5641,14 +5702,14 @@ prefillTouristTaxOptions() {
     if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
     if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
     
-    priceInput.style.display = 'none';
+    priceField.style.display = 'none';
     priceInput.value = '';
     priceInput.removeAttribute('data-raw-value');
   }
   
   // Sauvegarder l'état initial
   this.initialValues.touristTaxEnabled = touristTax?.enabled ?? false;
-  this.initialValues.touristTaxAmount = touristTax?.amount || 0;
+  this.initialValues.touristTaxAmount = this.getTouristTaxValue(touristTax);
 }
 
   // 🆕 Pré-remplir les options de supplément voyageurs
@@ -5858,7 +5919,12 @@ setupTouristTaxListeners() {
   
   if (!yesRadio || !noRadio || !priceInput) return;
   
-  // Parse décimal : accepte "0,88", "0.88", "0,88 €"
+    // 🆕 Le sélecteur enveloppe le champ : c'est le wrapper qu'il faut masquer,
+  // sinon les boutons € / % restent flottants. Résolution paresseuse : le
+  // wrapper peut ne pas encore exister au moment où on câble les listeners.
+  const getPriceField = () => priceInput.closest('.unit-toggle-wrap') || priceInput;
+  
+  // Parse décimal : accepte "0,88", "0.88", "0,88 €", "5 %"
   const parseTaxAmount = (value) => {
     const cleaned = String(value).replace(',', '.').replace(/[^\d.]/g, '');
     const amount = parseFloat(cleaned);
@@ -5871,7 +5937,7 @@ setupTouristTaxListeners() {
       if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
       if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
       
-      priceInput.style.display = 'block';
+      getPriceField().style.display = 'block';
       setTimeout(() => priceInput.focus(), 100);
       
       if (!this.pricingData.touristTax) {
@@ -5889,7 +5955,7 @@ setupTouristTaxListeners() {
       if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
       if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
       
-      priceInput.style.display = 'none';
+      getPriceField().style.display = 'none';
       priceInput.value = '';
       priceInput.removeAttribute('data-raw-value');
       
@@ -6065,7 +6131,9 @@ displayDiscounts() {
       }
       
       if (percentageInput) {
-        percentageInput.value = discount.percentage || '';
+        percentageInput.value = this.formatDiscountValue(discount);
+        percentageInput.setAttribute('data-raw-value', this.getDiscountValue(discount));
+        this.attachDiscountUnitToggle(percentageInput, discount, index, false);
       }
       
       // Ajouter les listeners pour modifications
@@ -6126,6 +6194,7 @@ addDiscount() {
     if (percentageInput) {
       percentageInput.value = '';
       percentageInput.removeAttribute('data-raw-value');
+      this.attachDiscountUnitToggle(percentageInput, newDiscount, newIndex, false);
     }
     
     // Ajouter les listeners
@@ -6182,40 +6251,60 @@ setupDiscountListeners(blocElement, index) {
     });
   }
   
-  // Version simplifiée :
+    // 🆕 La valeur est un % OU un montant en € selon l'unité choisie
   if (percentageInput) {
-    // Récupérer la valeur en enlevant le %
     percentageInput.addEventListener('input', (e) => {
+      const discount = this.pricingData.discounts[index];
       let value = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
-      
-      // Limiter entre 1 et 100 si une valeur est entrée
-      if (value > 0) {
-        if (value > 100) {
-          value = 100;
-          e.target.value = '100';
-        } else if (value < 1) {
-          value = 1;
-          e.target.value = '1';
-        }
+
+      // Le plafond à 100 ne concerne que le mode pourcentage
+      if (this.getDiscountUnit(discount) === 'percentage' && value > 100) {
+        value = 100;
+        e.target.value = '100';
       }
-      
-      this.pricingData.discounts[index].percentage = value;
+
+      if (this.getDiscountUnit(discount) === 'amount') {
+        discount.amount = value;
+      } else {
+        discount.percentage = value;
+      }
+      e.target.setAttribute('data-raw-value', value);
       this.enableButtons();
     });
-    
-    // Formatage au blur : ajouter %
-    percentageInput.addEventListener('blur', function() {
-      const value = this.value.replace(/[^\d]/g, '');
-      if (value) {
-        this.value = value + ' %';
-      }
+
+    // Formatage au blur : ajouter l'unité courante
+    percentageInput.addEventListener('blur', (e) => {
+      e.target.value = this.formatDiscountValue(this.pricingData.discounts[index]);
     });
-    
-    // Retirer le % au focus
-    percentageInput.addEventListener('focus', function() {
-      this.value = this.value.replace(/[^\d]/g, '');
+
+    // Retirer l'unité au focus
+    percentageInput.addEventListener('focus', (e) => {
+      e.target.value = e.target.value.replace(/[^\d]/g, '');
     });
   }
+}
+
+// 🆕 Greffer le sélecteur € / % sur un champ réduction
+// Le helper vient du script Webflow ; garde-fou si absent
+attachDiscountUnitToggle(input, discount, index, isRoom) {
+  if (!window.UnitToggle) return;
+
+  window.UnitToggle.attach(input, {
+    units: ['percentage', 'amount'],
+    value: this.getDiscountUnit(discount),
+    onChange: (unit) => {
+      const target = isRoom
+        ? this.roomPricingData.discounts[index]
+        : this.pricingData.discounts[index];
+      if (!target) return;
+
+      this.setDiscountUnit(target, unit);   // vide la valeur
+      input.value = '';
+      input.removeAttribute('data-raw-value');
+      input.focus();
+      this.enableButtons();
+    }
+  });
 }
 
 updateAddButtonState() {
