@@ -5707,9 +5707,41 @@ prefillTouristTaxOptions() {
     priceInput.removeAttribute('data-raw-value');
   }
   
-  // Sauvegarder l'état initial
+    // Sauvegarder l'état initial
   this.initialValues.touristTaxEnabled = touristTax?.enabled ?? false;
   this.initialValues.touristTaxAmount = this.getTouristTaxValue(touristTax);
+}
+
+// 🆕 Sélecteur d'unité de la taxe de séjour
+// Le helper vient du script Webflow ; garde-fou si absent
+attachTouristTaxUnitToggle(priceInput, currentUnit) {
+  if (!window.UnitToggle) return;
+
+  window.UnitToggle.attach(priceInput, {
+    units: ['amount', 'percentage'],
+    value: currentUnit,
+    onChange: (unit) => {
+      if (!this.pricingData.touristTax) {
+        this.pricingData.touristTax = { enabled: true };
+      }
+      const tax = this.pricingData.touristTax;
+
+      if (unit === 'percentage') {
+        tax.mode = 'percent_per_adult_night';
+        tax.rate = 0;
+        delete tax.amount;
+      } else {
+        tax.mode = 'per_adult_night';
+        tax.amount = 0;
+        delete tax.rate;
+      }
+
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+      priceInput.focus();
+      this.enableButtons();
+    }
+  });
 }
 
   // 🆕 Pré-remplir les options de supplément voyageurs
