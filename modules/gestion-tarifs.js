@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison - LOG production V1.22
+// Gestion de l'affichage des tarifs par saison - LOG production V1.24
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -40,7 +40,10 @@ class TariffsDisplayManager {
         
         // Prendre la première (qui sera la plus élevée après le tri)
         const weekDiscount = applicableDiscounts[0];
-        weekPrice = weekPrice * (1 - weekDiscount.percentage / 100);
+        // 🆕 Montant en € ou pourcentage
+        weekPrice -= (weekDiscount.type === 'amount')
+          ? Math.min(weekDiscount.amount || 0, weekPrice)
+          : weekPrice * (weekDiscount.percentage || 0) / 100;
       }
     }
     
