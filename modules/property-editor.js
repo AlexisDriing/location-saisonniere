@@ -5747,7 +5747,7 @@ attachTouristTaxUnitToggle(priceInput, currentUnit) {
   // Le champ, lui, doit rester visible à l'intérieur : Webflow le masque
   // par défaut, et plus personne ne le débloquait.
   if (priceInput.closest('.unit-toggle-wrap')) {
-    priceInput.style.display = 'block';
+    priceInput.style.display = 'flex';
   }
 }
 
