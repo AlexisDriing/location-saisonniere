@@ -1,4 +1,4 @@
-// LOG production V1.38.44
+// LOG production V1.38.45
 // Page google
 class InterfaceManager {
   constructor() {
@@ -367,36 +367,45 @@ setupConditionsAnnulation() {
       'Borne électrique': 'borne-electrique'
     };
     
-    // Masquer tous les équipements au départ
-    Object.values(equipementMapping).forEach(elementId => {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.style.display = 'none';
-      }
-    });
-    
     // Chercher l'élément qui contient les équipements
-    const equipementsElement = document.querySelector('[data-equipements-principaux]');
-    
-    if (!equipementsElement) {
-      console.warn('⚠️ Élément data-equipements-principaux non trouvé');
-      return;
-    }
-    
-    // Récupérer la valeur du champ
-    const equipementsString = equipementsElement.getAttribute('data-equipements-principaux');
-    
-    if (!equipementsString || equipementsString.trim() === '') {
-      return;
-    }
+const equipementsElement = document.querySelector('[data-equipements-principaux]');
 
-    const blocEquipements = document.querySelector('.blocentier-equipements:not(.chambre)');
-    if (blocEquipements) {
-      blocEquipements.style.display = 'block'; // ou 'block' selon votre design
-    }
-    
-    // Parser les équipements (séparés par des virgules)
-    const equipements = equipementsString.split(',').map(eq => eq.trim());
+if (!equipementsElement) {
+  console.warn('⚠️ Élément data-equipements-principaux non trouvé');
+}
+
+// Récupérer la valeur du champ
+const equipementsString = equipementsElement
+  ? (equipementsElement.getAttribute('data-equipements-principaux') || '')
+  : '';
+
+// Parser les équipements (séparés par des virgules)
+const equipements = equipementsString
+  .split(',')
+  .map(eq => eq.trim())
+  .filter(eq => eq !== '');
+
+// Supprimer du DOM les équipements que le logement n'a pas.
+// On les retire au lieu de les masquer : un display:none reste lu par les
+// moteurs de recherche, qui reprenaient la liste complète du template dans
+// leurs extraits de résultats.
+Object.keys(equipementMapping).forEach(nom => {
+  if (equipements.includes(nom)) return;
+
+  const element = document.getElementById(equipementMapping[nom]);
+  if (element) {
+    element.remove();
+  }
+});
+
+if (equipements.length === 0) {
+  return;
+}
+
+const blocEquipements = document.querySelector('.blocentier-equipements:not(.chambre)');
+if (blocEquipements) {
+  blocEquipements.style.display = 'block';
+}
     
     // Afficher chaque équipement trouvé
     let equipementsAffiches = 0;

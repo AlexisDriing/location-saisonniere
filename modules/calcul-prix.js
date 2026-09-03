@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.130
+// Calculateur de prix principal - LOG production V1.132
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -68,6 +68,8 @@ class PriceCalculator {
             acompte: parsedData.acompte || null,
             arrhes: parsedData.arrhes || null
           };
+          // 🆕 Taxe de séjour du logement parent (commune à toutes les chambres)
+          this._parentTouristTax = parsedData.touristTax || null;
           this.pricingData = null;
           return;
         }
@@ -93,8 +95,9 @@ class PriceCalculator {
 
   listenForDateChanges() {
     if (typeof jQuery !== 'undefined' && jQuery("#input-calendar, #input-calendar-mobile").length) {
-            jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
-        if (picker.startDate && picker.endDate) {
+              jQuery("#input-calendar, #input-calendar-mobile").on("apply.daterangepicker", (e, picker) => {
+        if (picker.startDate && picker.startDate.isValid() &&
+            picker.endDate && picker.endDate.isValid()) {
           this.startDate = picker.startDate;
           this.endDate = picker.endDate;
           this.calculateAndDisplayPrices();
@@ -159,6 +162,14 @@ class PriceCalculator {
     calculSupplementEls.forEach(el => el.textContent = '');
     const prixSupplementEls = Utils.getAllElementsById('prix-supplement');
     prixSupplementEls.forEach(el => el.textContent = '');
+
+    // 🆕 Masquer la ligne taxe de séjour (desktop + mobile)
+    const ligneTaxeResetEls = Utils.getAllElementsById('ligne-taxe-sejour');
+    ligneTaxeResetEls.forEach(el => el.style.display = 'none');
+    const calculTaxeResetEls = Utils.getAllElementsById('calcul-taxe');
+    calculTaxeResetEls.forEach(el => el.textContent = '');
+    const prixTaxeResetEls = Utils.getAllElementsById('prix-taxe');
+    prixTaxeResetEls.forEach(el => el.textContent = '');
     
     // ===== RÉINITIALISER LES RÉDUCTIONS (SIMPLIFIÉ) =====
     this.elements.prixReduction.forEach(element => {
@@ -433,6 +444,16 @@ class PriceCalculator {
         details.cleaningFee = this.pricingData.cleaning.price || 0;
         details.cleaningOptional = this.pricingData.cleaning.optional || false;
       }
+
+      // 🆕 Taxe de séjour : tarif communal × adultes × nuits (enfants exonérés)
+      // Pour les chambres d'hôtes, la taxe vient du logement parent (_parentTouristTax)
+      details.touristTaxAdults = 0;
+      const touristTax = this.pricingData.touristTax || this._parentTouristTax;
+      if (touristTax && touristTax.enabled && touristTax.amount > 0) {
+        const taxAdultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
+        details.touristTaxAdults = taxAdultsCount;
+        details.touristTax = touristTax.amount * taxAdultsCount * details.nights;
+      }
       
       // Prix total - Le ménage "en option" n'est PAS ajouté au total
       if (details.cleaningOptional) {
@@ -444,6 +465,10 @@ class PriceCalculator {
       if (details.cleaningFee > 0 && !details.cleaningOptional) {
         details.platformPrice += details.cleaningFee;
       }
+
+      // 🆕 La taxe s'ajoute des deux côtés (direct + plateforme) pour un % de réduction honnête
+      details.totalPrice += details.touristTax;
+      details.platformPrice += details.touristTax;
       
       return details;
       
@@ -610,12 +635,42 @@ class PriceCalculator {
           prixSupplementEls.forEach(el => {
             el.textContent = `${formatPrice(details.extraGuestsFee)}€`;
           });
-        } else {
+                } else {
           ligneSupplementEls.forEach(el => el.style.display = 'none');
           calculSupplementEls.forEach(el => el.textContent = '');
           prixSupplementEls.forEach(el => el.textContent = '');
         }
       } 
+
+      // 🆕 NOUVEAU : Taxe de séjour
+      // Formateur dédié : seule la ligne taxe peut afficher des centimes (ex : 0,88 €/adulte)
+      const formatTaxe = (price) => {
+        const rounded = Math.round(price * 100) / 100;
+        return rounded.toLocaleString("fr-FR", {
+          minimumFractionDigits: Number.isInteger(rounded) ? 0 : 2,
+          maximumFractionDigits: 2
+        });
+      };
+      const ligneTaxeEls = Utils.getAllElementsById('ligne-taxe-sejour');
+      const calculTaxeEls = Utils.getAllElementsById('calcul-taxe');
+      const prixTaxeEls = Utils.getAllElementsById('prix-taxe');
+
+      if (ligneTaxeEls.length) {
+        if (details.touristTax > 0) {
+          ligneTaxeEls.forEach(el => el.style.display = 'flex');
+          calculTaxeEls.forEach(el => {
+            const a = details.touristTaxAdults;
+            el.textContent = `Taxe de séjour (${a} adulte${a > 1 ? 's' : ''} × ${details.nights} nuit${details.nights > 1 ? 's' : ''})`;
+          });
+          prixTaxeEls.forEach(el => {
+            el.textContent = `${formatTaxe(details.touristTax)}€`;
+          });
+        } else {
+          ligneTaxeEls.forEach(el => el.style.display = 'none');
+          calculTaxeEls.forEach(el => el.textContent = '');
+          prixTaxeEls.forEach(el => el.textContent = '');
+        }
+      }
     
     // ===== GESTION DES RÉDUCTIONS (SIMPLIFIÉ) =====
     if (details.discountAmount > 0) {

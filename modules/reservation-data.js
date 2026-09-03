@@ -181,9 +181,12 @@ class ReservationDataManager {
     }
 
     
-    if (window.priceCalculator && window.priceCalculator.startDate) {
+  if (window.priceCalculator && window.priceCalculator.startDate) {
     const ligneSupplement = Utils.getElementByIdWithFallback("ligne-supplement-voyageurs");
     const supplementVisible = ligneSupplement && ligneSupplement.style.display !== "none";
+    // 🆕 Taxe de séjour
+    const ligneTaxe = Utils.getElementByIdWithFallback("ligne-taxe-sejour");
+    const taxeVisible = ligneTaxe && ligneTaxe.style.display !== "none";
   
     prixDetails = {
       calcNuit: Utils.getElementByIdWithFallback("calcul-nuit")?.textContent || "",
@@ -192,6 +195,8 @@ class ReservationDataManager {
       prixMenage: Utils.getElementByIdWithFallback("prix-menage")?.innerHTML || "",
       prixSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("prix-supplement")?.textContent || "") : "",
       calculSupplement: supplementVisible ? (Utils.getElementByIdWithFallback("calcul-supplement")?.textContent || "") : "",
+      prixTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("prix-taxe")?.textContent || "") : "",
+      calculTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("calcul-taxe")?.textContent || "") : "",
       totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
       dateDebut,
       dateFin,

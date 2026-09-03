@@ -1,4 +1,4 @@
-// Améliorations spécifiques mobile - LOG production
+// Améliorations spécifiques mobile - LOG production V1.02
 class MobileEnhancementsManager {
   constructor() {
     this.init();
@@ -25,52 +25,14 @@ class MobileEnhancementsManager {
         const picker = mobileCalendar.data('daterangepicker');
         if (!picker || picker.enhanced) return;
         
-        let nextUnavailableDate = null;
-        
-        // Améliorer la validation des dates
-        const originalIsInvalidDate = picker.isInvalidDate;
-        picker.isInvalidDate = function(date) {
-          if (this.startDate && !this.endDate) {
-            if (date.isBefore(this.startDate, 'day')) return true;
-            if (nextUnavailableDate && date.isSameOrAfter(nextUnavailableDate, 'day')) return true;
-          }
-          
-          const result = originalIsInvalidDate.call(this, date);
-          if (result && this.startDate && date.isAfter(this.startDate, 'day') && !nextUnavailableDate) {
-            nextUnavailableDate = date.clone();
-          }
-          return result;
-        };
-        
-        // Améliorer le rendu du calendrier
-        const originalRenderCalendar = picker.renderCalendar;
-        picker.renderCalendar = function(side) {
-          originalRenderCalendar.call(this, side);
-          
-          if (this.startDate && !this.endDate && !nextUnavailableDate) {
-            const calendar = $(this.container).find('.calendar.' + side);
-            const dates = calendar.find('td:not(.off)');
-            let foundStart = false;
-            let foundUnavailable = false;
-            
-            dates.each(function() {
-              const dateStr = $(this).attr('data-date');
-              const date = moment(dateStr, 'YYYY-MM-DD');
-              
-              if (foundStart && !foundUnavailable) {
-                if (originalIsInvalidDate.call(picker, date)) {
-                  foundUnavailable = true;
-                  nextUnavailableDate = date.clone();
-                }
-              }
-              
-              if (picker.startDate && date.isSame(picker.startDate, 'day')) {
-                foundStart = true;
-              }
-            });
-          }
-        };
-        
+                // ❌ La règle de sélection vivait ici en double. Elle est désormais
+        // dans CalendarManager.isDateInvalid() (calendrier.js) et s'applique
+        // au picker mobile via `this`, sans duplication.
+        //
+        // ❌ La boucle de rendu qui suivait lisait un attribut `data-date`
+        // que daterangepicker n'écrit pas (il écrit data-title="rXcY") :
+        // elle ne s'est jamais exécutée. Supprimée.
+
         // Gestion de l'affichage mobile
         const originalHide = picker.hide;
         const originalShow = picker.show;
@@ -121,10 +83,10 @@ class MobileEnhancementsManager {
               closeBtn.on("click", (e) => {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                picker.isShowing = false;
-                originalHide.call(picker);
-                document.body.classList.remove("no-scroll");
-                $(picker.container).removeClass('mobile-fullscreen').hide();
+                // ✅ FIX : passer par le hide() complet du picker.
+                // Il restaure endDate quand une seule date est sélectionnée,
+                // ce qui évite le crash de show() (endDate.clone() sur null) à la ré-ouverture.
+                picker.hide();
               });
               
               header.append(closeBtn);
@@ -135,23 +97,23 @@ class MobileEnhancementsManager {
               buttons.addClass('mobile-fixed-buttons');
               
               // Gestionnaires des boutons
-              buttons.find('.applyBtn').off('click').on('click', (e) => {
+              const applyBtn = buttons.find('.applyBtn');
+              applyBtn.prop('disabled', false); // "Fermer" toujours cliquable
+              applyBtn.off('click').on('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (picker.startDate && picker.endDate) {
-                  picker.clickApply();
+                if (picker.startDate && picker.startDate.isValid() &&
+                    picker.endDate && picker.endDate.isValid()) {
+                  picker.clickApply();  // plage complète ET valide : applique + ferme
+                } else {
+                  picker.hide();        // incomplète OU invalide : ferme sans rien enregistrer
                 }
-                picker.isShowing = false;
-                originalHide.call(picker);
-                document.body.classList.remove("no-scroll");
-                $(picker.container).hide();
               });
               
               buttons.find('.cancelBtn').off('click').on('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 picker.clickCancel();
-                nextUnavailableDate = null;
                 picker.isShowing = false;
                 originalHide.call(picker);
                 document.body.classList.remove("no-scroll");
@@ -164,7 +126,6 @@ class MobileEnhancementsManager {
         // Gestion des dates
         const originalSetStartDate = picker.setStartDate;
         picker.setStartDate = function(date) {
-          nextUnavailableDate = null;
           originalSetStartDate.call(this, date);
           if (this.startDate) {
             this.updateView();
@@ -179,6 +140,14 @@ class MobileEnhancementsManager {
           }
         };
         
+        // ✅ FIX : garder le bouton "Fermer" (applyBtn) actif même avec une seule
+        // date (daterangepicker le désactive à chaque updateView sinon)
+        const originalUpdateFormInputs = picker.updateFormInputs;
+        picker.updateFormInputs = function () {
+          originalUpdateFormInputs.call(this);
+          this.container.find('button.applyBtn').prop('disabled', false);
+        };
+
         picker.enhanced = true;
       };
       

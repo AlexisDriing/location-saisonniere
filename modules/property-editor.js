@@ -1,4 +1,4 @@
-// LOG production V1.99.5 - chambres d'hôtes v1.066
+// LOG production V1.99.7 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -201,6 +201,11 @@ async setupParentChambreHoteDisplay() {
   // 1. Masquer la tab 3 (tarification)
   const tabTarification = document.getElementById('tab-tarification');
   if (tabTarification) tabTarification.style.display = 'none';
+  
+  // 🆕 Afficher le bloc taxe de séjour dédié au parent chambres d'hôtes
+  // (masqué par défaut dans Webflow, la tab tarification étant cachée en mode B&B)
+  const blocTaxeParent = document.getElementById('bloc-taxe-sejour-parent');
+  if (blocTaxeParent) blocTaxeParent.style.display = 'block';
   
   // 2. Masquer le bloc taille maison
   const blocTailleMaison = document.getElementById('bloc-taille-maison');
@@ -3888,6 +3893,8 @@ setupTimeFormatters() {
     // NOUVEAU : Pré-remplir l'option prix week-end
     this.prefillWeekendOptions();
     this.prefillExtraGuestsOptions();
+    // 🆕 Pré-remplir la taxe de séjour
+    this.prefillTouristTaxOptions();
     this.prefillHoraires();
     this.prefillCancellationPolicy();
     this.prefillComplexFields();
@@ -5586,6 +5593,64 @@ prefillWeekendOptions() {
   this.initialValues.weekendPrice = weekend?.price || 0;
 }
 
+// 🆕 Pré-remplir l'option taxe de séjour
+// Deux blocs Webflow existent : IDs standards (tab tarification, gîtes)
+// et IDs suffixés "-parent" (section informations, parent chambres d'hôtes)
+prefillTouristTaxOptions() {
+  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+  const suffix = isChambreHote ? '-parent' : '';
+  
+  // 🆕 Le bloc "parent" ne concerne que les chambres d'hôtes :
+  // le masquer explicitement pour les gîtes / logements entiers
+  if (!isChambreHote) {
+    const blocTaxeParent = document.getElementById('bloc-taxe-sejour-parent');
+    if (blocTaxeParent) blocTaxeParent.style.display = 'none';
+  }
+  
+  const yesRadio = document.getElementById('taxe-oui' + suffix);
+  const noRadio = document.getElementById('taxe-non' + suffix);
+  const priceInput = document.getElementById('taxe-price-input' + suffix);
+  
+  if (!yesRadio || !noRadio || !priceInput) {
+    console.warn('⚠️ Éléments taxe de séjour non trouvés dans le DOM');
+    return;
+  }
+  
+  // Récupérer les labels Webflow
+  const yesLabel = document.getElementById('label-taxe-oui' + suffix);
+  const noLabel = document.getElementById('label-taxe-non' + suffix);
+  
+  const touristTax = this.pricingData.touristTax;
+  
+  if (touristTax && touristTax.enabled) {
+    // Activer "Oui"
+    yesRadio.checked = true;
+    noRadio.checked = false;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    
+    priceInput.style.display = 'block';
+    if (touristTax.amount) {
+      priceInput.value = String(touristTax.amount).replace('.', ',') + ' €';
+      priceInput.setAttribute('data-raw-value', touristTax.amount);
+    }
+  } else {
+    // "Non" par défaut
+    yesRadio.checked = false;
+    noRadio.checked = true;
+    if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+    if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+    
+    priceInput.style.display = 'none';
+    priceInput.value = '';
+    priceInput.removeAttribute('data-raw-value');
+  }
+  
+  // Sauvegarder l'état initial
+  this.initialValues.touristTaxEnabled = touristTax?.enabled ?? false;
+  this.initialValues.touristTaxAmount = touristTax?.amount || 0;
+}
+
   // 🆕 Pré-remplir les options de supplément voyageurs
 prefillExtraGuestsOptions() {
   const yesRadio = document.getElementById('extra-guests-oui');
@@ -5776,6 +5841,100 @@ setupWeekendListeners() {
       this.pricingData.defaultPricing.weekend = {};
     }
     this.pricingData.defaultPricing.weekend.price = price;
+    this.enableButtons();
+  });
+}
+
+// 🆕 Listeners pour la taxe de séjour
+setupTouristTaxListeners() {
+  const isChambreHote = (this.propertyData.mode_location || '') === "Chambre d'hôtes";
+  const suffix = isChambreHote ? '-parent' : '';
+  
+  const yesRadio = document.getElementById('taxe-oui' + suffix);
+  const noRadio = document.getElementById('taxe-non' + suffix);
+  const yesLabel = document.getElementById('label-taxe-oui' + suffix);
+  const noLabel = document.getElementById('label-taxe-non' + suffix);
+  const priceInput = document.getElementById('taxe-price-input' + suffix);
+  
+  if (!yesRadio || !noRadio || !priceInput) return;
+  
+  // Parse décimal : accepte "0,88", "0.88", "0,88 €"
+  const parseTaxAmount = (value) => {
+    const cleaned = String(value).replace(',', '.').replace(/[^\d.]/g, '');
+    const amount = parseFloat(cleaned);
+    return isNaN(amount) ? 0 : Math.round(amount * 100) / 100;
+  };
+  
+  // Listener sur le radio "Oui"
+  yesRadio.addEventListener('change', () => {
+    if (yesRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      
+      priceInput.style.display = 'block';
+      setTimeout(() => priceInput.focus(), 100);
+      
+      if (!this.pricingData.touristTax) {
+        this.pricingData.touristTax = { enabled: true, mode: 'per_adult_night', amount: 0 };
+      }
+      this.pricingData.touristTax.enabled = true;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Listener sur le radio "Non"
+  noRadio.addEventListener('change', () => {
+    if (noRadio.checked) {
+      if (yesLabel) yesLabel.querySelector('.w-radio-input')?.classList.remove('w--redirected-checked');
+      if (noLabel) noLabel.querySelector('.w-radio-input')?.classList.add('w--redirected-checked');
+      
+      priceInput.style.display = 'none';
+      priceInput.value = '';
+      priceInput.removeAttribute('data-raw-value');
+      
+      if (!this.pricingData.touristTax) {
+        this.pricingData.touristTax = { mode: 'per_adult_night' };
+      }
+      this.pricingData.touristTax.enabled = false;
+      this.pricingData.touristTax.amount = 0;
+      
+      this.enableButtons();
+    }
+  });
+  
+  // Saisie : n'autoriser que chiffres, virgule et point
+  priceInput.addEventListener('input', () => {
+    const cleaned = priceInput.value.replace(/[^\d.,]/g, '');
+    if (priceInput.value !== cleaned) priceInput.value = cleaned;
+    priceInput.setAttribute('data-raw-value', parseTaxAmount(cleaned));
+  });
+  
+  // Au focus : réafficher la valeur brute (sans le €)
+  priceInput.addEventListener('focus', () => {
+    const rawValue = priceInput.getAttribute('data-raw-value');
+    if (rawValue) {
+      priceInput.value = String(rawValue).replace('.', ',');
+    }
+  });
+  
+  // Au blur : formater et enregistrer
+  priceInput.addEventListener('blur', () => {
+    const amount = parseTaxAmount(priceInput.value);
+    
+    if (amount > 0) {
+      priceInput.setAttribute('data-raw-value', amount);
+      priceInput.value = String(amount).replace('.', ',') + ' €';
+    } else {
+      priceInput.removeAttribute('data-raw-value');
+      priceInput.value = '';
+    }
+    
+    if (!this.pricingData.touristTax) {
+      this.pricingData.touristTax = { enabled: true, mode: 'per_adult_night' };
+    }
+    this.pricingData.touristTax.amount = amount;
+    
     this.enableButtons();
   });
 }
@@ -7380,6 +7539,7 @@ cautionAcompteIds.forEach(id => {
   this.setupCleaningListeners();
   this.setupWeekendListeners();
   this.setupExtraGuestsListeners();
+  this.setupTouristTaxListeners();
   // 🆕 AJOUTER les gestionnaires d'opacité
   this.setupPriceOpacityHandlers();
 }
@@ -7882,6 +8042,7 @@ setBlockState(element, isActive) {
     this.prefillCleaningOptions();
     this.prefillWeekendOptions();
     this.prefillExtraGuestsOptions();
+    this.prefillTouristTaxOptions();
     // Réinitialiser les iCals depuis les valeurs initiales
     for (let i = 1; i <= 4; i++) {
       const input = document.getElementById(`ical-url-${i}`);
