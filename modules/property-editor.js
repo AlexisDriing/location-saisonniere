@@ -1,4 +1,4 @@
-// LOG production V1.99.8 - chambres d'hôtes v1.066
+// LOG production V1.99.9 - chambres d'hôtes v1.066
 // Gestionnaire de la page de modification de logement
 class PropertyEditor {
 
@@ -5742,6 +5742,13 @@ attachTouristTaxUnitToggle(priceInput, currentUnit) {
       this.enableButtons();
     }
   });
+
+  // 🆕 C'est le wrapper qui porte désormais l'affichage Oui/Non.
+  // Le champ, lui, doit rester visible à l'intérieur : Webflow le masque
+  // par défaut, et plus personne ne le débloquait.
+  if (priceInput.closest('.unit-toggle-wrap')) {
+    priceInput.style.display = 'block';
+  }
 }
 
   // 🆕 Pré-remplir les options de supplément voyageurs
