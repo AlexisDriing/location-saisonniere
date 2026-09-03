@@ -5958,8 +5958,8 @@ setupTouristTaxListeners() {
   const priceInput = document.getElementById('taxe-price-input' + suffix);
   
   if (!yesRadio || !noRadio || !priceInput) return;
-  
-    // 🆕 Le sélecteur enveloppe le champ : c'est le wrapper qu'il faut masquer,
+
+  // 🆕 Le sélecteur enveloppe le champ : c'est le wrapper qu'il faut masquer,
   // sinon les boutons € / % restent flottants. Résolution paresseuse : le
   // wrapper peut ne pas encore exister au moment où on câble les listeners.
   const getPriceField = () => priceInput.closest('.unit-toggle-wrap') || priceInput;
@@ -6003,7 +6003,12 @@ setupTouristTaxListeners() {
         this.pricingData.touristTax = { mode: 'per_adult_night' };
       }
       this.pricingData.touristTax.enabled = false;
-      this.pricingData.touristTax.amount = 0;
+      // 🆕 Remettre à zéro la valeur portée par le mode courant
+      if (this.getTouristTaxUnit(this.pricingData.touristTax) === 'percentage') {
+        this.pricingData.touristTax.rate = 0;
+      } else {
+        this.pricingData.touristTax.amount = 0;
+      }
       
       this.enableButtons();
     }
@@ -6016,7 +6021,7 @@ setupTouristTaxListeners() {
     priceInput.setAttribute('data-raw-value', parseTaxAmount(cleaned));
   });
   
-  // Au focus : réafficher la valeur brute (sans le €)
+  // Au focus : réafficher la valeur brute (sans l'unité)
   priceInput.addEventListener('focus', () => {
     const rawValue = priceInput.getAttribute('data-raw-value');
     if (rawValue) {
@@ -6024,23 +6029,33 @@ setupTouristTaxListeners() {
     }
   });
   
-  // Au blur : formater et enregistrer
+  // 🆕 Au blur : formater avec l'unité courante et enregistrer dans la bonne clé
   priceInput.addEventListener('blur', () => {
     const amount = parseTaxAmount(priceInput.value);
-    
-    if (amount > 0) {
-      priceInput.setAttribute('data-raw-value', amount);
-      priceInput.value = String(amount).replace('.', ',') + ' €';
+
+    if (!this.pricingData.touristTax) {
+      this.pricingData.touristTax = { enabled: true, mode: 'per_adult_night' };
+    }
+    const tax = this.pricingData.touristTax;
+    const isPercent = this.getTouristTaxUnit(tax) === 'percentage';
+
+    // Un pourcentage ne dépasse pas 100
+    const finalValue = isPercent ? Math.min(amount, 100) : amount;
+
+    if (finalValue > 0) {
+      priceInput.setAttribute('data-raw-value', finalValue);
+      priceInput.value = String(finalValue).replace('.', ',') + (isPercent ? ' %' : ' €');
     } else {
       priceInput.removeAttribute('data-raw-value');
       priceInput.value = '';
     }
-    
-    if (!this.pricingData.touristTax) {
-      this.pricingData.touristTax = { enabled: true, mode: 'per_adult_night' };
+
+    if (isPercent) {
+      tax.rate = finalValue;
+    } else {
+      tax.amount = finalValue;
     }
-    this.pricingData.touristTax.amount = amount;
-    
+
     this.enableButtons();
   });
 }
