@@ -1,4 +1,4 @@
-// LOG production V1.38.45
+// LOG production V1.38.46
 // Page google
 class InterfaceManager {
   constructor() {
@@ -1809,13 +1809,18 @@ if (blocEquipements) {
   
   
   // Construire la phrase dynamique
+  // 🆕 Formate une réduction selon son unité : "10%" ou "120 €"
+  const formatRemise = (d) => (d.type === 'amount')
+    ? `${d.amount} €`
+    : `${d.percentage}%`;
+  
   let phraseReduction = '';
   
   if (sortedDiscounts.length === 1) {
     // Une seule réduction
     const discount = sortedDiscounts[0];
     const nuitText = discount.nights === 1 ? 'nuit' : 'nuits';
-    phraseReduction = `En réservant ${discount.nights} ${nuitText} ou plus, profitez de ${discount.percentage}% de remise.`;
+    phraseReduction = `En réservant ${discount.nights} ${nuitText} ou plus, profitez de ${formatRemise(discount)} de remise.`;
     
   } else {
     // Plusieurs réductions
@@ -1832,8 +1837,8 @@ if (blocEquipements) {
       nightsText = nightsList.join(', ') + ' ou ' + lastNight;
     }
     
-    // Construire la liste des pourcentages
-    const percentagesList = sortedDiscounts.map(d => d.percentage + '%');
+    // Construire la liste des remises (% ou €)
+    const percentagesList = sortedDiscounts.map(formatRemise);
     let percentagesText = '';
     
     if (percentagesList.length === 2) {
