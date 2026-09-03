@@ -5717,9 +5717,10 @@ prefillTouristTaxOptions() {
 attachTouristTaxUnitToggle(priceInput, currentUnit) {
   if (!window.UnitToggle) return;
 
-  window.UnitToggle.attach(priceInput, {
+    window.UnitToggle.attach(priceInput, {
     units: ['amount', 'percentage'],
     value: currentUnit,
+    fullWidth: true,   // 🆕 le champ taxe occupe toute la largeur, sur sa propre ligne
     onChange: (unit) => {
       if (!this.pricingData.touristTax) {
         this.pricingData.touristTax = { enabled: true };
