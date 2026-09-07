@@ -48,15 +48,17 @@
     if (compteurEl) majCompteur(compteurEl);
   }
 
-  // Quand la liste rétrécit (zoom sur la carte), évite de rester bloqué dans le footer
+    let scrollAvantRendu = null;
+
+  // Le navigateur nous a-t-il déplacés parce que la page a raccourci ?
   function corrigerScrollListe() {
+    if (scrollAvantRendu === null) return;
+    if (window.scrollY >= scrollAvantRendu - 5) return; // personne ne nous a déplacés → rien à faire
     const wrapper = document.querySelector('.collection-list-wrapper');
     if (!wrapper) return;
     const hautListe = wrapper.getBoundingClientRect().top + window.scrollY;
-    const listeTientDansEcran = wrapper.offsetHeight < window.innerHeight;
-    if (listeTientDansEcran && window.scrollY > hautListe) {
-       window.scrollTo({ top: Math.max(0, hautListe - 20), behavior: 'auto' });
-    }
+    scrollAvantRendu = null;
+    window.scrollTo({ top: Math.max(0, hautListe - 20), behavior: 'auto' });
   }
   
   // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
@@ -65,11 +67,11 @@
     if (Array.isArray(pts)) majPointsCarte(pts);
   });
 
-  // Correction de scroll : on laisse la mise en page se stabiliser, puis on réessaie
+  // Correction de scroll : on note la position AVANT le re-rendu, on vérifie après
   window.addEventListener('driing:resultats-filtres', () => {
-    requestAnimationFrame(corrigerScrollListe); // AVANT le prochain affichage → aucun saut visible
-    setTimeout(corrigerScrollListe, 150);       // filets, si la mise en page n'était pas encore stable
-    setTimeout(corrigerScrollListe, 500);
+    scrollAvantRendu = window.scrollY;           // position avant que la liste change
+    requestAnimationFrame(corrigerScrollListe);  // contrôle avant le prochain affichage
+    setTimeout(corrigerScrollListe, 200);        // filet si la mise en page tarde
   });
 
 
