@@ -885,6 +885,9 @@ if (imageElement) {
     imageElement.style.backgroundImage = `url(${firstImageUrl})`;
     imageElement.classList.remove('w-dyn-bind-empty');
   }
+
+  // 🎠 Carrousel : les photos suivantes ne sont chargées qu'au survol / au clic
+  this.setupCarrouselCard(imageElement, propData.images_gallery);
 }
 
 // Image de l'hôte
@@ -949,6 +952,145 @@ if (hostImageElement) {
     }
   }
 
+  // Carrousel photo sur une card de liste.
+  // Rien n'est préchargé tant que le visiteur ne survole pas la card.
+  setupCarrouselCard(imageElement, gallery) {
+    const photos = (Array.isArray(gallery) ? gallery : [])
+      .map(p => (p && typeof p === 'object' ? p.url : p))
+      .filter(u => typeof u === 'string' && u.startsWith('http'));
+    if (photos.length < 2) return;
+
+    const media = imageElement.parentElement;
+    if (!media || media.querySelector('.cl-dots-liste')) return; // déjà en place
+    media.classList.add('cl-media-liste');
+
+    // Image jumelle qui sert au glissement (clonée pour hériter du même style)
+    const anim = imageElement.cloneNode(false);
+    anim.className = imageElement.className + ' cl-anim-liste';
+    anim.removeAttribute('src');
+    anim.removeAttribute('srcset');
+    anim.style.backgroundImage = '';
+    media.appendChild(anim);
+
+    // Flèches
+    const prev = document.createElement('span');
+    prev.className = 'cl-nav-liste cl-prev-liste';
+    prev.textContent = '‹';
+    const next = document.createElement('span');
+    next.className = 'cl-nav-liste cl-next-liste';
+    next.textContent = '›';
+
+    // Points (fenêtre de 5 + piste qui glisse)
+    const TAILLE_DOT = 6, ESPACE_DOT = 5, PAS = TAILLE_DOT + ESPACE_DOT;
+    const nbDots = Math.min(5, photos.length);
+    const dots = document.createElement('div');
+    dots.className = 'cl-dots-liste';
+    dots.style.width = (nbDots * TAILLE_DOT + (nbDots - 1) * ESPACE_DOT) + 'px';
+    const piste = document.createElement('div');
+    piste.className = 'cl-piste-liste';
+    photos.forEach(() => {
+      const d = document.createElement('span');
+      d.className = 'cl-dot-liste';
+      piste.appendChild(d);
+    });
+    dots.appendChild(piste);
+
+    media.appendChild(prev);
+    media.appendChild(next);
+    media.appendChild(dots);
+
+    let index = 0, enCours = false, prechargeFaite = false;
+
+    const debutFenetre = () => photos.length <= nbDots ? 0
+      : Math.max(0, Math.min(index - Math.floor(nbDots / 2), photos.length - nbDots));
+
+    const majDots = () => {
+      const debut = debutFenetre();
+      piste.style.transform = `translateX(${-debut * PAS}px)`;
+      Array.from(piste.children).forEach((d, k) => {
+        const pos = k - debut;
+        const visible = pos >= 0 && pos < nbDots;
+        const petit = visible && ((pos === 0 && debut > 0)
+          || (pos === nbDots - 1 && debut + nbDots < photos.length));
+        d.className = 'cl-dot-liste' + (k === index ? ' actif' : '') + (petit ? ' petit' : '');
+      });
+    };
+
+    const poser = (el, url) => {
+      el.src = url;
+      el.style.backgroundImage = `url(${url})`;
+    };
+
+    const precharger = (i) => {
+      const im = new Image();
+      im.src = photos[(i + photos.length) % photos.length];
+    };
+
+    const attendreImage = (url) => new Promise(res => {
+      const im = new Image();
+      let fini = false;
+      const ok = () => { if (!fini) { fini = true; res(); } };
+      im.onload = ok; im.onerror = ok;
+      im.src = url;
+      setTimeout(ok, 400); // filet : jamais plus de 400 ms d'attente
+    });
+
+    const glisser = async (sens) => {
+      if (enCours) return;
+      enCours = true;
+      const suivant = (index + sens + photos.length) % photos.length;
+      await attendreImage(photos[suivant]);
+
+      poser(anim, photos[suivant]);
+      anim.style.transition = 'none';
+      anim.style.transform = `translateX(${sens * 100}%)`;
+      anim.style.visibility = 'visible';
+      void anim.offsetWidth;
+
+      imageElement.style.transition = 'transform .35s ease';
+      anim.style.transition = 'transform .35s ease';
+      imageElement.style.transform = `translateX(${-sens * 100}%)`;
+      anim.style.transform = 'translateX(0)';
+
+      index = suivant;
+      majDots();
+
+      setTimeout(() => {
+        imageElement.style.transition = 'none';
+        poser(imageElement, photos[index]);
+        imageElement.style.transform = 'translateX(0)';
+        anim.style.visibility = 'hidden';
+        anim.style.transition = 'none';
+        enCours = false;
+        precharger(index + 1);
+      }, 360);
+    };
+
+    const allerA = (i) => {
+      if (enCours) return;
+      index = (i + photos.length) % photos.length;
+      poser(imageElement, photos[index]);
+      majDots();
+      precharger(index + 1);
+    };
+
+    const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+    prev.addEventListener('click', (e) => { stop(e); glisser(-1); });
+    next.addEventListener('click', (e) => { stop(e); glisser(1); });
+    Array.from(piste.children).forEach((d, k) =>
+      d.addEventListener('click', (e) => { stop(e); allerA(k); }));
+
+    // ⚡ Préchargement UNIQUEMENT au survol
+    media.addEventListener('mouseenter', () => {
+      if (prechargeFaite) return;
+      prechargeFaite = true;
+      precharger(index + 1);
+    });
+
+    majDots();
+  }
+
+  
   getFilterValues() {
     const filters = {
       start: this.startDate,
