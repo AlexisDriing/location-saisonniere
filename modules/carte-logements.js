@@ -21,6 +21,7 @@
   let popupActive = null;    // une seule fiche ouverte à la fois
   let panPourPopup = false;  // recadrage pour que la fiche tienne à l'écran
   let clicOuverture = null;  // le clic qui vient d'ouvrir une fiche (à ne pas confondre avec un clic extérieur)
+  let idSurvole = null;      // logement actuellement survolé dans la liste
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
   let pointsEnAttente = null;  // points reçus avant que la carte soit prête
@@ -52,6 +53,28 @@
     const pts = e.detail && e.detail.map_points;
     if (Array.isArray(pts)) majPointsCarte(pts);
   });
+
+
+    // Allume / éteint la pastille d'un logement sur la carte
+  function surligner(id, actif) {
+    const marqueur = marqueurs.get('p' + id);
+    if (!marqueur) return;                    // logement hors écran ou regroupé dans un cluster
+    const el = marqueur.getElement();
+    if (el) el.classList.toggle('survol', actif);
+  }
+
+  // Survol d'une card de la liste → pastille correspondante mise en avant
+  function brancherSurvolListe() {
+    document.addEventListener('mouseover', (e) => {
+      const card = e.target.closest && e.target.closest('.lien-logement[data-property-id]');
+      const id = card ? card.getAttribute('data-property-id') : null;
+      if (id === idSurvole) return;           // rien n'a changé, on ne fait rien
+      if (idSurvole) surligner(idSurvole, false);
+      idSurvole = id;
+      if (id) surligner(id, true);
+    });
+  }
+  
 
   // 🔗 La recherche de lieu déplace la carte (on enrobe setSearchLocation sans modifier le module)
     function brancherRecherche() {
@@ -238,6 +261,7 @@
     });
 
     brancherRecherche();
+    brancherSurvolListe();
   }
 
   // Fait suivre la liste de gauche au rectangle visible de la carte,
@@ -292,6 +316,7 @@
       } else {
         const id = f.properties.id, prix = f.properties.prix, coords = f.geometry.coordinates;
         el.className = 'cl-prix-pill';
+        if (idSurvole && String(idSurvole) === String(id)) el.classList.add('survol');
         el.textContent = euros(prix);
         el.addEventListener('click', (ev) => { clicOuverture = ev; ouvrirFiche(id, prix, coords, el); });
       }
