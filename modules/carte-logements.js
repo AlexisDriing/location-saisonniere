@@ -95,7 +95,7 @@
       #map-logements .cl-compteur {
         position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 3;
         background: #fff; border: 1px solid rgba(0,0,0,.08); box-shadow: 0 2px 10px rgba(0,0,0,.15);
-        border-radius: 22px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #1a1a1a;
+        border-radius: 22px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #272A2B;
         white-space: nowrap;
       }
       #map-logements .cl-message {
@@ -103,25 +103,25 @@
         text-align: center; padding: 30px; font-size: 14px; color: #555; line-height: 1.6;
       }
       .cl-prix-pill {
-        display: inline-flex; align-items: center; background: #fff; color: #1a1a1a;
+        display: inline-flex; align-items: center; background: #fff; color: #272A2B;
         font-size: 13px; font-weight: 700; line-height: 1; padding: 7px 11px; border-radius: 22px;
         border: 1px solid rgba(0,0,0,.08); box-shadow: 0 2px 6px rgba(0,0,0,.18);
         cursor: pointer; white-space: nowrap; user-select: none;
         transition: transform .12s ease, background .12s ease, color .12s ease;
       }
-      .cl-prix-pill:hover, .cl-prix-pill.actif { background: #1a1a1a; color: #fff; transform: scale(1.06); z-index: 5; }
+      .cl-prix-pill:hover, .cl-prix-pill.actif { background: #235B59; color: #fff; transform: scale(1.06); z-index: 5; }
       .cl-cluster {
-        display: flex; align-items: center; justify-content: center; background: #fff; color: #1a1a1a;
+        display: flex; align-items: center; justify-content: center; background: #fff; color: #272A2B;
         font-weight: 700; border-radius: 50%; border: 1px solid rgba(0,0,0,.08);
         box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; user-select: none;
       }
       #map-logements .mapboxgl-popup { max-width: none !important; }
       #map-logements .mapboxgl-popup-content {
         padding: 0; border-radius: 16px; overflow: hidden; width: 300px;
-        box-shadow: 0 8px 28px rgba(0,0,0,.22); font-family: inherit;
+        box-shadow: 0 8px 28px rgba(0,0,0,.22); font-family: Inter;
       }
       #map-logements .mapboxgl-popup-close-button {
-        font-size: 20px; color: #fff; right: 6px; top: 4px; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,.5);
+        font-size: 20px; background-color: #fff; width: 32px; height: 32px; color: #272A2B; right: 6px; top: 6px; z-index: 2;
       }
       .cl-popup img, .cl-popup .cl-noimg { width: 100%; height: 200px; object-fit: cover; display: block; background: #e6e4e0; }
       .cl-popup .infos { padding: 10px 12px 12px; }
@@ -132,7 +132,7 @@
       .cl-popup .prix { font-size: 14px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
       .cl-popup .prix del { color: #778183; }
       .cl-popup .prix b { font-weight: 600; }
-      .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 16px;
+      .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 14px;
         border-radius: 6px; padding: 4px; margin-left: auto; }
     `;
     document.head.appendChild(s);
