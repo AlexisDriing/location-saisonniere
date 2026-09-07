@@ -379,7 +379,7 @@
       </div>`;
 
         // closeOnClick: false → on gère la fermeture nous-mêmes, sans la course qui tuait la fiche
-    popupActive = new mapboxgl.Popup({ offset: 18, closeOnClick: false })
+    popupActive = new mapboxgl.Popup({ offset: 30, closeOnClick: false })
       .setLngLat(coords)
       .setHTML(lien
         ? `<a class="cl-popup" href="${lien}" target="_blank" style="text-decoration:none;display:block">${contenu}</a>`
