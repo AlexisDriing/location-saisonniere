@@ -55,15 +55,20 @@
     const hautListe = wrapper.getBoundingClientRect().top + window.scrollY;
     const listeTientDansEcran = wrapper.offsetHeight < window.innerHeight;
     if (listeTientDansEcran && window.scrollY > hautListe) {
-      window.scrollTo({ top: Math.max(0, hautListe - 20), behavior: 'smooth' });
+       window.scrollTo({ top: Math.max(0, hautListe - 20), behavior: 'auto' });
     }
   }
   
   // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
-  window.addEventListener('driing:resultats-filtres', (e) => {
+    window.addEventListener('driing:resultats-filtres', (e) => {
     const pts = e.detail && e.detail.map_points;
     if (Array.isArray(pts)) majPointsCarte(pts);
-    setTimeout(corrigerScrollListe, 0); // la liste vient d'être re-rendue
+  });
+
+  // Correction de scroll : on laisse la mise en page se stabiliser, puis on réessaie
+  window.addEventListener('driing:resultats-filtres', () => {
+    setTimeout(corrigerScrollListe, 150);
+    setTimeout(corrigerScrollListe, 500);
   });
 
 
