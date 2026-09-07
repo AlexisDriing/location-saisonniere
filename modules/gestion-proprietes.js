@@ -1045,10 +1045,6 @@ if (hostImageElement) {
       anim.style.setProperty('width', imageElement.offsetWidth + 'px', 'important');
       anim.style.setProperty('height', imageElement.offsetHeight + 'px', 'important');
       anim.style.setProperty('object-fit', 'cover', 'important');
-      anim.style.setProperty('border-radius', getComputedStyle(imageElement).borderRadius, 'important');
-      // Le cadre qui découpe doit être arrondi lui aussi, sinon les coins paraissent carrés
-      // pendant que les images (et donc leurs coins) défilent.
-      media.style.setProperty('border-radius', getComputedStyle(imageElement).borderRadius, 'important');
       poser(anim, photos[suivant]);
       anim.style.transition = 'none';
       anim.style.transform = `translateX(${sens * 100}%)`;
@@ -1093,6 +1089,16 @@ if (hostImageElement) {
       if (prechargeFaite) return;
       prechargeFaite = true;
       precharger(index + 1);
+    });
+
+    // 🔲 Les coins arrondis passent sur le CADRE, les images n'en ont plus.
+    // Sinon chaque image emmène ses propres coins pendant le glissement
+    // et on voit des arrondis au milieu du cadre.
+    requestAnimationFrame(() => {
+      const rayon = getComputedStyle(imageElement).borderRadius;
+      media.style.setProperty('border-radius', rayon, 'important');
+      imageElement.style.setProperty('border-radius', '0', 'important');
+      anim.style.setProperty('border-radius', '0', 'important');
     });
 
     majDots();
