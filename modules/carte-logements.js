@@ -341,14 +341,33 @@
     const racine = popupActive.getElement();
     if (!racine) return;
     const img = racine.querySelector('.cl-photo');
-    const dots = Array.from(racine.querySelectorAll('.cl-dot'));
+    const dotsWrap = racine.querySelector('.cl-dots');
     if (!img) return;
+
+    const nbDots = Math.min(5, photos.length);
     let index = 0;
+
+    // Début de la fenêtre de 5 points, bloquée aux deux extrémités
+    const debutFenetre = () => {
+      if (photos.length <= nbDots) return 0;
+      return Math.max(0, Math.min(index - Math.floor(nbDots / 2), photos.length - nbDots));
+    };
+
+    const majDots = () => {
+      if (!dotsWrap) return;
+      const debut = debutFenetre();
+      Array.from(dotsWrap.children).forEach((d, k) => {
+        const actif = (debut + k) === index;
+        const petit = (k === 0 && debut > 0)                              // il reste des photos avant
+                   || (k === nbDots - 1 && debut + nbDots < photos.length); // il en reste après
+        d.className = 'cl-dot' + (actif ? ' actif' : '') + (petit ? ' petit' : '');
+      });
+    };
 
     const afficher = (i) => {
       index = (i + photos.length) % photos.length;
       img.src = photos[index];
-      dots.forEach((d, k) => d.classList.toggle('actif', k === index));
+      majDots();
     };
 
     racine.querySelectorAll('.cl-nav').forEach(btn => {
@@ -359,11 +378,17 @@
       });
     });
 
-    dots.forEach((d, k) => d.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      afficher(k);
-    }));
+    if (dotsWrap) {
+      Array.from(dotsWrap.children).forEach((d, k) => {
+        d.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          afficher(debutFenetre() + k);
+        });
+      });
+    }
+
+    majDots();
   }
 
   // Calcule prix barré + % de réduction à partir des données tarifaires,
@@ -415,7 +440,7 @@
           ${photos.length > 1 ? `
             <span class="cl-nav cl-prev" role="button" aria-label="Photo précédente">‹</span>
             <span class="cl-nav cl-next" role="button" aria-label="Photo suivante">›</span>
-            <div class="cl-dots">${photos.map((_, i) => `<span class="cl-dot${i === 0 ? ' actif' : ''}"></span>`).join('')}</div>
+            <div class="cl-dots">${Array.from({ length: Math.min(5, photos.length) }, () => `<span class="cl-dot"></span>`).join('')}</div>
           ` : ''}
         </div>` : `<div class="cl-noimg"></div>`}
       <div class="infos">
