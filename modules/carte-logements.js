@@ -121,10 +121,10 @@
         box-shadow: 0 8px 28px rgba(0,0,0,.22); font-family: Inter;
       }
       #map-logements .mapboxgl-popup-close-button {
-        font-size: 20px; background-color: #fff; width: 32px; height: 32px; color: #272A2B; right: 6px; top: 6px; z-index: 2;
+        font-size: 20px; background-color: #fff; width: 32px; height: 32px; border-radius: 24px; color: #272A2B; right: 6px; top: 6px; z-index: 2;
       }
       .cl-popup img, .cl-popup .cl-noimg { width: 100%; height: 200px; object-fit: cover; display: block; background: #e6e4e0; }
-      .cl-popup .infos { padding: 10px 12px 12px; }
+      .cl-popup .infos { padding: 12px 12px 12px; }
       .cl-popup .lieu { font-size: 14px; line-heigh: 20px; color: #778183; margin: 0 0 2px; }
       .cl-popup .titre { font-size: 16px; line-heigh: 22px; font-weight: 600; margin: 0 0 4px; color: #272A2B;
         display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
