@@ -48,10 +48,22 @@
     if (compteurEl) majCompteur(compteurEl);
   }
 
+  // Quand la liste rétrécit (zoom sur la carte), évite de rester bloqué dans le footer
+  function corrigerScrollListe() {
+    const wrapper = document.querySelector('.collection-list-wrapper');
+    if (!wrapper) return;
+    const hautListe = wrapper.getBoundingClientRect().top + window.scrollY;
+    const listeTientDansEcran = wrapper.offsetHeight < window.innerHeight;
+    if (listeTientDansEcran && window.scrollY > hautListe) {
+      window.scrollTo({ top: Math.max(0, hautListe - 20), behavior: 'smooth' });
+    }
+  }
+  
   // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
   window.addEventListener('driing:resultats-filtres', (e) => {
     const pts = e.detail && e.detail.map_points;
     if (Array.isArray(pts)) majPointsCarte(pts);
+    setTimeout(corrigerScrollListe, 0); // la liste vient d'être re-rendue
   });
 
 
