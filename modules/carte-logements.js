@@ -18,6 +18,9 @@
   const marqueurs = new Map();
   const cacheFiches = new Map();
   let pillActive = null;
+  let popupActive = null;    // une seule fiche ouverte à la fois
+  let panPourPopup = false;  // recadrage pour que la fiche tienne à l'écran
+  let clicOuverture = null;  // le clic qui vient d'ouvrir une fiche (à ne pas confondre avec un clic extérieur)
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
   let pointsEnAttente = null;  // points reçus avant que la carte soit prête
@@ -219,6 +222,14 @@
       map.on('idle', synchroniser);
       map.on('moveend', () => majCompteur(compteurEl));
       map.on('moveend', filtrerListeParCarte); // ← la liste suit la carte
+
+      // Fermer la fiche au clic ailleurs — en ignorant le clic qui vient de l'ouvrir
+      map.on('click', (e) => {
+        if (e.originalEvent === clicOuverture) return;                          // c'est le clic d'ouverture
+        const cible = e.originalEvent && e.originalEvent.target;
+        if (cible && cible.closest && cible.closest('.mapboxgl-popup')) return; // clic dans la fiche
+        if (popupActive) { popupActive.remove(); popupActive = null; }
+      });
       synchroniser();
       majCompteur(compteurEl);
 
@@ -232,6 +243,7 @@
   // Fait suivre la liste de gauche au rectangle visible de la carte,
   // en réutilisant le filtrage par bbox déjà géré par ton serveur.
   function filtrerListeParCarte() {
+    if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : pas de rechargement
     if (!window.propertyManager) return;
     rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
     clearTimeout(rechercheTimeout);
@@ -281,7 +293,7 @@
         const id = f.properties.id, prix = f.properties.prix, coords = f.geometry.coordinates;
         el.className = 'cl-prix-pill';
         el.textContent = euros(prix);
-        el.addEventListener('click', () => ouvrirFiche(id, prix, coords, el));
+        el.addEventListener('click', (ev) => { clicOuverture = ev; ouvrirFiche(id, prix, coords, el); });
       }
       marqueurs.set(cle, new mapboxgl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(map));
     }
@@ -333,6 +345,8 @@
   }
 
   async function ouvrirFiche(id, prix, coords, el) {
+    // On ferme nous-mêmes la fiche précédente (Mapbox ne le fera plus)
+    if (popupActive) { popupActive.remove(); popupActive = null; }
     if (pillActive) pillActive.classList.remove('actif');
     el.classList.add('actif'); pillActive = el;
 
@@ -364,12 +378,39 @@
         </p>
       </div>`;
 
-    new mapboxgl.Popup({ offset: 18 })
+        // closeOnClick: false → on gère la fermeture nous-mêmes, sans la course qui tuait la fiche
+    popupActive = new mapboxgl.Popup({ offset: 18, closeOnClick: false })
       .setLngLat(coords)
       .setHTML(lien
         ? `<a class="cl-popup" href="${lien}" target="_blank" style="text-decoration:none;display:block">${contenu}</a>`
         : `<div class="cl-popup">${contenu}</div>`)
       .addTo(map);
+
+    // Remettre l'état à zéro à la fermeture (croix ou clic extérieur)
+    popupActive.on('close', () => {
+      if (pillActive) pillActive.classList.remove('actif');
+      pillActive = null;
+      popupActive = null;
+    });
+
+    // Recadrer si la fiche dépasse du cadre de la carte
+    requestAnimationFrame(ajusterVuePopup);
+  }
+
+  // Décale la carte du minimum nécessaire pour que la fiche soit entièrement visible
+  function ajusterVuePopup() {
+    if (!popupActive || !map) return;
+    const el = popupActive.getElement();
+    if (!el) return;
+    const f = el.getBoundingClientRect();
+    const c = conteneur.getBoundingClientRect();
+    const marge = 12;
+    let dx = 0, dy = 0;
+    if (f.top < c.top + marge) dy = f.top - (c.top + marge);
+    else if (f.bottom > c.bottom - marge) dy = f.bottom - (c.bottom - marge);
+    if (f.left < c.left + marge) dx = f.left - (c.left + marge);
+    else if (f.right > c.right - marge) dx = f.right - (c.right - marge);
+    if (dx || dy) { panPourPopup = true; map.panBy([dx, dy], { duration: 250 }); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
