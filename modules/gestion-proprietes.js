@@ -1046,6 +1046,9 @@ if (hostImageElement) {
       anim.style.setProperty('height', imageElement.offsetHeight + 'px', 'important');
       anim.style.setProperty('object-fit', 'cover', 'important');
       anim.style.setProperty('border-radius', getComputedStyle(imageElement).borderRadius, 'important');
+      // Le cadre qui découpe doit être arrondi lui aussi, sinon les coins paraissent carrés
+      // pendant que les images (et donc leurs coins) défilent.
+      media.style.setProperty('border-radius', getComputedStyle(imageElement).borderRadius, 'important');
       poser(anim, photos[suivant]);
       anim.style.transition = 'none';
       anim.style.transform = `translateX(${sens * 100}%)`;
