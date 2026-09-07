@@ -117,23 +117,23 @@
       }
       #map-logements .mapboxgl-popup { max-width: none !important; }
       #map-logements .mapboxgl-popup-content {
-        padding: 0; border-radius: 16px; overflow: hidden; width: 220px;
+        padding: 0; border-radius: 16px; overflow: hidden; width: 300px;
         box-shadow: 0 8px 28px rgba(0,0,0,.22); font-family: inherit;
       }
       #map-logements .mapboxgl-popup-close-button {
         font-size: 20px; color: #fff; right: 6px; top: 4px; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,.5);
       }
-      .cl-popup img, .cl-popup .cl-noimg { width: 100%; height: 140px; object-fit: cover; display: block; background: #e6e4e0; }
+      .cl-popup img, .cl-popup .cl-noimg { width: 100%; height: 200px; object-fit: cover; display: block; background: #e6e4e0; }
       .cl-popup .infos { padding: 10px 12px 12px; }
-      .cl-popup .lieu { font-size: 12px; color: #778183; margin: 0 0 2px; }
-      .cl-popup .titre { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #272A2B;
+      .cl-popup .lieu { font-size: 14px; line-heigh: 20px; color: #778183; margin: 0 0 2px; }
+      .cl-popup .titre { font-size: 16px; line-heigh: 22px; font-weight: 600; margin: 0 0 4px; color: #272A2B;
         display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-      .cl-popup .hote { font-size: 12px; color: #778183; margin: 0 0 8px; }
-      .cl-popup .prix { font-size: 13px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+      .cl-popup .hote { font-size: 14px; line-heigh: 20px; color: #778183; margin: 0 0 8px; }
+      .cl-popup .prix { font-size: 14px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
       .cl-popup .prix del { color: #778183; }
       .cl-popup .prix b { font-weight: 600; }
-      .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 12px;
-        border-radius: 6px; padding: 2px 6px; margin-left: auto; }
+      .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 16px;
+        border-radius: 6px; padding: 4px; margin-left: auto; }
     `;
     document.head.appendChild(s);
   }
