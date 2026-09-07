@@ -1041,6 +1041,10 @@ if (hostImageElement) {
       const suivant = (index + sens + photos.length) % photos.length;
       await attendreImage(photos[suivant]);
 
+      // Verrouille la taille du clone sur celle de l'image affichée (évite le flash en grand)
+      anim.style.setProperty('width', imageElement.offsetWidth + 'px', 'important');
+      anim.style.setProperty('height', imageElement.offsetHeight + 'px', 'important');
+      anim.style.setProperty('object-fit', 'cover', 'important');
       poser(anim, photos[suivant]);
       anim.style.transition = 'none';
       anim.style.transform = `translateX(${sens * 100}%)`;
