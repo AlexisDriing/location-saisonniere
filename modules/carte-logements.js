@@ -334,61 +334,125 @@
     return seul ? [seul] : [];
   }
 
-  // Carrousel : UNE seule balise <img> dont on remplace le src
-  // → seules les photos réellement regardées sont téléchargées
+    // Carrousel : 2 images (l'affichée + celle qui glisse) et des points animés.
+  // Préchargement limité à la photo suivante → pas d'image vide, coût minimal.
   function activerCarrousel(photos) {
     if (!popupActive || photos.length < 2) return;
     const racine = popupActive.getElement();
     if (!racine) return;
-    const img = racine.querySelector('.cl-photo');
+    const imgA = racine.querySelector('.cl-photo');
+    const imgB = racine.querySelector('.cl-photo-anim');
     const dotsWrap = racine.querySelector('.cl-dots');
-    if (!img) return;
+    const piste = racine.querySelector('.cl-dots-piste');
+    if (!imgA || !imgB) return;
+
+    // ⚠️ À garder synchronisé avec le CSS (.cl-dot width et .cl-dots-piste gap)
+    const TAILLE_DOT = 6, ESPACE_DOT = 5;
+    const PAS = TAILLE_DOT + ESPACE_DOT;
 
     const nbDots = Math.min(5, photos.length);
     let index = 0;
+    let enCours = false;
 
-    // Début de la fenêtre de 5 points, bloquée aux deux extrémités
+    if (dotsWrap) dotsWrap.style.width = (nbDots * TAILLE_DOT + (nbDots - 1) * ESPACE_DOT) + 'px';
+
     const debutFenetre = () => {
       if (photos.length <= nbDots) return 0;
       return Math.max(0, Math.min(index - Math.floor(nbDots / 2), photos.length - nbDots));
     };
 
     const majDots = () => {
-      if (!dotsWrap) return;
+      if (!piste) return;
       const debut = debutFenetre();
-      Array.from(dotsWrap.children).forEach((d, k) => {
-        const actif = (debut + k) === index;
-        const petit = (k === 0 && debut > 0)                              // il reste des photos avant
-                   || (k === nbDots - 1 && debut + nbDots < photos.length); // il en reste après
-        d.className = 'cl-dot' + (actif ? ' actif' : '') + (petit ? ' petit' : '');
+      piste.style.transform = `translateX(${-debut * PAS}px)`;
+      Array.from(piste.children).forEach((d, k) => {
+        const pos = k - debut;                       // position dans la fenêtre visible
+        const visible = pos >= 0 && pos < nbDots;
+        const petit = visible && (
+             (pos === 0 && debut > 0)                            // il reste des photos avant
+          || (pos === nbDots - 1 && debut + nbDots < photos.length)); // il en reste après
+        d.className = 'cl-dot' + (k === index ? ' actif' : '') + (petit ? ' petit' : '');
       });
     };
 
-    const afficher = (i) => {
+    // Précharge discrètement la photo suivante (l'arrière est déjà en cache)
+    const prechargerSuivante = () => {
+      const im = new Image();
+      im.src = photos[(index + 1) % photos.length];
+    };
+
+    // Garantit qu'on n'anime jamais vers une image non chargée
+    const attendreImage = (url) => new Promise(res => {
+      const im = new Image();
+      let fini = false;
+      const ok = () => { if (!fini) { fini = true; res(); } };
+      im.onload = ok; im.onerror = ok;
+      im.src = url;
+      setTimeout(ok, 400); // filet : on n'attend jamais plus de 400 ms
+    });
+
+    // Glissement animé. sens = +1 (flèche droite) ou -1 (flèche gauche)
+    const glisser = async (sens) => {
+      if (enCours) return;
+      enCours = true;
+      const suivant = (index + sens + photos.length) % photos.length;
+
+      await attendreImage(photos[suivant]);
+
+      imgB.src = photos[suivant];
+      imgB.style.transition = 'none';
+      imgB.style.transform = `translateX(${sens * 100}%)`;
+      imgB.style.visibility = 'visible';
+      void imgB.offsetWidth; // fige la position de départ avant d'animer
+
+      imgA.style.transition = 'transform .35s ease';
+      imgB.style.transition = 'transform .35s ease';
+      imgA.style.transform = `translateX(${-sens * 100}%)`;
+      imgB.style.transform = 'translateX(0)';
+
+      index = suivant;
+      majDots(); // les points glissent en même temps que l'image
+
+      setTimeout(() => {
+        imgA.style.transition = 'none';
+        imgA.src = photos[index];
+        imgA.style.transform = 'translateX(0)';
+        imgB.style.visibility = 'hidden';
+        imgB.style.transition = 'none';
+        enCours = false;
+        prechargerSuivante();
+      }, 360);
+    };
+
+    // Saut direct au clic sur un point (sans glissement d'image)
+    const allerA = (i) => {
+      if (enCours) return;
       index = (i + photos.length) % photos.length;
-      img.src = photos[index];
+      imgA.src = photos[index];
       majDots();
+      prechargerSuivante();
     };
 
     racine.querySelectorAll('.cl-nav').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();   // ne pas ouvrir la page du logement
         e.stopPropagation();  // ne pas fermer la fiche
-        afficher(btn.classList.contains('cl-next') ? index + 1 : index - 1);
+        glisser(btn.classList.contains('cl-next') ? 1 : -1);
       });
     });
 
-    if (dotsWrap) {
-      Array.from(dotsWrap.children).forEach((d, k) => {
+    if (piste) {
+      Array.from(piste.children).forEach((d, k) => {
         d.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          afficher(debutFenetre() + k);
+          allerA(k);
         });
       });
     }
 
     majDots();
+    setTimeout(prechargerSuivante, 400); // seulement si la fiche reste ouverte
   }
 
   // Calcule prix barré + % de réduction à partir des données tarifaires,
@@ -440,7 +504,8 @@
           ${photos.length > 1 ? `
             <span class="cl-nav cl-prev" role="button" aria-label="Photo précédente">‹</span>
             <span class="cl-nav cl-next" role="button" aria-label="Photo suivante">›</span>
-            <div class="cl-dots">${Array.from({ length: Math.min(5, photos.length) }, () => `<span class="cl-dot"></span>`).join('')}</div>
+            <img class="cl-photo-anim" alt="" />
+            <div class="cl-dots"><div class="cl-dots-piste">${photos.map(() => `<span class="cl-dot"></span>`).join('')}</div></div>
           ` : ''}
         </div>` : `<div class="cl-noimg"></div>`}
       <div class="infos">
