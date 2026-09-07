@@ -324,6 +324,48 @@
     return fiche.image || fiche.image1 || '';
   }
 
+    // Toutes les photos du logement (champ "photos du logement"), avec repli
+  function toutesLesPhotos(fiche) {
+    const g = Array.isArray(fiche.images_gallery) ? fiche.images_gallery : [];
+    const urls = g.map(p => (p && typeof p === 'object' ? p.url : p))
+                  .filter(u => typeof u === 'string' && u.startsWith('http'));
+    if (urls.length) return urls;
+    const seul = fiche.image || fiche.image1 || '';
+    return seul ? [seul] : [];
+  }
+
+  // Carrousel : UNE seule balise <img> dont on remplace le src
+  // → seules les photos réellement regardées sont téléchargées
+  function activerCarrousel(photos) {
+    if (!popupActive || photos.length < 2) return;
+    const racine = popupActive.getElement();
+    if (!racine) return;
+    const img = racine.querySelector('.cl-photo');
+    const dots = Array.from(racine.querySelectorAll('.cl-dot'));
+    if (!img) return;
+    let index = 0;
+
+    const afficher = (i) => {
+      index = (i + photos.length) % photos.length;
+      img.src = photos[index];
+      dots.forEach((d, k) => d.classList.toggle('actif', k === index));
+    };
+
+    racine.querySelectorAll('.cl-nav').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();   // ne pas ouvrir la page du logement
+        e.stopPropagation();  // ne pas fermer la fiche
+        afficher(btn.classList.contains('cl-next') ? index + 1 : index - 1);
+      });
+    });
+
+    dots.forEach((d, k) => d.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      afficher(k);
+    }));
+  }
+
   // Calcule prix barré + % de réduction à partir des données tarifaires,
   // comme sur les cartes de la liste (prix "Dès" = prix direct minimum).
   function prixAffichage(pd, prixDirect) {
@@ -361,13 +403,21 @@
       }
     }
 
-    const img = premiereImage(fiche);
+    const photos = toutesLesPhotos(fiche);
     const direct = fiche.price || prix;
     const { barre, reduc } = prixAffichage(fiche.pricing_data, direct);
     const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
 
     const contenu = `
-      ${img ? `<img src="${img}" alt="" loading="lazy" />` : `<div class="cl-noimg"></div>`}
+      ${photos.length ? `
+        <div class="cl-media">
+          <img class="cl-photo" src="${photos[0]}" alt="" />
+          ${photos.length > 1 ? `
+            <span class="cl-nav cl-prev" role="button" aria-label="Photo précédente">‹</span>
+            <span class="cl-nav cl-next" role="button" aria-label="Photo suivante">›</span>
+            <div class="cl-dots">${photos.map((_, i) => `<span class="cl-dot${i === 0 ? ' actif' : ''}"></span>`).join('')}</div>
+          ` : ''}
+        </div>` : `<div class="cl-noimg"></div>`}
       <div class="infos">
         ${fiche.address ? `<p class="lieu">${fiche.address}</p>` : ''}
         <p class="titre">${fiche.name || 'Logement'}</p>
@@ -392,6 +442,8 @@
       pillActive = null;
       popupActive = null;
     });
+
+    activerCarrousel(photos);
 
     // Recadrer si la fiche dépasse du cadre de la carte
     requestAnimationFrame(ajusterVuePopup);
