@@ -67,7 +67,8 @@
 
   // Correction de scroll : on laisse la mise en page se stabiliser, puis on réessaie
   window.addEventListener('driing:resultats-filtres', () => {
-    setTimeout(corrigerScrollListe, 150);
+    requestAnimationFrame(corrigerScrollListe); // AVANT le prochain affichage → aucun saut visible
+    setTimeout(corrigerScrollListe, 150);       // filets, si la mise en page n'était pas encore stable
     setTimeout(corrigerScrollListe, 500);
   });
 
