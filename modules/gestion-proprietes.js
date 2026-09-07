@@ -970,7 +970,13 @@ if (hostImageElement) {
     anim.removeAttribute('src');
     anim.removeAttribute('srcset');
     anim.style.backgroundImage = '';
-    media.appendChild(anim);
+
+    // Cadre dédié qui n'entoure QUE les photos (la photo de l'hôte reste en dehors)
+    const cadre = document.createElement('div');
+    cadre.className = 'cl-cadre-liste';
+    media.insertBefore(cadre, imageElement);
+    cadre.appendChild(imageElement);
+    cadre.appendChild(anim);
 
     // Flèches
     const prev = document.createElement('span');
@@ -995,9 +1001,9 @@ if (hostImageElement) {
     });
     dots.appendChild(piste);
 
-    media.appendChild(prev);
-    media.appendChild(next);
-    media.appendChild(dots);
+    cadre.appendChild(prev);
+    cadre.appendChild(next);
+    cadre.appendChild(dots);
 
     let index = 0, enCours = false, prechargeFaite = false;
 
@@ -1096,7 +1102,7 @@ if (hostImageElement) {
     // et on voit des arrondis au milieu du cadre.
     requestAnimationFrame(() => {
       const rayon = getComputedStyle(imageElement).borderRadius;
-      media.style.setProperty('border-radius', rayon, 'important');
+      cadre.style.setProperty('border-radius', rayon, 'important');
       imageElement.style.setProperty('border-radius', '0', 'important');
       anim.style.setProperty('border-radius', '0', 'important');
     });
