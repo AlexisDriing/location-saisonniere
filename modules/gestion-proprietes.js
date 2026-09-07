@@ -1041,10 +1041,11 @@ if (hostImageElement) {
       const suivant = (index + sens + photos.length) % photos.length;
       await attendreImage(photos[suivant]);
 
-      // Verrouille la taille du clone sur celle de l'image affichée (évite le flash en grand)
+      // Verrouille l'apparence du clone sur celle de l'image affichée
       anim.style.setProperty('width', imageElement.offsetWidth + 'px', 'important');
       anim.style.setProperty('height', imageElement.offsetHeight + 'px', 'important');
       anim.style.setProperty('object-fit', 'cover', 'important');
+      anim.style.setProperty('border-radius', getComputedStyle(imageElement).borderRadius, 'important');
       poser(anim, photos[suivant]);
       anim.style.transition = 'none';
       anim.style.transform = `translateX(${sens * 100}%)`;
