@@ -132,11 +132,11 @@
       .cl-popup .titre { font-size: 16px; line-heigh: 22px; font-weight: 600; margin: 0 0 4px; color: #272A2B;
         display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
       .cl-popup .hote { font-size: 14px; line-heigh: 20px; color: #778183; margin: 0 0 8px; }
-      .cl-popup .prix { font-size: 14px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-      .cl-popup .prix del { color: #778183; }
+      .cl-popup .prix { font-size: 16px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+      .cl-popup .prix del { font-size: 14px; color: #778183; }
       .cl-popup .prix b { font-weight: 600; }
       .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 14px;
-        border-radius: 6px; padding: 4px; margin-left: auto; }
+        border-radius: 6px; padding: 4px; margin-left: 6px; }
     `;
     document.head.appendChild(s);
   }
