@@ -137,6 +137,40 @@
   const ICONE_LISTE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
   let boutonBascule = null;
 
+
+    // Hauteur réelle du bandeau du haut (nav + recherche + filtres)
+  function hauteurEntete() {
+    let bas = 0;
+    ['.nav.logement', '.container-filtres-logements', '.container-filtes-mobile'].forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.height && r.top < 200 && r.bottom > bas) bas = r.bottom;
+      });
+    });
+    return Math.round(bas) || 219;
+  }
+
+
+  // Mobile : on ne recharge la liste que si l'utilisateur le demande
+  function brancherBoutonZone() {
+    boutonZone = document.createElement('button');
+    boutonZone.type = 'button';
+    boutonZone.className = 'cl-zone';
+    boutonZone.textContent = 'Rechercher dans cette zone';
+    boutonZone.addEventListener('click', () => {
+      afficherBoutonZone(false);
+      forcerChargementZone = true;
+      filtrerListeParCarte();
+    });
+    conteneur.appendChild(boutonZone);
+  }
+
+  function afficherBoutonZone(visible) {
+    if (boutonZone) boutonZone.classList.toggle('visible', visible);
+    if (compteurEl) compteurEl.classList.toggle('cache', visible);
+  }
+  
+  
   function brancherBasculeMobile() {
     boutonBascule = document.createElement('button');
     boutonBascule.type = 'button';
@@ -146,6 +180,12 @@
     });
     document.body.appendChild(boutonBascule);
     majBoutonBascule();
+    brancherBoutonZone();
+
+    // iOS : le pincement doit zoomer la carte, pas la page
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(type =>
+      conteneur.addEventListener(type, (e) => e.preventDefault(), { passive: false })
+    );
 
     // Le bouton retour du navigateur ferme la carte au lieu de quitter la page
     window.addEventListener('popstate', () => { if (carteOuverte) fermerCarteMobile(true); });
@@ -162,6 +202,7 @@
   function ouvrirCarteMobile() {
     carteOuverte = true;
     document.body.classList.add('no-scroll');
+    conteneur.style.setProperty('--cl-haut', hauteurEntete() + 'px');
     conteneur.classList.add('cl-plein-ecran');
     majBoutonBascule();
     history.pushState({ carteDriing: true }, ''); // pour intercepter le retour
@@ -374,9 +415,15 @@
 
   // Fait suivre la liste de gauche au rectangle visible de la carte,
   // en réutilisant le filtrage par bbox déjà géré par ton serveur.
-  function filtrerListeParCarte() {
+    function filtrerListeParCarte() {
     if (carteAgrandie) return;                          // liste masquée : inutile de la recharger
     if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : pas de rechargement
+    // Mobile : c'est l'utilisateur qui déclenche le rechargement
+    if (MOBILE && carteOuverte && !rechercheEnCours && !forcerChargementZone) {
+      afficherBoutonZone(true);
+      return;
+    }
+    forcerChargementZone = false;
     if (!window.propertyManager) return;
     rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
     clearTimeout(rechercheTimeout);
