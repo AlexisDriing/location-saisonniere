@@ -955,6 +955,8 @@ if (hostImageElement) {
   // Carrousel photo sur une card de liste.
   // Rien n'est préchargé tant que le visiteur ne survole pas la card.
   setupCarrouselCard(imageElement, gallery) {
+    // Mobile : une seule photo par card, pas de carrousel
+    if (window.innerWidth < 768) return;
     const photos = (Array.isArray(gallery) ? gallery : [])
       .map(p => (p && typeof p === 'object' ? p.url : p))
       .filter(u => typeof u === 'string' && u.startsWith('http'));
