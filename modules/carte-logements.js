@@ -139,12 +139,14 @@
 
 
     // Hauteur réelle du bandeau du haut (nav + recherche + filtres)
-  function hauteurEntete() {
+   function hauteurEntete() {
     let bas = 0;
-    ['.nav.logement', '.container-filtres-logements', '.container-filtes-mobile'].forEach(sel => {
+    ['.nav.logement', '.bloc-search-mobile', '.container-filtres-logements'].forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
+        // On ignore ce qui est masqué (display:none)
+        if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
         const r = el.getBoundingClientRect();
-        if (r.height && r.top < 200 && r.bottom > bas) bas = r.bottom;
+        if (r.height && r.top < 250 && r.bottom > bas) bas = r.bottom;
       });
     });
     return Math.round(bas) || 219;
