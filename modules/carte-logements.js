@@ -118,8 +118,15 @@
       carteAgrandie = bloc.classList.toggle('carte-agrandie');
       bouton.innerHTML = carteAgrandie ? ICONE_FERMER : ICONE_OUVRIR;
       bouton.setAttribute('aria-label', carteAgrandie ? 'Réduire la carte' : 'Agrandir la carte');
-      map.resize();
-      if (!carteAgrandie) filtrerListeParCarte(); // la liste revient : on la recale sur la vue
+
+      // La carte suit sa nouvelle largeur image par image, sinon elle saute à la fin
+      const debut = performance.now();
+      const suivre = () => {
+        map.resize();
+        if (performance.now() - debut < 480) requestAnimationFrame(suivre);
+        else if (!carteAgrandie) filtrerListeParCarte(); // la liste est revenue : on la recale
+      };
+      requestAnimationFrame(suivre);
     });
   }
   
