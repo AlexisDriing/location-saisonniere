@@ -22,6 +22,9 @@
   let panPourPopup = false;  // recadrage pour que la fiche tienne à l'écran
   let clicOuverture = null;  // le clic qui vient d'ouvrir une fiche (à ne pas confondre avec un clic extérieur)
   let idSurvole = null;      // logement actuellement survolé dans la liste
+  let clusterSurvole = null; // élément du cluster mis en avant
+  let carteAgrandie = false; // carte en pleine largeur, liste masquée
+  const cacheLeaves = new Map(); // cluster → logements qu'il contient (vidé à chaque déplacement)
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
   let pointsEnAttente = null;  // points reçus avant que la carte soit prête
@@ -92,6 +95,31 @@
       if (idSurvole) surligner(idSurvole, false);
       idSurvole = id;
       if (id) surligner(id, true);
+    });
+  }
+
+
+  const ICONE_OUVRIR = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10V4h6M20 14v6h-6M4 4l6 6M20 20l-6-6"/></svg>';
+  const ICONE_FERMER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v6H4M14 20v-6h6M10 10L4 4M14 14l6 6"/></svg>';
+
+  // Bouton "carte en pleine largeur" (la liste disparaît)
+  function brancherAgrandir() {
+    const bloc = conteneur.closest('.bloc-logement-map');
+    if (!bloc) return;
+
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'cl-agrandir';
+    bouton.innerHTML = ICONE_OUVRIR;
+    bouton.setAttribute('aria-label', 'Agrandir la carte');
+    conteneur.appendChild(bouton);
+
+    bouton.addEventListener('click', () => {
+      carteAgrandie = bloc.classList.toggle('carte-agrandie');
+      bouton.innerHTML = carteAgrandie ? ICONE_FERMER : ICONE_OUVRIR;
+      bouton.setAttribute('aria-label', carteAgrandie ? 'Réduire la carte' : 'Agrandir la carte');
+      map.resize();
+      if (!carteAgrandie) filtrerListeParCarte(); // la liste revient : on la recale sur la vue
     });
   }
   
