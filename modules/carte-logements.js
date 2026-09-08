@@ -500,24 +500,53 @@
     setTimeout(prechargerSuivante, 400); // seulement si la fiche reste ouverte
   }
 
-  // Calcule prix barré + % de réduction à partir des données tarifaires,
-  // comme sur les cartes de la liste (prix "Dès" = prix direct minimum).
-  function prixAffichage(pd, prixDirect) {
-    let barre = null, reduc = null;
-    if (pd) {
-      if (pd.platformPricing && pd.platformPricing.defaultDiscount > 0) {
-        reduc = pd.platformPricing.defaultDiscount;
-        barre = Math.round(prixDirect / (1 - reduc / 100));
-      } else if (pd.defaultPricing && pd.defaultPricing.platformPrices) {
-        const vals = Object.values(pd.defaultPricing.platformPrices).filter(v => v > 0);
-        if (vals.length) {
-          barre = Math.max(...vals);
-          if (barre > prixDirect) reduc = Math.round((barre - prixDirect) / barre * 100);
-          else barre = null;
-        }
+    // Ville + pays uniquement (l'adresse est stockée "Ville, Pays, Rue…"),
+  // même règle que la liste (adresse-formatter.js)
+  function villePays(adresse) {
+    const parties = String(adresse).split(',').map(p => p.trim()).filter(Boolean);
+    return parties.length >= 2 ? parties.slice(0, 2).join(', ') : String(adresse);
+  }
+
+  // Exactement le calcul des cartes de la liste : prix le plus bas selon le nombre
+  // de voyageurs, puis prix barré au même ratio plein/plateforme.
+  function prixCommeLaListe(pd, prixPastille) {
+    if (!pd) return { direct: prixPastille, barre: null, reduc: null };
+
+    const adultes = parseInt(document.getElementById('chiffres-adultes')?.textContent || '1', 10);
+    const enfants = parseInt(document.getElementById('chiffres-enfants')?.textContent || '0', 10);
+    const voyageurs = Math.max(1, adultes + enfants);
+
+    const prixSaison = (s) => {
+      if (pd.defaultPricing && pd.defaultPricing.mode === 'per_guest') {
+        const ppg = (s.pricesPerGuest?.length ? s.pricesPerGuest : pd.defaultPricing.pricesPerGuest) || [];
+        if (ppg.length > 0) return ppg[Math.min(voyageurs - 1, ppg.length - 1)];
+      }
+      return s.price;
+    };
+
+    let bas = Infinity, saisonBasse = null;
+    if (pd.defaultPricing) {
+      const p = prixSaison(pd.defaultPricing);
+      if (p > 0 && p < bas) { bas = p; saisonBasse = pd.defaultPricing; }
+    }
+    if (Array.isArray(pd.seasons)) {
+      for (const s of pd.seasons) {
+        const p = prixSaison(s);
+        if (p > 0 && p < bas) { bas = p; saisonBasse = s; }
       }
     }
-    return { barre, reduc };
+    const direct = bas !== Infinity ? Math.round(bas) : prixPastille;
+
+    const plein = saisonBasse?.price || direct;
+    const tarifsPlateforme = saisonBasse?.platformPrices
+      ? Object.values(saisonBasse.platformPrices).filter(v => v > 0) : [];
+    const pleinPlateforme = tarifsPlateforme.length
+      ? tarifsPlateforme.reduce((a, b) => a + b, 0) / tarifsPlateforme.length
+      : plein * (100 / (100 - (pd.platformPricing?.defaultDiscount || 17)));
+
+    const barre = Math.round(direct * (plein > 0 ? pleinPlateforme / plein : 1));
+    if (barre <= direct) return { direct, barre: null, reduc: null };
+    return { direct, barre, reduc: Math.round((barre - direct) / barre * 100) };
   }
 
   async function ouvrirFiche(id, prix, coords, el) {
@@ -538,8 +567,7 @@
     }
 
     const photos = toutesLesPhotos(fiche);
-    const direct = fiche.price || prix;
-    const { barre, reduc } = prixAffichage(fiche.pricing_data, direct);
+    const { direct, barre, reduc } = prixCommeLaListe(fiche.pricing_data_carte || fiche.pricing_data, prix);
     const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
 
     const contenu = `
@@ -554,7 +582,7 @@
           ` : ''}
         </div>` : `<div class="cl-noimg"></div>`}
       <div class="infos">
-        ${fiche.address ? `<p class="lieu">${fiche.address}</p>` : ''}
+        ${fiche.address ? `<p class="lieu">${villePays(fiche.address)}</p>` : ''}
         <p class="titre">${fiche.name || 'Logement'}</p>
         ${fiche.host_name ? `<p class="hote">Hôte : ${fiche.host_name}</p>` : ''}
         <p class="prix">
