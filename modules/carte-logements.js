@@ -243,7 +243,7 @@
     conteneur.appendChild(compteurEl);
 
     map = new mapboxgl.Map({ container: 'map-logements', style: STYLE, projection: 'mercator', center: [2.2, 46.6], zoom: 5 });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
     const limites = new mapboxgl.LngLatBounds();
     tousLesPoints.forEach(p => limites.extend([p.lng, p.lat]));
@@ -282,11 +282,13 @@
 
     brancherRecherche();
     brancherSurvolListe();
+    brancherAgrandir();
   }
 
   // Fait suivre la liste de gauche au rectangle visible de la carte,
   // en réutilisant le filtrage par bbox déjà géré par ton serveur.
   function filtrerListeParCarte() {
+    if (carteAgrandie) return;                          // liste masquée : inutile de la recharger
     if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : pas de rechargement
     if (!window.propertyManager) return;
     rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
@@ -330,7 +332,13 @@
         el.textContent = n;
         el.addEventListener('click', () => {
           map.getSource('logements').getClusterExpansionZoom(f.properties.cluster_id, (err, zoom) => {
-            if (!err) map.easeTo({ center: f.geometry.coordinates, zoom: zoom + 0.3 });
+            if (err) return;
+            map.easeTo({
+              center: f.geometry.coordinates,
+              zoom: zoom + 0.3,
+              duration: 900,                          // 500 ms par défaut
+              easing: t => 1 - Math.pow(1 - t, 3)     // départ franc, arrivée en douceur
+            });
           });
         });
       } else {
