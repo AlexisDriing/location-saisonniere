@@ -2,8 +2,8 @@
   const conteneur = document.getElementById('map-logements');
   if (!conteneur) return; // ← inerte si la div n'est pas là
 
-  // Sur mobile : on n'initialise pas encore (bascule mobile = étape suivante).
-  if (window.innerWidth < 768) return;
+  // Sur mobile, la carte existe mais n'est chargée qu'au premier tap sur "Carte"
+  const MOBILE = window.innerWidth < 768;
 
   const STYLE = 'mapbox://styles/alexisdriing/cmr6hgcc1001901r1bmcg5x8r';
   const TOKEN = (window.MAPBOX_TOKEN || '').trim();
@@ -22,6 +22,7 @@
   let panPourPopup = false;  // recadrage pour que la fiche tienne à l'écran
   let clicOuverture = null;  // le clic qui vient d'ouvrir une fiche (à ne pas confondre avec un clic extérieur)
   let idSurvole = null;      // logement actuellement survolé dans la liste
+  let carteOuverte = false;  // mobile : carte affichée en plein écran
   let clusterSurvole = null; // élément du cluster mis en avant
   let carteAgrandie = false; // carte en pleine largeur, liste masquée
   const cacheLeaves = new Map(); // cluster → logements qu'il contient (vidé à chaque déplacement)
@@ -128,6 +129,57 @@
       };
       requestAnimationFrame(suivre);
     });
+  }
+
+
+  // ── Mobile : bascule liste ↔ carte plein écran ─────────────────────────────
+  const ICONE_CARTE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3zM9 3v15M15 6v15"/></svg>';
+  const ICONE_LISTE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  let boutonBascule = null;
+
+  function brancherBasculeMobile() {
+    boutonBascule = document.createElement('button');
+    boutonBascule.type = 'button';
+    boutonBascule.className = 'cl-bascule-mobile';
+    boutonBascule.addEventListener('click', () => {
+      if (carteOuverte) fermerCarteMobile(); else ouvrirCarteMobile();
+    });
+    document.body.appendChild(boutonBascule);
+    majBoutonBascule();
+
+    // Le bouton retour du navigateur ferme la carte au lieu de quitter la page
+    window.addEventListener('popstate', () => { if (carteOuverte) fermerCarteMobile(true); });
+  }
+
+  function majBoutonBascule() {
+    if (!boutonBascule) return;
+    boutonBascule.innerHTML = carteOuverte
+      ? ICONE_LISTE + '<span>Liste</span>'
+      : ICONE_CARTE + '<span>Carte</span>';
+    boutonBascule.setAttribute('aria-label', carteOuverte ? 'Revenir à la liste' : 'Voir la carte');
+  }
+
+  function ouvrirCarteMobile() {
+    carteOuverte = true;
+    document.body.classList.add('no-scroll');
+    conteneur.classList.add('cl-plein-ecran');
+    majBoutonBascule();
+    history.pushState({ carteDriing: true }, ''); // pour intercepter le retour
+
+    if (!map) {
+      conteneur.classList.add('cl-chargement');   // premier tap : Mapbox se télécharge
+      init().then(() => conteneur.classList.remove('cl-chargement'));
+    } else {
+      requestAnimationFrame(() => map.resize());
+    }
+  }
+
+  function fermerCarteMobile(depuisHistorique) {
+    carteOuverte = false;
+    document.body.classList.remove('no-scroll');
+    conteneur.classList.remove('cl-plein-ecran');
+    majBoutonBascule();
+    if (!depuisHistorique) history.back();        // on retire notre entrée d'historique
   }
   
 
@@ -288,7 +340,7 @@
       map.addSource('logements', {
         type: 'geojson',
         data: enGeoJSON(tousLesPoints),
-        cluster: true, clusterMaxZoom: 13, clusterRadius: 55
+        cluster: true, clusterMaxZoom: 13, clusterRadius: MOBILE ? 80 : 55
       });
       map.addLayer({ id: 'ancre-clusters', type: 'circle', source: 'logements',
         filter: ['has', 'point_count'], paint: { 'circle-radius': 12, 'circle-opacity': 0.01 } });
@@ -317,7 +369,7 @@
 
     brancherRecherche();
     brancherSurvolListe();
-    brancherAgrandir();
+    if (!MOBILE) brancherAgrandir(); // agrandissement : desktop uniquement
   }
 
   // Fait suivre la liste de gauche au rectangle visible de la carte,
@@ -671,6 +723,7 @@
     if (dx || dy) { panPourPopup = true; map.panBy([dx, dy], { duration: 250 }); }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  const demarrer = () => (MOBILE ? brancherBasculeMobile() : init());
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
+  else demarrer();
 })();
