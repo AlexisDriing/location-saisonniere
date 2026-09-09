@@ -209,7 +209,8 @@
   function ouvrirCarteMobile() {
     carteOuverte = true;
     document.body.classList.add('no-scroll');
-    conteneur.style.setProperty('--cl-haut', hauteurEntete() + 'px');
+    document.body.classList.add('cl-carte-ouverte');   // nav masquée, barre de recherche fixée
+    conteneur.style.setProperty('--cl-haut', hauteurEntete() + 'px'); // mesuré APRÈS, la barre est en haut
     conteneur.classList.add('cl-plein-ecran');
     majBoutonBascule();
     history.pushState({ carteDriing: true }, ''); // pour intercepter le retour
@@ -225,6 +226,7 @@
   function fermerCarteMobile(depuisHistorique) {
     carteOuverte = false;
     document.body.classList.remove('no-scroll');
+    document.body.classList.remove('cl-carte-ouverte');
     conteneur.classList.remove('cl-plein-ecran');
     majBoutonBascule();
     if (!depuisHistorique) history.back();        // on retire notre entrée d'historique
