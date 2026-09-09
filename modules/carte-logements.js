@@ -23,8 +23,7 @@
   let clicOuverture = null;  // le clic qui vient d'ouvrir une fiche (à ne pas confondre avec un clic extérieur)
   let idSurvole = null;      // logement actuellement survolé dans la liste
   let carteOuverte = false;  // mobile : carte affichée en plein écran
-  let clusterSurvole = null; // élément du cluster mis en avant
-  let carteAgrandie = false; // carte en pleine largeur, liste masquée
+  let carteADeplace = false; // mobile : la carte a bougé, la liste devra se recaler
   const cacheLeaves = new Map(); // cluster → logements qu'il contient (vidé à chaque déplacement)
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
@@ -182,7 +181,13 @@
     });
     document.body.appendChild(boutonBascule);
     majBoutonBascule();
-    brancherBoutonZone();
+
+    // La fenêtre de filtres retire "no-scroll" en se fermant : on le remet si la carte est ouverte
+    document.addEventListener('click', (e) => {
+      if (carteOuverte && e.target.closest('.button-modal-prix.close, #bouton-valider-mobile')) {
+        setTimeout(() => document.body.classList.add('no-scroll'), 50);
+      }
+    });
 
     // iOS : le pincement doit zoomer la carte, pas la page
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(type =>
@@ -223,6 +228,7 @@
     conteneur.classList.remove('cl-plein-ecran');
     majBoutonBascule();
     if (!depuisHistorique) history.back();        // on retire notre entrée d'historique
+    if (carteADeplace) { carteADeplace = false; filtrerListeParCarte(); } // un seul recalage, au retour
   }
   
 
@@ -420,12 +426,8 @@
     function filtrerListeParCarte() {
     if (carteAgrandie) return;                          // liste masquée : inutile de la recharger
     if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : pas de rechargement
-    // Mobile : c'est l'utilisateur qui déclenche le rechargement
-    if (MOBILE && carteOuverte && !rechercheEnCours && !forcerChargementZone) {
-      afficherBoutonZone(true);
-      return;
-    }
-    forcerChargementZone = false;
+    // Mobile : pas de rechargement pendant qu'on manipule la carte, on note juste qu'elle a bougé
+    if (MOBILE && carteOuverte && !rechercheEnCours) { carteADeplace = true; return; }
     if (!window.propertyManager) return;
     rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
     clearTimeout(rechercheTimeout);
