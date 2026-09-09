@@ -22,6 +22,8 @@
   let panPourPopup = false;  // recadrage pour que la fiche tienne à l'écran
   let clicOuverture = null;  // le clic qui vient d'ouvrir une fiche (à ne pas confondre avec un clic extérieur)
   let idSurvole = null;      // logement actuellement survolé dans la liste
+  let clusterSurvole = null; // élément du cluster mis en avant
+  const cacheLeaves = new Map(); // cluster → logements qu'il contient (vidé à chaque déplacement)
   let carteOuverte = false;  // mobile : carte affichée en plein écran
   let carteADeplace = false; // mobile : la carte a bougé, la liste devra se recaler
   let ficheMobile = null;    // mobile : la fiche en bas de l'écran
@@ -80,12 +82,54 @@
   });
 
 
-    // Allume / éteint la pastille d'un logement sur la carte
+    // Allume / éteint la pastille d'un logement, ou le cluster qui le contient
   function surligner(id, actif) {
     const marqueur = marqueurs.get('p' + id);
-    if (!marqueur) return;                    // logement hors écran ou regroupé dans un cluster
-    const el = marqueur.getElement();
-    if (el) el.classList.toggle('survol', actif);
+    if (!actif) {
+      if (marqueur && marqueur.getElement()) marqueur.getElement().classList.remove('survol');
+      if (clusterSurvole) { clusterSurvole.classList.remove('survol'); clusterSurvole = null; }
+      return;
+    }
+    if (marqueur && marqueur.getElement()) { marqueur.getElement().classList.add('survol'); return; }
+    surlignerCluster(id); // le logement est regroupé : on allume son cluster
+  }
+
+  // Trouve le cluster qui contient réellement ce logement et le met en avant
+  function surlignerCluster(id) {
+    const src = map && map.getSource('logements');
+    const point = tousLesPoints.find(p => p.id === id);
+    if (!src || !point) return;
+
+    // Clusters à l'écran, du plus proche du logement au plus lointain
+    const ecran = map.project([point.lng, point.lat]);
+    const candidats = [];
+    for (const [cle, marqueur] of marqueurs) {
+      if (cle[0] !== 'c') continue;
+      const pos = map.project(marqueur.getLngLat());
+      const d = Math.hypot(pos.x - ecran.x, pos.y - ecran.y);
+      if (d < 220) candidats.push({ clusterId: Number(cle.slice(1)), el: marqueur.getElement(), d });
+    }
+    candidats.sort((a, b) => a.d - b.d);
+
+    const essayer = (i) => {
+      if (i >= candidats.length || idSurvole !== id) return; // souris déjà partie ailleurs
+      const c = candidats[i];
+      const connu = cacheLeaves.get(c.clusterId);
+      if (connu) {
+        if (connu.has(id)) { c.el.classList.add('survol'); clusterSurvole = c.el; }
+        else essayer(i + 1);
+        return;
+      }
+      src.getClusterLeaves(c.clusterId, 1000, 0, (err, feuilles) => {
+        if (err) return essayer(i + 1);
+        const ids = new Set(feuilles.map(f => f.properties.id));
+        cacheLeaves.set(c.clusterId, ids);
+        if (idSurvole !== id) return;
+        if (ids.has(id)) { c.el.classList.add('survol'); clusterSurvole = c.el; }
+        else essayer(i + 1);
+      });
+    };
+    essayer(0);
   }
 
   // Survol d'une card de la liste → pastille correspondante mise en avant
@@ -233,7 +277,6 @@
     conteneur.classList.remove('cl-plein-ecran');
     majBoutonBascule();
     if (!depuisHistorique) history.back();        // on retire notre entrée d'historique
-    if (carteADeplace) { carteADeplace = false; filtrerListeParCarte(); } // un seul recalage, au retour
   }
   
 
@@ -470,7 +513,10 @@
       map.addSource('logements', {
         type: 'geojson',
         data: enGeoJSON(tousLesPoints),
-        cluster: true, clusterMaxZoom: 13, clusterRadius: MOBILE ? 80 : 55
+        cluster: true,
+        clusterMaxZoom: 13,
+        clusterRadius: MOBILE ? 65 : 45,
+        clusterMinPoints: 3        // un duo reste affiché en deux prix
       });
       map.addLayer({ id: 'ancre-clusters', type: 'circle', source: 'logements',
         filter: ['has', 'point_count'], paint: { 'circle-radius': 12, 'circle-opacity': 0.01 } });
@@ -482,6 +528,7 @@
       map.on('idle', synchroniser);
       map.on('moveend', () => majCompteur(compteurEl));
       map.on('moveend', filtrerListeParCarte); // ← la liste suit la carte
+      map.on('moveend', () => cacheLeaves.clear()); // les clusters changent : on repart à zéro
 
       // Fermer la fiche au clic ailleurs — en ignorant le clic qui vient de l'ouvrir
       map.on('click', (e) => {
@@ -506,10 +553,7 @@
   // Fait suivre la liste de gauche au rectangle visible de la carte,
   // en réutilisant le filtrage par bbox déjà géré par ton serveur.
     function filtrerListeParCarte() {
-    if (carteAgrandie) return;                          // liste masquée : inutile de la recharger
     if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : pas de rechargement
-    // Mobile : pas de rechargement pendant qu'on manipule la carte, on note juste qu'elle a bougé
-    if (MOBILE && carteOuverte && !rechercheEnCours) { carteADeplace = true; return; }
     if (!window.propertyManager) return;
     rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
     clearTimeout(rechercheTimeout);
