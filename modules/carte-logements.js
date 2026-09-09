@@ -24,6 +24,8 @@
   let idSurvole = null;      // logement actuellement survolé dans la liste
   let carteOuverte = false;  // mobile : carte affichée en plein écran
   let carteADeplace = false; // mobile : la carte a bougé, la liste devra se recaler
+  let ficheMobile = null;    // mobile : la fiche en bas de l'écran
+  let ficheMobileId = null;  // logement affiché dedans
   const cacheLeaves = new Map(); // cluster → logements qu'il contient (vidé à chaque déplacement)
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
@@ -225,6 +227,7 @@
 
   function fermerCarteMobile(depuisHistorique) {
     carteOuverte = false;
+    fermerFicheMobile();
     document.body.classList.remove('no-scroll');
     document.body.classList.remove('cl-carte-ouverte');
     conteneur.classList.remove('cl-plein-ecran');
@@ -234,6 +237,82 @@
   }
   
 
+
+  // ── Mobile : fiche en bas de l'écran ────────────────────────────────────────
+  function creerFicheMobile() {
+    ficheMobile = document.createElement('div');
+    ficheMobile.className = 'cl-fiche-mobile';
+    conteneur.appendChild(ficheMobile);
+
+    // Croix
+    ficheMobile.addEventListener('click', (e) => {
+      if (e.target.closest('.cl-fermer')) { e.preventDefault(); fermerFicheMobile(); }
+    });
+
+    // Glissement horizontal : logement précédent / suivant parmi ceux à l'écran
+    let x0 = 0, y0 = 0;
+    ficheMobile.addEventListener('touchstart', (e) => {
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    ficheMobile.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - x0;
+      const dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 40 && Math.abs(dy) < 30) {
+        e.preventDefault();               // un glissement n'ouvre pas la page du logement
+        voisinFiche(dx < 0 ? 1 : -1);
+      }
+    });
+  }
+
+  function afficherFicheMobile(d) {
+    if (!ficheMobile) creerFicheMobile();
+    ficheMobileId = String(d.id);
+    const photo = d.photos[0] || '';
+    const adresse = d.fiche.address ? villePays(d.fiche.address) : '';
+    ficheMobile.innerHTML = `
+      <a class="cl-fm-card" href="${d.lien || '#'}"${d.lien ? ' target="_blank"' : ''}>
+        ${photo ? `<img class="cl-fm-photo" src="${photo}" alt="" />` : '<div class="cl-fm-photo"></div>'}
+        <div class="cl-fm-infos">
+          ${adresse ? `<p class="lieu">${adresse}</p>` : ''}
+          <p class="titre">${d.fiche.name || 'Logement'}</p>
+          ${d.fiche.host_name ? `<p class="hote">Hôte : ${d.fiche.host_name}</p>` : ''}
+          <p class="prix">
+            Dès ${d.barre ? `<del>${euros(d.barre)}</del>` : ''} <b>${euros(d.direct)}</b> / nuit
+            ${d.reduc ? `<span class="badge">-${d.reduc}%</span>` : ''}
+          </p>
+        </div>
+        <span class="cl-fermer" role="button" aria-label="Fermer">×</span>
+      </a>`;
+    ficheMobile.classList.add('visible');
+    document.body.classList.add('cl-fiche-ouverte');
+  }
+
+  function fermerFicheMobile() {
+    if (!ficheMobile) return;
+    ficheMobile.classList.remove('visible');
+    document.body.classList.remove('cl-fiche-ouverte');
+    ficheMobileId = null;
+    if (pillActive) { pillActive.classList.remove('actif'); pillActive = null; }
+  }
+
+  // Logement voisin, à gauche (-1) ou à droite (+1), parmi les pastilles à l'écran
+  function voisinFiche(sens) {
+    const pastilles = [];
+    for (const [cle, m] of marqueurs) {
+      if (cle[0] !== 'p') continue;
+      const pos = m.getLngLat();
+      pastilles.push({ id: cle.slice(1), x: map.project(pos).x, el: m.getElement(), pos });
+    }
+    if (pastilles.length < 2) return;
+    pastilles.sort((a, b) => a.x - b.x);
+    const i = pastilles.findIndex(p => p.id === ficheMobileId);
+    const v = pastilles[(i + sens + pastilles.length) % pastilles.length];
+    ouvrirFiche(v.id, Number(v.el.dataset.prix), [v.pos.lng, v.pos.lat], v.el);
+  }
+  
+  
+  
+  
   // 🔗 La recherche de lieu déplace la carte (on enrobe setSearchLocation sans modifier le module)
     function brancherRecherche() {
     const attente = setInterval(() => {
@@ -410,6 +489,8 @@
         const cible = e.originalEvent && e.originalEvent.target;
         if (cible && cible.closest && cible.closest('.mapboxgl-popup')) return; // clic dans la fiche
         if (popupActive) { popupActive.remove(); popupActive = null; }
+        if (MOBILE) fermerFicheMobile();
+      });
       });
       synchroniser();
       majCompteur(compteurEl);
@@ -484,6 +565,7 @@
       } else {
         const id = f.properties.id, prix = f.properties.prix, coords = f.geometry.coordinates;
         el.className = 'cl-prix-pill';
+        el.dataset.prix = prix;      // relu par le glissement d'une fiche à l'autre
         if (idSurvole && String(idSurvole) === String(id)) el.classList.add('survol');
         el.textContent = euros(prix);
         el.addEventListener('click', (ev) => { clicOuverture = ev; ouvrirFiche(id, prix, coords, el); });
@@ -717,6 +799,9 @@
     const photos = toutesLesPhotos(fiche);
     const { direct, barre, reduc } = prixCommeLaListe(fiche.pricing_data_carte || fiche.pricing_data, prix);
     const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
+
+    // Mobile : fiche en bas de l'écran, pas de bulle accrochée à la pastille
+    if (MOBILE) { afficherFicheMobile({ id, fiche, photos, direct, barre, reduc, lien }); return; }
 
     const contenu = `
       ${photos.length ? `
