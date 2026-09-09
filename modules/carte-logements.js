@@ -28,7 +28,6 @@
   let carteADeplace = false; // mobile : la carte a bougé, la liste devra se recaler
   let ficheMobile = null;    // mobile : la fiche en bas de l'écran
   let ficheMobileId = null;  // logement affiché dedans
-  const cacheLeaves = new Map(); // cluster → logements qu'il contient (vidé à chaque déplacement)
   let compteurEl = null;
   let moveDepuisCarte = false; // évite que le flyTo se déclenche quand c'est la carte qui filtre
   let pointsEnAttente = null;  // points reçus avant que la carte soit prête
