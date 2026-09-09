@@ -491,7 +491,6 @@
         if (popupActive) { popupActive.remove(); popupActive = null; }
         if (MOBILE) fermerFicheMobile();
       });
-      });
       synchroniser();
       majCompteur(compteurEl);
 
