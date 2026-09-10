@@ -838,7 +838,7 @@
       if (cacheFiches.has(id)) fiche = cacheFiches.get(id);
       else {
         try {
-          const r = await fetch(`${API}/property-metadata/${encodeURIComponent(id)}`);
+          const r = await fetch(`${API}/map-card/${encodeURIComponent(id)}`);
           if (r.ok) { fiche = await r.json(); cacheFiches.set(id, fiche); }
         } catch (e) { /* fiche minimale : on affiche quand même le prix */ }
       }
