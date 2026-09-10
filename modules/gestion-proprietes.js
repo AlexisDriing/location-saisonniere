@@ -541,7 +541,9 @@ class PropertyManager {
       const cacheKey = this.buildCacheKey(filters);
       const cachedData = this.getFromCache(cacheKey);
       
-     if (cachedData) {
+      if (cachedData) {
+        this.plusProches = cachedData.plus_proches || null;
+        this.videRaison = cachedData.vide_raison || null;
         this.displayFilteredProperties(cachedData.properties);
         this.totalResults = cachedData.total || 0;
         this.totalPages = cachedData.total_pages || 1;
@@ -549,7 +551,7 @@ class PropertyManager {
         this.renderPagination();
 
         // 🗺️ Prévenir la carte des logements filtrés (même jeu de filtres)
-        window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: cachedData.map_points || [] } }));
+                window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: cachedData.map_points || [], plus_proches: this.plusProches } }));
 
         // Mettre à jour les prix si des dates sont sélectionnées
         if (filters.start && filters.end) {
@@ -624,7 +626,9 @@ class PropertyManager {
       this.setInCache(cacheKey, data);
 
       // 🗺️ Prévenir la carte des logements filtrés (même jeu de filtres)
-      window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: data.map_points || [] } }));
+      this.plusProches = data.plus_proches || null;
+      this.videRaison = data.vide_raison || null;
+      window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: data.map_points || [], plus_proches: this.plusProches } }));
 
       // Mettre à jour les informations de pagination
       this.totalResults = data.total || 0;
@@ -1611,11 +1615,72 @@ if (hostImageElement) {
     }
   }
 
-  showNoResults(show) {
+    showNoResults(show) {
     const noResultsMessage = document.querySelector('.no-results-message');
-    if (noResultsMessage) {
-      noResultsMessage.style.display = show ? 'block' : 'none';
+    if (!noResultsMessage) return;
+    noResultsMessage.style.display = show ? 'block' : 'none';
+    if (show) this.configurerBlocVide(noResultsMessage);
+  }
+
+  // Titre et boutons : la cause vient du serveur, on se contente d'afficher
+  configurerBlocVide(bloc) {
+    const parFiltres = this.videRaison === 'filtres';
+
+    const titre = bloc.querySelector('.titre-aucun-logement');
+    if (titre) {
+      titre.textContent = parFiltres
+        ? 'Aucun logement ne correspond à cette recherche'
+        : 'Aucun logement dans cette zone';
     }
+
+    const btnEffacer = bloc.querySelector('.btn-effacer-filtres');
+    if (btnEffacer) {
+      btnEffacer.style.display = parFiltres ? '' : 'none';
+      if (!btnEffacer.dataset.branche) {
+        btnEffacer.dataset.branche = '1';
+        btnEffacer.addEventListener('click', (e) => { e.preventDefault(); this.effacerTout(); });
+      }
+    }
+
+    const btnProches = bloc.querySelector('.btn-plus-proches');
+    if (btnProches) {
+      btnProches.style.display = this.plusProches && this.plusProches.bbox ? '' : 'none';
+      if (!btnProches.dataset.branche) {
+        btnProches.dataset.branche = '1';
+        btnProches.addEventListener('click', (e) => { e.preventDefault(); this.allerAuxPlusProches(); });
+      }
+    }
+  }
+
+  effacerTout() {
+    if (window.filtersManager) window.filtersManager.clearAllFilters();
+
+    this.startDate = null;
+    this.endDate = null;
+    ['text-dates-search', 'text-dates-search-mobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = 'Dates';
+    });
+    document.querySelectorAll('.text-total').forEach(el => { el.style.display = 'none'; });
+
+    this.applyFilters(true);
+  }
+
+  allerAuxPlusProches() {
+    const cible = this.plusProches;
+    if (!cible || !cible.bbox) return;
+    const b = cible.bbox;
+
+    // La carte se recadre, son déplacement rechargera la liste
+    if (window.driingCarte && window.driingCarte.allerVers(b)) return;
+
+    // Carte absente ou masquée : on déplace la zone nous-mêmes
+    this.setSearchLocation(
+      { lat: (b[1] + b[3]) / 2, lng: (b[0] + b[2]) / 2 },
+      'region',
+      { polygon_source: 'bbox', bbox: b, geo_feature_name: null, geo_feature_code: null }
+    );
+    this.applyFilters(true);
   }
 
   showError(show) {
