@@ -501,7 +501,13 @@
     compteurEl.textContent = '…';
     conteneur.appendChild(compteurEl);
 
-    map = new mapboxgl.Map({ container: 'map-logements', style: STYLE, projection: 'mercator', center: [2.2, 46.6], zoom: 5 });
+    map = new mapboxgl.Map({
+      container: 'map-logements', style: STYLE, projection: 'mercator',
+      center: [2.2, 46.6], zoom: 5,
+      pitchWithRotate: false,   // pas d'inclinaison
+      touchPitch: false         // pas d'inclinaison à deux doigts
+    });
+    if (MOBILE) map.touchZoomRotate.disableRotation(); // le pincement zoome, sans faire tourner
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
     const limites = new mapboxgl.LngLatBounds();
