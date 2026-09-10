@@ -68,10 +68,23 @@
   }
   
   // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
-    window.addEventListener('driing:resultats-filtres', (e) => {
+      let plusProchesCarte = null;
+
+  window.addEventListener('driing:resultats-filtres', (e) => {
     const pts = e.detail && e.detail.map_points;
+    plusProchesCarte = (e.detail && e.detail.plus_proches) || null;
     if (Array.isArray(pts)) majPointsCarte(pts);
   });
+
+  // Utilisé par le bloc "aucun logement" de la liste
+  window.driingCarte = {
+    allerVers(bbox) {
+      // offsetParent null = carte masquée : la liste se débrouillera sans elle
+      if (!map || !conteneur.offsetParent || !Array.isArray(bbox) || bbox.length !== 4) return false;
+      map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, maxZoom: 12 });
+      return true;
+    }
+  };
 
   // Correction de scroll : on note la position AVANT le re-rendu, on vérifie après
   window.addEventListener('driing:resultats-filtres', () => {
@@ -534,6 +547,7 @@
       map.on('moveend', () => majCompteur(compteurEl));
       map.on('moveend', filtrerListeParCarte); // ← la liste suit la carte
       map.on('moveend', () => cacheLeaves.clear()); // les clusters changent : on repart à zéro
+      map.on('movestart', () => { plusProchesCarte = null; }); // les données arrivent après le moveend
 
       // Fermer la fiche au clic ailleurs — en ignorant le clic qui vient de l'ouvrir
       map.on('click', (e) => {
@@ -630,6 +644,22 @@
     const b = map.getBounds();
     const n = tousLesPoints.filter(p =>
       p.lng >= b.getWest() && p.lng <= b.getEast() && p.lat >= b.getSouth() && p.lat <= b.getNorth()).length;
+    // Mobile seulement : la liste est masquée, la pastille est la seule sortie.
+    // Sur ordinateur, le bloc "aucun logement" de la liste s'en charge.
+    if (MOBILE && n === 0 && plusProchesCarte && plusProchesCarte.bbox) {
+      el.textContent = '';
+      el.appendChild(document.createTextNode('Aucun logement ici'));
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'cl-compteur-action';
+      go.textContent = 'Voir les plus proches';
+      go.addEventListener('click', () => window.driingCarte.allerVers(plusProchesCarte.bbox));
+      el.appendChild(go);
+      el.classList.add('avec-action');
+      return;
+    }
+
+    el.classList.remove('avec-action');
     el.textContent = `${n} logement${n > 1 ? 's' : ''} dans cette zone`;
   }
 
