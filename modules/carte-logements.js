@@ -34,6 +34,7 @@
   let rechercheEnCours = false; // une recherche de lieu repositionne la carte : on laisse la carte piloter
   let rechercheTimeout = null;
   let tempoCarte = null;   // regroupe les gestes enchaînés en un seul chargement
+  
 
   function enGeoJSON(points) {
     return {
@@ -58,8 +59,9 @@
   
   
   // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
-      let plusProchesCarte = null;
-
+  let plusProchesCarte = null;
+  let rechargeDepuisCarte = false; // la carte a déclenché ce rechargement
+  
   window.addEventListener('driing:resultats-filtres', (e) => {
     const pts = e.detail && e.detail.map_points;
     plusProchesCarte = (e.detail && e.detail.plus_proches) || null;
@@ -79,7 +81,19 @@
     }
   };
 
-
+  // La liste vient de changer sous les pieds du visiteur. Sans ça, le navigateur
+  // le jette dans le pied de page quand la page rétrécit. Airbnb fait pareil :
+  // retour en haut de la liste, sec, dès que les résultats arrivent.
+  window.addEventListener('driing:resultats-filtres', () => {
+    if (!rechargeDepuisCarte) return;
+    rechargeDepuisCarte = false;
+    requestAnimationFrame(() => {
+      const bloc = document.querySelector('.bloc-logement-map');
+      if (!bloc) return;
+      const haut = bloc.getBoundingClientRect().top + window.scrollY;
+      if (window.scrollY > haut + 10) window.scrollTo({ top: Math.max(0, haut - 20), behavior: 'auto' });
+    });
+  });
 
 
     // Allume / éteint la pastille d'un logement, ou le cluster qui le contient
@@ -602,6 +616,7 @@
       }
     );
     moveDepuisCarte = false;
+    rechargeDepuisCarte = true;
     window.propertyManager.applyFilters(true);
   }
 
