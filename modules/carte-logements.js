@@ -450,7 +450,7 @@
 
       #map-logements .cl-fm-card { position: relative; }
       #map-logements .cl-fm-card > .cl-tag {
-        position: absolute; top: 12px; left: 12px; z-index: 2;
+        position: absolute; top: 14px; left: 14px; z-index: 2;
         font-size: 10px; padding: 2px 7px; margin: 0;
       }
       
