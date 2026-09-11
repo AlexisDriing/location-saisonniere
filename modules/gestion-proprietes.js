@@ -202,55 +202,66 @@ class PropertyManager {
   // GESTION DES PRIX
   // ================================
 
-  async updatePricesForDates(startDate, endDate) {
+    async updatePricesForDates(startDate, endDate) {
     try {
-      
-      // Récupérer les propriétés visibles
       const visiblePropertyIds = [];
       const visibleElements = document.querySelectorAll('.housing-item:not([style*="display: none"]) .lien-logement[data-property-id]');
-      
       visibleElements.forEach(element => {
         const propertyId = element.getAttribute('data-property-id');
         if (propertyId) visiblePropertyIds.push(propertyId);
       });
-      
       if (visiblePropertyIds.length === 0) return;
-      
-            // Récupérer le nombre d'adultes et d'enfants (avant la cacheKey, pour qu'elle inclue les deux)
+
       const adultsElement = document.getElementById('chiffres-adultes');
       const adultsCount = adultsElement ? parseInt(adultsElement.textContent, 10) : 1;
       const childrenElement = document.getElementById('chiffres-enfants');
       const childrenCount = childrenElement ? parseInt(childrenElement.textContent, 10) : 0;
       const totalGuests = adultsCount + childrenCount;
-      
-      // Vérifier le cache d'abord (clé inclut childrenCount pour invalider quand le filtre voyageurs change)
-      const cacheKey = `prices_${startDate}_${endDate}_${adultsCount}_${childrenCount}_${visiblePropertyIds.join(',')}`;
-      const cachedPrices = this.getFromCache(cacheKey);
-      
-      if (cachedPrices) {
-        this.updatePriceDisplays(cachedPrices.prices, cachedPrices.nights);
+
+      // Cache par logement : on ne demande au serveur que ceux qu'on n'a pas encore
+      const prefixe = `prices_${startDate}_${endDate}_${adultsCount}_${childrenCount}_`;
+      const dejaConnus = {};
+      const manquants = [];
+      let nightsConnues = null;
+      for (const id of visiblePropertyIds) {
+        const c = this.getFromCache(prefixe + id);
+        if (c) { dejaConnus[id] = c.price; nightsConnues = c.nights; }
+        else manquants.push(id);
+      }
+      if (Object.keys(dejaConnus).length > 0) {
+        this.updatePriceDisplays(dejaConnus, nightsConnues);
+      }
+      if (manquants.length === 0) return; // tout était en cache : aucun appel
+
+      let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}&total_guests=${totalGuests}`;
+      manquants.forEach(id => { url += `&property_ids=${encodeURIComponent(id)}`; });
+
+      const response = await this.queueRequest(url);
+
+      if (response.status === 429) {
+        // Un seul nouvel essai après la fenêtre du limiteur, jamais en chaîne
+        if (!this._prixRetente) {
+          this._prixRetente = true;
+          setTimeout(async () => {
+            if (this.startDate && this.endDate) await this.updatePricesForDates(this.startDate, this.endDate);
+            this._prixRetente = false;
+          }, 6000);
+        }
         return;
       }
-      
-      // Construire l'URL pour la requête
-      let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}&total_guests=${totalGuests}`;
-      visiblePropertyIds.forEach(id => {
-        url += `&property_ids=${encodeURIComponent(id)}`;
-      });
-      
-      // Utiliser la queue de requêtes
-      const response = await this.queueRequest(url);
+      if (!response.ok) return;
+
       const data = await response.json();
-      
       if (!data.prices) {
         console.error('Format de réponse inattendu:', data);
         return;
       }
-      
-      // Mettre en cache
-      this.setInCache(cacheKey, { prices: data.prices, nights: data.nights });
+
+      Object.entries(data.prices).forEach(([id, price]) => {
+        this.setInCache(prefixe + id, { price, nights: data.nights });
+      });
       this.updatePriceDisplays(data.prices, data.nights);
-      
+
     } catch (error) {
       console.error('❌ Erreur mise à jour prix:', error);
     }
@@ -347,6 +358,7 @@ class PropertyManager {
       filters.price_max || 'no-price',
       filters.latitude || 'no-lat',
       filters.longitude || 'no-lng',
+      filters.bbox || 'no-bbox', // un zoom garde le centre mais change le cadre
       (filters.amenities || []).sort().join(',') || 'no-amenities',
       (filters.options || []).sort().join(',') || 'no-options',
       (filters.types || []).sort().join(',') || 'no-types',
@@ -619,6 +631,17 @@ class PropertyManager {
       
       // Utiliser la queue de requêtes
       const response = await this.queueRequest(url);
+
+      // Réponse en erreur : ne pas la lire comme du JSON, ne rien mettre en cache,
+      // garder les logements déjà à l'écran.
+      if (!response.ok) {
+        if (response.status === 429) {
+          console.warn('⏳ Trop de recherches, résultats précédents conservés');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const data = await response.json();
     
       
@@ -1664,8 +1687,7 @@ if (hostImageElement) {
     });
     document.querySelectorAll('.text-total').forEach(el => { el.style.display = 'none'; });
 
-    // Les calendriers gardent leur sélection en interne : sans ça, le visiteur
-    // rouvre le calendrier et ses anciennes dates sont toujours surlignées
+    // Les calendriers gardent leur sélection en interne : on la vide aussi
     if (typeof jQuery !== 'undefined' && typeof moment !== 'undefined') {
       jQuery('.dates-button-search, #input-calendar-mobile').each(function () {
         const p = jQuery(this).data('daterangepicker');
