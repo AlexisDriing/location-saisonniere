@@ -315,8 +315,8 @@
     ficheMobile.innerHTML = `
       <a class="cl-fm-card" href="${d.lien || '#'}"${d.lien ? ' target="_blank"' : ''}>
         ${photo ? `<img class="cl-fm-photo" src="${photo}" alt="" />` : '<div class="cl-fm-photo"></div>'}
-          <div class="cl-fm-infos">
-          ${d.fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : ''}
+        ${d.fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : ''}
+        <div class="cl-fm-infos">
           ${adresse ? `<p class="lieu">${adresse}</p>` : ''}
           <p class="titre">${d.fiche.name || 'Logement'}</p>
           ${d.fiche.host_name ? `<p class="hote">Hôte : ${d.fiche.host_name}</p>` : ''}
@@ -447,6 +447,12 @@
       }
       .cl-popup .cl-media, .cl-popup .cl-noimg { position: relative; }
       .cl-popup .cl-tag { position: absolute; top: 12px; left: 12px; z-index: 3; }
+
+      #map-logements .cl-fm-card { position: relative; }
+      #map-logements .cl-fm-card > .cl-tag {
+        position: absolute; top: 8px; left: 8px; z-index: 2;
+        font-size: 11px; padding: 2px 7px; margin: 0;
+      }
       
       .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 14px;
         border-radius: 6px; padding: 4px; margin-left: 6px; }
