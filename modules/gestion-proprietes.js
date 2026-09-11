@@ -1652,16 +1652,26 @@ if (hostImageElement) {
     }
   }
 
-  effacerTout() {
+    effacerTout() {
     if (window.filtersManager) window.filtersManager.clearAllFilters();
 
     this.startDate = null;
     this.endDate = null;
+    localStorage.removeItem('selected_search_data');
     ['text-dates-search', 'text-dates-search-mobile'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = 'Dates';
+      if (el) { el.textContent = 'Dates'; el.style.color = ''; }
     });
     document.querySelectorAll('.text-total').forEach(el => { el.style.display = 'none'; });
+
+    // Les calendriers gardent leur sélection en interne : sans ça, le visiteur
+    // rouvre le calendrier et ses anciennes dates sont toujours surlignées
+    if (typeof jQuery !== 'undefined' && typeof moment !== 'undefined') {
+      jQuery('.dates-button-search, #input-calendar-mobile').each(function () {
+        const p = jQuery(this).data('daterangepicker');
+        if (p) { p.setStartDate(moment()); p.setEndDate(moment()); }
+      });
+    }
 
     this.applyFilters(true);
   }
