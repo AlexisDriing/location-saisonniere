@@ -55,18 +55,7 @@
     if (compteurEl) majCompteur(compteurEl);
   }
 
-    let scrollAvantRendu = null;
-
-  // Le navigateur nous a-t-il déplacés parce que la page a raccourci ?
-  function corrigerScrollListe() {
-    if (scrollAvantRendu === null) return;
-    if (window.scrollY >= scrollAvantRendu - 5) return; // personne ne nous a déplacés → rien à faire
-    const wrapper = document.querySelector('.collection-list-wrapper');
-    if (!wrapper) return;
-    const hautListe = wrapper.getBoundingClientRect().top + window.scrollY;
-    scrollAvantRendu = null;
-    window.scrollTo({ top: Math.max(0, hautListe - 20), behavior: 'auto' });
-  }
+  
   
   // 🔗 Les filtres de la liste pilotent aussi la carte (événement émis par gestion-proprietes.js)
       let plusProchesCarte = null;
@@ -90,12 +79,7 @@
     }
   };
 
-  // Correction de scroll : on note la position AVANT le re-rendu, on vérifie après
-  window.addEventListener('driing:resultats-filtres', () => {
-    scrollAvantRendu = window.scrollY;           // position avant que la liste change
-    requestAnimationFrame(corrigerScrollListe);  // contrôle avant le prochain affichage
-    setTimeout(corrigerScrollListe, 200);        // filet si la mise en page tarde
-  });
+
 
 
     // Allume / éteint la pastille d'un logement, ou le cluster qui le contient
@@ -461,6 +445,9 @@
         display: inline-block; background: #f0f7ff; color: #15394c; font-weight: 500; font-size: 12px;
         border-radius: 8px; padding: 10px 10px; margin-bottom: 0px;
       }
+      .cl-popup .cl-media, .cl-popup .cl-noimg { position: relative; }
+      .cl-popup .cl-tag { position: absolute; top: 12px; left: 12px; z-index: 3; }
+      
       .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 14px;
         border-radius: 6px; padding: 4px; margin-left: 6px; }
     `;
@@ -900,6 +887,8 @@
     // Mobile : fiche en bas de l'écran, pas de bulle accrochée à la pastille
     if (MOBILE) { afficherFicheMobile({ id, fiche, photos, direct, barre, reduc, lien }); return; }
 
+    const tag = fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : '';
+    
     const contenu = `
       ${photos.length ? `
         <div class="cl-media">
@@ -909,10 +898,10 @@
             <span class="cl-nav cl-next" role="button" aria-label="Photo suivante">›</span>
             <img class="cl-photo-anim" alt="" />
             <div class="cl-dots"><div class="cl-dots-piste">${photos.map(() => `<span class="cl-dot"></span>`).join('')}</div></div>
-          ` : ''}
-        </div>` : `<div class="cl-noimg"></div>`}
-        <div class="infos">
-        ${fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : ''}
+                    ` : ''}
+          ${tag}
+        </div>` : `<div class="cl-noimg">${tag}</div>`}
+      <div class="infos">
         ${fiche.address ? `<p class="lieu">${villePays(fiche.address)}</p>` : ''}
         <p class="titre">${fiche.name || 'Logement'}</p>
         ${fiche.host_name ? `<p class="hote">Hôte : ${fiche.host_name}</p>` : ''}
