@@ -553,7 +553,7 @@
       map.on('moveend', () => {
         if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : rien à charger
         clearTimeout(tempoCarte);
-        tempoCarte = setTimeout(filtrerListeParCarte, 400);
+        tempoCarte = setTimeout(filtrerListeParCarte, 200);
       });
       map.on('moveend', () => cacheLeaves.clear()); // les clusters changent : on repart à zéro
       map.on('movestart', () => {
