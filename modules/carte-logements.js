@@ -331,7 +331,8 @@
     ficheMobile.innerHTML = `
       <a class="cl-fm-card" href="${d.lien || '#'}"${d.lien ? ' target="_blank"' : ''}>
         ${photo ? `<img class="cl-fm-photo" src="${photo}" alt="" />` : '<div class="cl-fm-photo"></div>'}
-        <div class="cl-fm-infos">
+          <div class="cl-fm-infos">
+          ${d.fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : ''}
           ${adresse ? `<p class="lieu">${adresse}</p>` : ''}
           <p class="titre">${d.fiche.name || 'Logement'}</p>
           ${d.fiche.host_name ? `<p class="hote">Hôte : ${d.fiche.host_name}</p>` : ''}
@@ -454,6 +455,10 @@
       .cl-popup .prix { font-size: 16px; margin: 0; color: #272A2B; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
       .cl-popup .prix del { font-size: 14px; color: #778183; }
       .cl-popup .prix b { font-weight: 600; }
+      .cl-tag {
+        display: inline-block; background: #f0f7ff; color: #15394c; font-weight: 500; font-size: 12px;
+        border-radius: 8px; padding: 10px 10px; margin-bottom: 0px;
+      }
       .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 14px;
         border-radius: 6px; padding: 4px; margin-left: 6px; }
     `;
@@ -904,7 +909,8 @@
             <div class="cl-dots"><div class="cl-dots-piste">${photos.map(() => `<span class="cl-dot"></span>`).join('')}</div></div>
           ` : ''}
         </div>` : `<div class="cl-noimg"></div>`}
-      <div class="infos">
+        <div class="infos">
+        ${fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : ''}
         ${fiche.address ? `<p class="lieu">${villePays(fiche.address)}</p>` : ''}
         <p class="titre">${fiche.name || 'Logement'}</p>
         ${fiche.host_name ? `<p class="hote">Hôte : ${fiche.host_name}</p>` : ''}
