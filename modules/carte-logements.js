@@ -450,12 +450,12 @@
 
       #map-logements .cl-fm-card { position: relative; }
       #map-logements .cl-fm-card > .cl-tag {
-        position: absolute; top: 8px; left: 8px; z-index: 2;
-        font-size: 11px; padding: 2px 7px; margin: 0;
+        position: absolute; top: 10px; left: 10px; z-index: 2;
+        font-size: 10px; padding: 2px 7px; margin: 0;
       }
       
       .cl-popup .badge { background: #EBF1F0; color: #235B59; font-weight: 600; font-size: 14px;
-        border-radius: 6px; padding: 4px; margin-left: 6px; }
+        border-radius: 6px; padding: 2px; margin-left: 6px; }
     `;
     document.head.appendChild(s);
   }
