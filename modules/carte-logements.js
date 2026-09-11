@@ -79,8 +79,12 @@
   // Utilisé par le bloc "aucun logement" de la liste
   window.driingCarte = {
     allerVers(bbox) {
-      // offsetParent null = carte masquée : la liste se débrouillera sans elle
-      if (!map || !conteneur.offsetParent || !Array.isArray(bbox) || bbox.length !== 4) return false;
+      if (!map || !Array.isArray(bbox) || bbox.length !== 4) return false;
+      // Carte vraiment affichée ? Une carte masquée mesure 0 × 0.
+      // (offsetParent ne convient pas : il vaut null dès qu'un élément est en
+      //  position:fixed, ce qui est le cas du plein écran mobile.)
+      const r = conteneur.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return false;
       map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, maxZoom: 12 });
       return true;
     }
