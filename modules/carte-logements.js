@@ -386,13 +386,15 @@
         setOrig(location, searchType, zoneInfo);
         if (moveDepuisCarte || !map || !location) return;
         rechercheEnCours = true; // la carte va bouger : c'est elle qui fera l'unique chargement
+        pm.showLoading(true);    // la liste va changer : on le montre sans attendre la carte
         const bbox = zoneInfo && zoneInfo.bbox
           ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
           : null;
+        // Déplacement court : la liste attend la fin du mouvement, autant qu'il soit bref
         if (bbox && bbox.length === 4 && bbox.every(isFinite)) {
-          map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40 });
+          map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 400 });
         } else {
-          map.flyTo({ center: [location.lng, location.lat], zoom: 11 });
+          map.easeTo({ center: [location.lng, location.lat], zoom: 11, duration: 400 });
         }
         // Filet de sécurité si la carte ne bouge pas (déjà au bon endroit)
         clearTimeout(rechercheTimeout);
