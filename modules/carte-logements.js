@@ -33,6 +33,7 @@
   let pointsEnAttente = null;  // points reçus avant que la carte soit prête
   let rechercheEnCours = false; // une recherche de lieu repositionne la carte : on laisse la carte piloter
   let rechercheTimeout = null;
+  let tempoCarte = null;   // regroupe les gestes enchaînés en un seul chargement
 
   function enGeoJSON(points) {
     return {
@@ -81,8 +82,7 @@
     allerVers(bbox) {
       if (!map || !Array.isArray(bbox) || bbox.length !== 4) return false;
       // Carte vraiment affichée ? Une carte masquée mesure 0 × 0.
-      // (offsetParent ne convient pas : il vaut null dès qu'un élément est en
-      //  position:fixed, ce qui est le cas du plein écran mobile.)
+      // (offsetParent vaut null en position:fixed, donc en plein écran mobile.)
       const r = conteneur.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return false;
       map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, maxZoom: 12 });
@@ -549,9 +549,17 @@
       map.on('moveend', synchroniser);
       map.on('idle', synchroniser);
       map.on('moveend', () => majCompteur(compteurEl));
-      map.on('moveend', filtrerListeParCarte); // ← la liste suit la carte
+            // La liste suit la carte, mais des gestes enchaînés ne déclenchent qu'un chargement
+      map.on('moveend', () => {
+        if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : rien à charger
+        clearTimeout(tempoCarte);
+        tempoCarte = setTimeout(filtrerListeParCarte, 400);
+      });
       map.on('moveend', () => cacheLeaves.clear()); // les clusters changent : on repart à zéro
-      map.on('movestart', () => { plusProchesCarte = null; }); // les données arrivent après le moveend
+      map.on('movestart', () => {
+        plusProchesCarte = null;
+        if (!panPourPopup) clearTimeout(tempoCarte); // un recadrage de fiche n'annule pas un chargement prévu
+      });
 
       // Fermer la fiche au clic ailleurs — en ignorant le clic qui vient de l'ouvrir
       map.on('click', (e) => {
@@ -575,8 +583,8 @@
 
   // Fait suivre la liste de gauche au rectangle visible de la carte,
   // en réutilisant le filtrage par bbox déjà géré par ton serveur.
-    function filtrerListeParCarte() {
-    if (panPourPopup) { panPourPopup = false; return; } // recadrage de fiche : pas de rechargement
+  function filtrerListeParCarte() {
+    clearTimeout(tempoCarte);       // appelée directement (recherche, agrandissement) : pas de doublon
     if (!window.propertyManager) return;
     rechercheEnCours = false;      // la carte a bougé : on peut charger (une seule fois)
     clearTimeout(rechercheTimeout);
