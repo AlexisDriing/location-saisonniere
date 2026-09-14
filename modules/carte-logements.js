@@ -335,7 +335,7 @@
           <p class="titre">${d.fiche.name || 'Logement'}</p>
           ${d.fiche.host_name ? `<p class="hote">Hôte : ${d.fiche.host_name}</p>` : ''}
           <p class="prix">
-            Dès ${d.barre ? `<del>${euros(d.barre)}</del>` : ''} <b>${euros(d.direct)}</b> / nuit
+            ${d.avecDates ? '' : 'Dès '}${d.barre ? `<del>${euros(d.barre)}</del>` : ''} <b>${euros(d.direct)}</b> / nuit
             ${d.reduc ? `<span class="badge">-${d.reduc}%</span>` : ''}
           </p>
         </div>
@@ -902,11 +902,19 @@
     }
 
     const photos = toutesLesPhotos(fiche);
-    const { direct, barre, reduc } = prixCommeLaListe(fiche.pricing_data_carte || fiche.pricing_data, prix);
+
+    // Avec des dates, le serveur a déjà calculé le prix du séjour pour cette
+    // pastille : on le relit dans tousLesPoints au lieu de refaire le calcul.
+    const pt = tousLesPoints.find(p => String(p.id) === String(id));
+    const avecDates = !!(window.propertyManager && window.propertyManager.startDate && window.propertyManager.endDate);
+    const { direct, barre, reduc } = (avecDates && pt)
+      ? { direct: pt.prix, barre: pt.barre || null, reduc: pt.reduc || null }
+      : prixCommeLaListe(fiche.pricing_data_carte || fiche.pricing_data, prix);
+
     const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
 
     // Mobile : fiche en bas de l'écran, pas de bulle accrochée à la pastille
-    if (MOBILE) { afficherFicheMobile({ id, fiche, photos, direct, barre, reduc, lien }); return; }
+    if (MOBILE) { afficherFicheMobile({ id, fiche, photos, direct, barre, reduc, lien, avecDates }); return; }
 
     const tag = fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : '';
     
@@ -927,7 +935,7 @@
         <p class="titre">${fiche.name || 'Logement'}</p>
         ${fiche.host_name ? `<p class="hote">Hôte : ${fiche.host_name}</p>` : ''}
         <p class="prix">
-          Dès ${barre ? `<del>${euros(barre)}</del>` : ''} <b>${euros(direct)}</b> / nuit
+          ${avecDates ? '' : 'Dès '}${barre ? `<del>${euros(barre)}</del>` : ''} <b>${euros(direct)}</b> / nuit
           ${reduc ? `<span class="badge">-${reduc}%</span>` : ''}
         </p>
       </div>`;
