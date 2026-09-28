@@ -17,8 +17,12 @@ class CalendarEditor {
     this.onChange = options.onChange || (() => {});
 
     this.container = null;
-    this.blockedDates = new Set();       // dates manuelles courantes "YYYY-MM-DD"
+    this.blockedDates = new Set();       // nuits fermées manuellement "YYYY-MM-DD"
     this.initialBlockedDates = new Set(); // baseline pour hasChanges/restore
+    // 🆕 Jours de départ des périodes saisies par glissement : peints en
+    // rouge comme une fermeture, mais leur nuit reste réservable à l'arrivée
+    this.departureDays = new Set();
+    this.initialDepartureDays = new Set();
     this.externalDates = new Map();      // "YYYY-MM-DD" → "Source"
 
     const today = new Date();
@@ -56,10 +60,19 @@ class CalendarEditor {
     this.setupExportBlock();
   }
 
-  setData(data) {
+    setData(data) {
     const ranges = (data && Array.isArray(data.blockedDates)) ? data.blockedDates : [];
     this.blockedDates = this.rangesToSet(ranges);
+
+    // 🆕 Relecture des jours de départ enregistrés avec les plages
+    this.departureDays = new Set();
+    for (const r of ranges) {
+      if (r && typeof r.d === 'string') this.departureDays.add(r.d);
+    }
+    this.cleanDepartureDays();
+
     this.initialBlockedDates = new Set(this.blockedDates);
+    this.initialDepartureDays = new Set(this.departureDays);
 
     const ext = (data && data.externalDates && typeof data.externalDates === 'object') ? data.externalDates : {};
     this.externalDates = new Map(Object.entries(ext));
@@ -71,24 +84,28 @@ class CalendarEditor {
 
   getBlockedDatesJson() {
     const ranges = this.setToRanges(this.blockedDates);
+    // 🆕 On rattache à chaque plage son jour de départ, s'il en a un
+    for (const r of ranges) {
+      const next = this.shiftKey(r.e, 1);
+      if (this.departureDays.has(next)) r.d = next;
+    }
     return JSON.stringify(ranges);
   }
 
   hasChanges() {
-    if (this.blockedDates.size !== this.initialBlockedDates.size) return true;
-    for (const d of this.blockedDates) {
-      if (!this.initialBlockedDates.has(d)) return true;
-    }
-    return false;
+    return !this.sameSet(this.blockedDates, this.initialBlockedDates)
+        || !this.sameSet(this.departureDays, this.initialDepartureDays);
   }
 
   restoreInitialState() {
     this.blockedDates = new Set(this.initialBlockedDates);
+    this.departureDays = new Set(this.initialDepartureDays);
     this.render();
   }
 
   commitChanges() {
     this.initialBlockedDates = new Set(this.blockedDates);
+    this.initialDepartureDays = new Set(this.departureDays);
     this.render();
   }
 
@@ -143,18 +160,46 @@ class CalendarEditor {
     return ranges;
   }
 
-  // 🆕 Toutes les nuits occupées : fermetures manuelles + réservations
-  // importées. blockedDates contient déjà des nuits, il n'y a rien à dériver.
-  nightsSet() {
-    const nights = new Set(this.blockedDates);
-    for (const day of this.externalDates.keys()) nights.add(day);
-    return nights;
-  }
   
   fmtKey(date) {
     return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
   }
 
+
+    // 🆕 Décale une date "YYYY-MM-DD" de n jours
+  shiftKey(key, n) {
+    const [y, m, d] = key.split('-').map(Number);
+    return this.fmtKey(new Date(y, m - 1, d + n));
+  }
+
+  sameSet(a, b) {
+    if (a.size !== b.size) return false;
+    for (const x of a) if (!b.has(x)) return false;
+    return true;
+  }
+
+  // 🆕 Ce que l'hôte voit en rouge : ses nuits fermées + ses jours de départ
+  isShownClosed(key) {
+    return this.blockedDates.has(key) || this.departureDays.has(key);
+  }
+
+  // 🆕 Garde-fous des jours de départ :
+  // - un jour de départ doit suivre immédiatement une nuit fermée, sinon on
+  //   retire le marqueur (on ne peint jamais en rouge un jour orphelin) ;
+  // - s'il est suivi d'une nuit fermée, il est coincé au milieu d'un bloc
+  //   rouge : on le ferme, pour que tout ce qui est rouge soit vraiment fermé.
+  cleanDepartureDays() {
+    for (const day of Array.from(this.departureDays).sort()) {
+      if (this.blockedDates.has(day) || !this.blockedDates.has(this.shiftKey(day, -1))) {
+        this.departureDays.delete(day);
+      } else if (this.blockedDates.has(this.shiftKey(day, 1))) {
+        this.departureDays.delete(day);
+        this.blockedDates.add(day);
+      }
+    }
+  }
+  
+  
   isPast(date) {
     return date.getTime() < this.today.getTime();
   }
@@ -293,7 +338,7 @@ class CalendarEditor {
     });
   }
 
-  renderMonth(grid, year, month, nights) {
+    renderMonth(grid, year, month) {
     grid.innerHTML = '';
     const firstDay = new Date(year, month, 1);
     const offset = (firstDay.getDay() + 6) % 7; // Lun=0
@@ -314,15 +359,8 @@ class CalendarEditor {
       if (this.isPast(date)) cell.classList.add('cale-day--passe');
       if (date.getTime() === this.today.getTime()) cell.classList.add('cale-day--today');
 
-            // 🆕 État des nuits autour de ce jour : c'est ce qui décide des demi-cases
-      const prevKey = this.fmtKey(new Date(year, month, d - 1));
-      const nightTaken = nights.has(key);
-      const prevNightTaken = nights.has(prevKey);
-
       if (this.externalDates.has(key)) {
         cell.classList.add('cale-day--externe');
-        // Première nuit de la réservation : la matinée reste libre au départ
-        if (!prevNightTaken) cell.classList.add('cale-day--depart');
         const lock = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         lock.setAttribute('class', 'cale-lock');
         lock.setAttribute('viewBox', '0 0 24 24');
@@ -333,15 +371,9 @@ class CalendarEditor {
         tip.className = 'cale-tooltip';
         tip.textContent = 'Réservé via ' + this.externalDates.get(key);
         cell.appendChild(tip);
-      } else if (this.blockedDates.has(key) && !this.isPast(date)) {
+      } else if (this.isShownClosed(key) && !this.isPast(date)) {
+        // 🆕 Nuit fermée ou jour de départ : même rendu rouge, comme avant
         cell.classList.add('cale-day--ferme');
-        // Première nuit fermée : la matinée reste libre au départ
-        if (!prevNightTaken) cell.classList.add('cale-day--depart');
-      } else if (!nightTaken && this.blockedDates.has(prevKey) && !this.isPast(date)) {
-        // 🆕 Lendemain de la dernière nuit fermée : la nuit de ce jour est
-        // libre, il reste réservable à l'arrivée. Demi-case inversée pour
-        // que l'hôte voie où sa fermeture s'arrête.
-        cell.classList.add('cale-day--ferme', 'cale-day--arrivee');
       }
 
       if (this.dragSelection.has(key)) cell.classList.add('cale-day--selecting');
@@ -361,9 +393,8 @@ class CalendarEditor {
     this.container.querySelector('[data-role="title-1"]').textContent = CalendarEditor.MONTH_NAMES[m1] + ' ' + y1;
     this.container.querySelector('[data-role="title-2"]').textContent = CalendarEditor.MONTH_NAMES[m2] + ' ' + y2;
 
-    const nights = this.nightsSet();   // 🆕 calculé une seule fois
-    this.renderMonth(this.container.querySelector('[data-role="grid-1"]'), y1, m1, nights);
-    this.renderMonth(this.container.querySelector('[data-role="grid-2"]'), y2, m2, nights);
+    this.renderMonth(this.container.querySelector('[data-role="grid-1"]'), y1, m1);
+    this.renderMonth(this.container.querySelector('[data-role="grid-2"]'), y2, m2);
 
     const prevBtn = this.container.querySelector('[data-action="prev"]');
     const nextBtn = this.container.querySelector('[data-action="next"]');
@@ -437,7 +468,8 @@ class CalendarEditor {
     if (!this.isInteractable(dateKey)) return;
     this.isDragging = true;
     this.dragStartDate = dateKey;
-    this.dragAction = this.blockedDates.has(dateKey) ? 'open' : 'close';
+    // 🆕 Une case rouge se rouvre au clic, qu'elle soit une nuit ou un jour de départ
+    this.dragAction = this.isShownClosed(dateKey) ? 'open' : 'close';
     this.dragSelection = new Set([dateKey]);
     this.render();
   }
@@ -459,19 +491,35 @@ class CalendarEditor {
     this.render();
   }
 
-  endDrag() {
+    endDrag() {
     if (!this.isDragging) return;
+    const days = Array.from(this.dragSelection).sort();
+
     if (this.dragAction === 'close') {
-      // Le glissement décrit un séjour : la dernière case est le jour de
-      // départ, elle ne consomme pas de nuit et reste réservable à l'arrivée.
-      // Un clic simple ferme la nuit du jour cliqué.
-      const days = Array.from(this.dragSelection).sort();
-      const nights = days.length > 1 ? days.slice(0, -1) : days;
-      for (const k of nights) this.blockedDates.add(k);
+      if (days.length > 1) {
+        // Glissement = une période : les nuits vont du premier au pénultième
+        // jour. Le dernier est le jour de départ : peint en rouge, mais sa
+        // nuit reste réservable à l'arrivée sur la fiche.
+        const last = days[days.length - 1];
+        for (const k of days.slice(0, -1)) {
+          this.blockedDates.add(k);
+          this.departureDays.delete(k);
+        }
+        if (!this.blockedDates.has(last)) this.departureDays.add(last);
+      } else if (days.length === 1) {
+        // Clic simple = la nuit du jour cliqué, et rien d'autre
+        this.blockedDates.add(days[0]);
+        this.departureDays.delete(days[0]);
+      }
     } else {
-      // Réouverture : on libère toutes les cases survolées
-      for (const k of this.dragSelection) this.blockedDates.delete(k);
+      // Réouverture : on libère tout ce qui a été survolé
+      for (const k of days) {
+        this.blockedDates.delete(k);
+        this.departureDays.delete(k);
+      }
     }
+    this.cleanDepartureDays();
+
     this.isDragging = false;
     this.dragStartDate = null;
     this.dragAction = null;
