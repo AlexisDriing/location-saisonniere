@@ -83,6 +83,9 @@ window.CONFIG = CONFIG;
     'lit-king-size':      ['lit-king-size', 'king-size bed'],
     'lit-bebe':           ['lit-bebe', 'cot'],
     'canape-lit':         ['canape-lit', 'sofa bed'],
+    'canape-convertible': ['canape-convertible', 'sofa bed'],
+    'lit-dappoint':       ['lit-dappoint', 'extra bed'],
+    'lit-superpose':      ['lit-superpose', 'bunk bed'],
 
     // — Calendrier —
     fermer:               ['Fermer', 'Close'],
