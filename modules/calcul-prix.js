@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.132
+// Calculateur de prix principal - LOG production V1.133
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -426,11 +426,21 @@ class PriceCalculator {
         
         for (const discount of sortedDiscounts) {
           if (details.nights >= discount.nights) {
-            const discountPercentage = discount.percentage;
             // 🆕 La réduction s'applique sur originalNightsPrice + supplément voyageurs
+            // (corrige l'ancien calcul qui ignorait le supplément, contrairement au serveur)
             const baseForDiscount = details.originalNightsPrice + details.extraGuestsFee;
-            const nightsDiscount = details.originalNightsPrice * discountPercentage / 100;
-            const platformDiscount = details.platformPrice * discountPercentage / 100;
+            
+            // 🆕 Deux unités possibles : montant en € ou pourcentage
+            // Pas de clé "type" → pourcentage, comme avant
+            let nightsDiscount, platformDiscount;
+            if (discount.type === 'amount') {
+              nightsDiscount   = Math.min(discount.amount || 0, baseForDiscount);
+              platformDiscount = Math.min(discount.amount || 0, details.platformPrice);
+            } else {
+              const pct = discount.percentage || 0;
+              nightsDiscount   = baseForDiscount * pct / 100;
+              platformDiscount = details.platformPrice * pct / 100;
+            }
             
             details.discountAmount = nightsDiscount;
             details.platformPrice -= platformDiscount;
@@ -449,10 +459,26 @@ class PriceCalculator {
       // Pour les chambres d'hôtes, la taxe vient du logement parent (_parentTouristTax)
       details.touristTaxAdults = 0;
       const touristTax = this.pricingData.touristTax || this._parentTouristTax;
-      if (touristTax && touristTax.enabled && touristTax.amount > 0) {
+      if (touristTax && touristTax.enabled) {
         const taxAdultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
-        details.touristTaxAdults = taxAdultsCount;
-        details.touristTax = touristTax.amount * taxAdultsCount * details.nights;
+        
+        // 🆕 Tarif par adulte et par nuit : montant fixe, ou % du prix de la nuitée par personne
+        let perAdultNight = 0;
+        if (touristTax.mode === 'percent_per_adult_night') {
+          const taxChildrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+          const totalGuests = Math.max(1, taxAdultsCount + taxChildrenCount);
+          // Base = prix réellement payé pour l'hébergement (hors ménage), réduction déduite
+          const lodgingPrice = details.originalNightsPrice + details.extraGuestsFee - details.discountAmount;
+          const perGuestNight = lodgingPrice / details.nights / totalGuests;
+          perAdultNight = perGuestNight * (touristTax.rate || 0) / 100;
+        } else {
+          perAdultNight = touristTax.amount || 0;
+        }
+        
+        if (perAdultNight > 0) {
+          details.touristTaxAdults = taxAdultsCount;
+          details.touristTax = perAdultNight * taxAdultsCount * details.nights;
+        }
       }
       
       // Prix total - Le ménage "en option" n'est PAS ajouté au total
