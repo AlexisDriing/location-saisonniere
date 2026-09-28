@@ -49,7 +49,7 @@ class UIElementsManager {
       if (collectionList) {
         const noResultsMessage = document.createElement('div');
         noResultsMessage.className = 'no-results-message';
-        noResultsMessage.innerHTML = 'Aucun logement ne correspond à vos critères de recherche.<br>Essayez de modifier vos filtres.';
+        noResultsMessage.innerHTML = I18N.t('aucunResultatListe');
         noResultsMessage.style.display = 'none';
         collectionList.parentNode.insertBefore(noResultsMessage, collectionList);
       }
@@ -62,7 +62,7 @@ class UIElementsManager {
       if (collectionList) {
         const errorMessage = document.createElement('div');
         errorMessage.className = 'error-message';
-        errorMessage.innerHTML = 'Une erreur est survenue lors du chargement des logements.<br>Veuillez réessayer ultérieurement.';
+        errorMessage.innerHTML = I18N.t('erreurChargement');
         errorMessage.style.display = 'none';
         collectionList.parentNode.insertBefore(errorMessage, collectionList);
       }

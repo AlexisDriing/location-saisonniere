@@ -1,17 +1,17 @@
 // Gestion des prix pour les cartes de logements sur la page liste - LOG production
 function setPriceListDisplay(element, price, oldPrice = null) {
   element.textContent = '';
-  element.appendChild(document.createTextNode('Dès '));
+  element.appendChild(document.createTextNode(I18N.t('des') + ' '));
   
   if (oldPrice) {
     const del = document.createElement('del');
-    del.textContent = `${Math.round(oldPrice)}€`;
+    del.textContent = I18N.prix(Math.round(oldPrice));
     element.appendChild(del);
     element.appendChild(document.createTextNode(' '));
   }
   
   const strong = document.createElement('strong');
-  strong.textContent = `${Math.round(price)}€ / nuit`;
+  strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(Math.round(price)) });
   element.appendChild(strong);
 }
 

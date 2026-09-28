@@ -27,7 +27,7 @@ class MobileSyncManager {
     }
     
     // Initialiser le texte mobile
-    $('#text-dates-search-mobile').text('Dates').css('color', '');
+    $('#text-dates-search-mobile').text(I18N.t('dates')).css('color', '');
     
     // Synchroniser desktop vers mobile
     desktopButton.on('apply.daterangepicker', (e, picker) => {
@@ -77,7 +77,7 @@ class MobileSyncManager {
       // Réinitialiser le texte mobile
       const textMobile = $('#text-dates-search-mobile');
       if (textMobile.length > 0) {
-        textMobile.text('Dates');
+        textMobile.text(I18N.t('dates'));
         textMobile.css('color', '');
       }
     });
@@ -108,7 +108,7 @@ class MobileSyncManager {
         const textMobile = $('#text-dates-search-mobile');
         if (textMobile.length > 0) {
           if (moment(desktopPicker.startDate).isSame(moment(desktopPicker.endDate), 'day')) {
-            textMobile.text('Dates');
+            textMobile.text(I18N.t('dates'));
             textMobile.css('color', '');
           } else {
             const formattedDates = this.formatDateRange(desktopPicker.startDate, desktopPicker.endDate);
@@ -131,7 +131,7 @@ class MobileSyncManager {
         const textDesktop = $('#text-dates-search');
         if (textDesktop.length > 0) {
           if (moment(mobilePicker.startDate).isSame(moment(mobilePicker.endDate), 'day')) {
-            textDesktop.text('Dates');
+            textDesktop.text(I18N.t('dates'));
             textDesktop.css('color', '');
           } else {
             const formattedDates = this.formatDateRange(mobilePicker.startDate, mobilePicker.endDate);
@@ -146,6 +146,8 @@ class MobileSyncManager {
   formatDateRange(startDate, endDate) {
     const startDay = startDate.format('D');
     const endDay = endDate.format('D');
+    // Page anglaise : « 12-15 Feb » (moment.js est déjà en anglais)
+    if (I18N.LANG === 'en') return `${startDay}-${endDay} ${endDate.format('MMM')}`;
     let month = endDate.format('MMM').toLowerCase();
     
     const monthAbbr = {
@@ -241,7 +243,7 @@ class MobileSyncManager {
     // Ajouter le header mobile si nécessaire
     if (!daterangepicker.find('.mobile-calendar-header').length) {
       const header = $('<div class="mobile-calendar-header"></div>');
-      const title = $('<div class="mobile-calendar-title">Vos dates de séjour</div>');
+      const title = $('<div class="mobile-calendar-title"></div>').text(I18N.t('vosDates'));
       const closeBtn = $('<div class="mobile-calendar-close">×</div>');
       
       closeBtn.css({
@@ -297,7 +299,7 @@ class MobileSyncManager {
       cancelBtn.on('click', () => {
         const textMobile = $('#text-dates-search-mobile');
         if (textMobile.length > 0) {
-          textMobile.text('Dates');
+          textMobile.text(I18N.t('dates'));
           textMobile.css('color', '');
         }
         
