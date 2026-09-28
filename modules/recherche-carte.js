@@ -302,7 +302,7 @@ class SearchMapManager {
 
   async fetchSuggestions(query) {
     try {
-      const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}`;
+      const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}&lang=${I18N.LANG}`;
       
       const response = await fetch(url);
       if (!response.ok) {
