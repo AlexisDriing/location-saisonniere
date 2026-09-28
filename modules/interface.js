@@ -1375,7 +1375,7 @@ if (blocEquipements) {
     prixEl.appendChild(strong);
 
     const suffix = document.createElement('span');
-    suffix.textContent = '/ nuit';
+    suffix.textContent = I18N.t('parNuit');
     suffix.style.setProperty('font-weight', '400', 'important');
     suffix.style.setProperty('font-size', '16px', 'important');
     prixEl.appendChild(suffix);
@@ -1522,7 +1522,7 @@ if (blocEquipements) {
       prixEl.appendChild(strong);
 
       const suffix = document.createElement('span');
-      suffix.textContent = '/ nuit';
+      suffix.textContent = I18N.t('parNuit');
       suffix.style.setProperty('font-weight', '400', 'important');
       suffix.style.setProperty('font-size', '16px', 'important');
       prixEl.appendChild(suffix);

@@ -37,14 +37,14 @@ class CalendarListManager {
       locale: {
         format: 'DD/MM/YYYY',
         separator: ' - ',
-        applyLabel: 'Valider',
-        cancelLabel: 'Effacer les dates',
-        fromLabel: 'Du',
-        toLabel: 'Au',
-        customRangeLabel: 'Personnalisé',
-        weekLabel: 'S',
-        daysOfWeek: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
-        monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+        applyLabel: I18N.t('valider'),
+        cancelLabel: I18N.t('effacerDates'),
+        fromLabel: I18N.t('du'),
+        toLabel: I18N.t('au'),
+        customRangeLabel: I18N.t('personnalise'),
+        weekLabel: I18N.t('semaineCourt'),
+        daysOfWeek: I18N.t('joursCourts'),
+        monthNames: I18N.t('moisCalendrier'),
         firstDay: 1
       },
       minDate: moment().startOf('day'),
@@ -115,7 +115,7 @@ class CalendarListManager {
     this.dateButton.on('cancel.daterangepicker', function(e, picker) {
       // Réinitialiser l'affichage
       if (self.textDatesSearch.length > 0) {
-        self.textDatesSearch.text('Dates');
+        self.textDatesSearch.text(I18N.t('dates'));
         self.textDatesSearch.css('color', '');
       }
       
@@ -142,6 +142,8 @@ class CalendarListManager {
   formatDateRange(startDate, endDate) {
     const startDay = startDate.format('D');
     const endDay = endDate.format('D');
+    // Page anglaise : « 12-15 Feb » (moment.js est déjà en anglais)
+    if (I18N.LANG === 'en') return `${startDay}-${endDay} ${endDate.format('MMM')}`;
     let month = endDate.format('MMM').toLowerCase();
     
     const monthAbbr = {
@@ -220,7 +222,7 @@ class CalendarListManager {
       
       if (picker.startDate && !picker.endDate) {
         nightsCount.hide();
-        minNightsText.text('1 nuit minimum de séjour');
+        minNightsText.text(I18N.pluriel(1, 'nuitMinSejour', 'nuitsMinSejour'));
         minNightsText.show();
         divider.hide();
         selectedDates.hide();
@@ -229,7 +231,7 @@ class CalendarListManager {
         const nights = picker.endDate.diff(picker.startDate, 'days');
         
         if (nights > 0) {
-          nightsCount.text(nights + (nights > 1 ? ' nuits' : ' nuit'));
+          nightsCount.text(I18N.pluriel(nights, 'nuit', 'nuits'));
           const startDateText = picker.startDate.format('ddd').toLowerCase() + ' ' + picker.startDate.format('DD/MM');
           const endDateText = picker.endDate.format('ddd').toLowerCase() + ' ' + picker.endDate.format('DD/MM');
           selectedDates.text(startDateText + ' - ' + endDateText);
@@ -275,7 +277,7 @@ class CalendarListManager {
       if (!container.hasClass('mobile-enhanced')) {
         container.addClass('mobile-enhanced');
         const header = jQuery('<div class="mobile-calendar-header"></div>');
-        const title = jQuery('<div class="mobile-calendar-title">Vos dates de séjour</div>');
+        const title = jQuery('<div class="mobile-calendar-title"></div>').text(I18N.t('vosDates'));
         header.append(title);
         container.prepend(header);
         const buttons = container.find('.drp-buttons');

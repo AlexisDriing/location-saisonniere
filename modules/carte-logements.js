@@ -171,13 +171,13 @@
     bouton.type = 'button';
     bouton.className = 'cl-agrandir';
     bouton.innerHTML = ICONE_OUVRIR;
-    bouton.setAttribute('aria-label', 'Agrandir la carte');
+    bouton.setAttribute('aria-label', I18N.t('agrandirCarte'));
     conteneur.appendChild(bouton);
 
     bouton.addEventListener('click', () => {
       carteAgrandie = bloc.classList.toggle('carte-agrandie');
       bouton.innerHTML = carteAgrandie ? ICONE_FERMER : ICONE_OUVRIR;
-      bouton.setAttribute('aria-label', carteAgrandie ? 'Réduire la carte' : 'Agrandir la carte');
+      bouton.setAttribute('aria-label', I18N.t(carteAgrandie ? 'reduireCarte' : 'agrandirCarte'));
 
       // La carte suit sa nouvelle largeur image par image, sinon elle saute à la fin
       const debut = performance.now();
@@ -217,7 +217,7 @@
     boutonZone = document.createElement('button');
     boutonZone.type = 'button';
     boutonZone.className = 'cl-zone';
-    boutonZone.textContent = 'Rechercher dans cette zone';
+    boutonZone.textContent = I18N.t('rechercherZone');
     boutonZone.addEventListener('click', () => {
       afficherBoutonZone(false);
       forcerChargementZone = true;
@@ -261,9 +261,9 @@
   function majBoutonBascule() {
     if (!boutonBascule) return;
     boutonBascule.innerHTML = carteOuverte
-      ? ICONE_LISTE + '<span>Liste</span>'
-      : ICONE_CARTE + '<span>Carte</span>';
-    boutonBascule.setAttribute('aria-label', carteOuverte ? 'Revenir à la liste' : 'Voir la carte');
+      ? ICONE_LISTE + `<span>${I18N.t('liste')}</span>`
+      : ICONE_CARTE + `<span>${I18N.t('carte')}</span>`;
+    boutonBascule.setAttribute('aria-label', I18N.t(carteOuverte ? 'revenirListe' : 'voirCarte'));
   }
 
   function ouvrirCarteMobile() {
@@ -329,17 +329,17 @@
     ficheMobile.innerHTML = `
       <a class="cl-fm-card" href="${d.lien || '#'}"${d.lien ? ' target="_blank"' : ''}>
         ${photo ? `<img class="cl-fm-photo" src="${photo}" alt="" />` : '<div class="cl-fm-photo"></div>'}
-        ${d.fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : ''}
+        ${d.fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">${I18N.t('tagChambreHotes')}</span>` : ''}
         <div class="cl-fm-infos">
           ${adresse ? `<p class="lieu">${adresse}</p>` : ''}
-          <p class="titre">${d.fiche.name || 'Logement'}</p>
-          ${d.fiche.host_name ? `<p class="hote">Hôte : ${d.fiche.host_name}</p>` : ''}
+          <p class="titre">${d.fiche.name || I18N.t('logement')}</p>
+          ${d.fiche.host_name ? `<p class="hote">${I18N.t('hote', { nom: d.fiche.host_name })}</p>` : ''}
           <p class="prix">
-            ${d.avecDates ? '' : 'Dès '}${d.barre ? `<del>${euros(d.barre)}</del>` : ''} <b>${euros(d.direct)}</b> / nuit
+            ${d.avecDates ? '' : I18N.t('des') + ' '}${d.barre ? `<del>${euros(d.barre)}</del>` : ''} <b>${euros(d.direct)}</b> ${I18N.t('parNuit')}
             ${d.reduc ? `<span class="badge">-${d.reduc}%</span>` : ''}
           </p>
         </div>
-        <span class="cl-fermer" role="button" aria-label="Fermer">×</span>
+        <span class="cl-fermer" role="button" aria-label="${I18N.t('fermer')}">×</span>
       </a>`;
     ficheMobile.classList.add('visible');
     document.body.classList.add('cl-fiche-ouverte');
@@ -504,7 +504,8 @@
     return data.points || [];
   }
 
-  function euros(n) { return Number(n).toLocaleString('fr-FR') + ' €'; }
+  // « 1 250 € » en français, « €1,250 » en anglais
+  function euros(n) { return I18N.LANG === 'en' ? `€${I18N.nombre(n)}` : `${I18N.nombre(n)} €`; }
 
   async function init() {
     poserStyles();
@@ -525,7 +526,7 @@
         Le serveur est peut-être en train de se réveiller (Render) — réessaie dans 30 s.`);
       return;
     }
-    if (!tousLesPoints.length) { message('Aucun logement géolocalisé pour le moment.'); return; }
+    if (!tousLesPoints.length) { message(I18N.t('aucunGeolocalise')); return; }
 
     compteurEl = document.createElement('div');
     compteurEl.className = 'cl-compteur';
@@ -675,11 +676,11 @@
     // Sur ordinateur, le bloc "aucun logement" de la liste s'en charge.
     if (MOBILE && n === 0 && plusProchesCarte && plusProchesCarte.bbox) {
       el.textContent = '';
-      el.appendChild(document.createTextNode('Aucun logement ici'));
+      el.appendChild(document.createTextNode(I18N.t('aucunLogementIci')));
       const go = document.createElement('button');
       go.type = 'button';
       go.className = 'cl-compteur-action';
-      go.textContent = 'Voir les plus proches';
+      go.textContent = I18N.t('voirPlusProches');
       go.addEventListener('click', () => window.driingCarte.allerVers(plusProchesCarte.bbox));
       el.appendChild(go);
       el.classList.add('avec-action');
@@ -687,7 +688,7 @@
     }
 
     el.classList.remove('avec-action');
-    el.textContent = `${n} logement${n > 1 ? 's' : ''} dans cette zone`;
+    el.textContent = I18N.pluriel(n, 'logementZone1', 'logementsZoneN');
   }
 
   // Première image du champ "photos du logement" (même logique que la liste),
@@ -911,20 +912,20 @@
       ? { direct: pt.prix, barre: pt.barre || null, reduc: pt.reduc || null }
       : prixCommeLaListe(fiche.pricing_data_carte || fiche.pricing_data, prix);
 
-    const lien = String(id).startsWith('demo-') ? null : `/locations-saisonnieres/${id}`;
+    const lien = String(id).startsWith('demo-') ? null : I18N.lien(`/locations-saisonnieres/${id}`);
 
     // Mobile : fiche en bas de l'écran, pas de bulle accrochée à la pastille
     if (MOBILE) { afficherFicheMobile({ id, fiche, photos, direct, barre, reduc, lien, avecDates }); return; }
 
-    const tag = fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">Chambre d'hôtes</span>` : '';
+    const tag = fiche.type === "Chambre d'hôtes" ? `<span class="cl-tag">${I18N.t('tagChambreHotes')}</span>` : '';
     
     const contenu = `
       ${photos.length ? `
         <div class="cl-media">
           <img class="cl-photo" src="${photos[0]}" alt="" />
           ${photos.length > 1 ? `
-            <span class="cl-nav cl-prev" role="button" aria-label="Photo précédente">‹</span>
-            <span class="cl-nav cl-next" role="button" aria-label="Photo suivante">›</span>
+            <span class="cl-nav cl-prev" role="button" aria-label="${I18N.t('photoPrecedente')}">‹</span>
+            <span class="cl-nav cl-next" role="button" aria-label="${I18N.t('photoSuivante')}">›</span>
             <img class="cl-photo-anim" alt="" />
             <div class="cl-dots"><div class="cl-dots-piste">${photos.map(() => `<span class="cl-dot"></span>`).join('')}</div></div>
                     ` : ''}
@@ -932,10 +933,10 @@
         </div>` : `<div class="cl-noimg">${tag}</div>`}
       <div class="infos">
         ${fiche.address ? `<p class="lieu">${villePays(fiche.address)}</p>` : ''}
-        <p class="titre">${fiche.name || 'Logement'}</p>
-        ${fiche.host_name ? `<p class="hote">Hôte : ${fiche.host_name}</p>` : ''}
+        <p class="titre">${fiche.name || I18N.t('logement')}</p>
+        ${fiche.host_name ? `<p class="hote">${I18N.t('hote', { nom: fiche.host_name })}</p>` : ''}
         <p class="prix">
-          ${avecDates ? '' : 'Dès '}${barre ? `<del>${euros(barre)}</del>` : ''} <b>${euros(direct)}</b> / nuit
+          ${avecDates ? '' : I18N.t('des') + ' '}${barre ? `<del>${euros(barre)}</del>` : ''} <b>${euros(direct)}</b> ${I18N.t('parNuit')}
           ${reduc ? `<span class="badge">-${reduc}%</span>` : ''}
         </p>
       </div>`;

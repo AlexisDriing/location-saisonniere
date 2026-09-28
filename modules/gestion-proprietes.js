@@ -4,7 +4,7 @@
 function setPriceDisplay(element, price, unit = '') {
   element.textContent = ''; // Nettoyer
   const strong = document.createElement('strong');
-  strong.textContent = `${price}€`;
+  strong.textContent = I18N.prix(price);
   element.appendChild(strong);
   if (unit) {
     element.appendChild(document.createTextNode(` ${unit}`));
@@ -20,13 +20,13 @@ function setPriceWithStrike(element, oldPrice, newPrice, prefix = '', suffix = '
   
   if (oldPrice) {
     const del = document.createElement('del');
-    del.textContent = `${oldPrice}€`;
+    del.textContent = I18N.prix(oldPrice);
     element.appendChild(del);
     element.appendChild(document.createTextNode(' '));
   }
   
   const strong = document.createElement('strong');
-  strong.textContent = `${newPrice}€`;
+  strong.textContent = I18N.prix(newPrice);
   element.appendChild(strong);
   
   if (suffix) {
@@ -287,7 +287,7 @@ class PropertyManager {
     
     if (nights > 1) {
       if (textePrix) {
-        setPriceDisplay(textePrix, priceInfo.price_per_night, '/ nuit');  // ✅ SÉCURISÉ
+        setPriceDisplay(textePrix, priceInfo.price_per_night, I18N.t('parNuit'));  // ✅ SÉCURISÉ
       }
       
       if (texteTotal) {
@@ -296,22 +296,22 @@ class PropertyManager {
         
         // ✅ SÉCURISÉ : Utilisation des helpers
         if (totalPlatformPrice > totalPrice) {
-          setPriceWithStrike(texteTotal, totalPlatformPrice, totalPrice, '', 'au total');
+          setPriceWithStrike(texteTotal, totalPlatformPrice, totalPrice, '', I18N.t('auTotal'));
         } else {
-          setPriceDisplay(texteTotal, totalPrice, 'au total');
+          setPriceDisplay(texteTotal, totalPrice, I18N.t('auTotal'));
         }
         texteTotal.style.display = 'block';
       }
     } else {
     if (textePrix) {
       if (priceInfo.platform_price_per_night > priceInfo.price_per_night) {
-        setPriceWithStrike(textePrix, priceInfo.platform_price_per_night, priceInfo.price_per_night, 'Dès', '/ nuit');  // ✅ SÉCURISÉ
+        setPriceWithStrike(textePrix, priceInfo.platform_price_per_night, priceInfo.price_per_night, I18N.t('des'), I18N.t('parNuit'));  // ✅ SÉCURISÉ
       } else {
         // Créer manuellement pour le cas sans réduction
         textePrix.textContent = '';
-        textePrix.appendChild(document.createTextNode('Dès '));
+        textePrix.appendChild(document.createTextNode(I18N.t('des') + ' '));
         const strong = document.createElement('strong');
-        strong.textContent = `${priceInfo.price_per_night}€ / nuit`;
+        strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(priceInfo.price_per_night) });
         textePrix.appendChild(strong);
       }
     }
@@ -720,9 +720,9 @@ class PropertyManager {
     if (!propData.pricing_data) {
       if (propData.price) {
         priceElement.textContent = '';
-        priceElement.appendChild(document.createTextNode('Dès '));
+        priceElement.appendChild(document.createTextNode(I18N.t('des') + ' '));
         const strong = document.createElement('strong');
-        strong.textContent = `${propData.price}€ / nuit`;
+        strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(propData.price) });
         priceElement.appendChild(strong);
         if (pourcentageElement) pourcentageElement.style.display = 'none';
       }
@@ -798,7 +798,7 @@ class PropertyManager {
 
     // Affichage
     if (hasDiscount && platformPrice > basePrice) {
-      setPriceWithStrike(priceElement, platformPrice, basePrice, 'Dès', '/ nuit');
+      setPriceWithStrike(priceElement, platformPrice, basePrice, I18N.t('des'), I18N.t('parNuit'));
       if (pourcentageElement) {
         const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
         pourcentageElement.textContent = `-${discount}%`;
@@ -806,9 +806,9 @@ class PropertyManager {
       }
     } else {
       priceElement.textContent = '';
-      priceElement.appendChild(document.createTextNode('Dès '));
+      priceElement.appendChild(document.createTextNode(I18N.t('des') + ' '));
       const strong = document.createElement('strong');
-      strong.textContent = `${basePrice}€ / nuit`;
+      strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(basePrice) });
       priceElement.appendChild(strong);
       if (pourcentageElement) pourcentageElement.style.display = 'none';
     }
@@ -825,14 +825,14 @@ class PropertyManager {
     // Lien principal
     const linkElement = newCard.querySelector('.lien-logement');
     if (linkElement) {
-      linkElement.href = `/locations-saisonnieres/${propData.id}`;
+      linkElement.href = I18N.lien(`/locations-saisonnieres/${propData.id}`);
       linkElement.setAttribute('data-property-id', propData.id);
     }
     
     // Nom du logement - CORRECTION du sélecteur
     const nameElement = newCard.querySelector('.text-nom-logement-card');
     if (nameElement) {
-      nameElement.textContent = propData.name || 'Logement';
+      nameElement.textContent = propData.name || I18N.t('logement');
     }
 
     // Nom de l'hôte
@@ -859,8 +859,7 @@ class PropertyManager {
     const capacityElement = newCard.querySelector('[data-voyageurs]');
     if (capacityElement && propData.capacity) {
       capacityElement.setAttribute('data-voyageurs', propData.capacity);
-      const capacityText = propData.capacity > 1 ? 
-        `${propData.capacity} voyageurs` : '1 voyageur';
+      const capacityText = I18N.pluriel(propData.capacity > 1 ? propData.capacity : 1, 'voyageur', 'voyageurs');
       capacityElement.textContent = capacityText;
     }
     
@@ -1284,14 +1283,14 @@ if (hostImageElement) {
     const arrowRight = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
     
     // Bouton "Précédent" - flèche sur mobile, texte sur desktop
-    const prevText = isMobile ? arrowLeft : 'Précédent';
+    const prevText = isMobile ? arrowLeft : I18N.t('precedent');
     const prevButton = this.createPaginationButton(prevText, 'prev', this.currentPage <= 1);
     paginationList.appendChild(prevButton);
     
     this.addPageNumbers(paginationList);
     
     // Bouton "Suivant" - flèche sur mobile, texte sur desktop
-    const nextText = isMobile ? arrowRight : 'Suivant';
+    const nextText = isMobile ? arrowRight : I18N.t('suivant');
     const nextButton = this.createPaginationButton(nextText, 'next', this.currentPage >= this.totalPages);
     paginationList.appendChild(nextButton);
     
@@ -1299,7 +1298,7 @@ if (hostImageElement) {
     resultsText.className = 'pagination-results-text';
     const start = (this.currentPage - 1) * this.pageSize + 1;
     const end = Math.min(start + this.pageSize - 1, this.totalResults);
-    resultsText.textContent = `Affichage de ${start}-${end} sur ${this.totalResults} logements`;
+    resultsText.textContent = I18N.t('affichageResultats', { debut: start, fin: end, total: this.totalResults });
     
     paginationContainer.appendChild(resultsText);
     paginationContainer.appendChild(paginationList);
@@ -1411,7 +1410,7 @@ if (hostImageElement) {
       
       jQuery(this.dateButton).on('cancel.daterangepicker', function(e, picker) {
         if (self.textDatesSearch) {
-          self.textDatesSearch.textContent = 'Dates';
+          self.textDatesSearch.textContent = I18N.t('dates');
           self.textDatesSearch.style.color = '';
         }
         
@@ -1555,6 +1554,8 @@ if (hostImageElement) {
   formatDateRange(startDate, endDate) {
     const startDay = startDate.format('D');
     const endDay = endDate.format('D');
+    // Page anglaise : « 12-15 Feb » (moment.js est déjà en anglais)
+    if (I18N.LANG === 'en') return `${startDay}-${endDay} ${endDate.format('MMM')}`;
     let month = endDate.format('MMM').toLowerCase();
     
     const monthAbbr = {
@@ -1652,8 +1653,8 @@ if (hostImageElement) {
     const titre = bloc.querySelector('.titre-aucun-logement');
     if (titre) {
       titre.textContent = parFiltres
-        ? 'Aucun logement ne correspond à cette recherche'
-        : 'Aucun logement dans cette zone';
+        ? I18N.t('aucunLogementRecherche')
+        : I18N.t('aucunLogementZone');
     }
 
     const btnEffacer = bloc.querySelector('.btn-effacer-filtres');
@@ -1683,7 +1684,7 @@ if (hostImageElement) {
     localStorage.removeItem('selected_search_data');
     ['text-dates-search', 'text-dates-search-mobile'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) { el.textContent = 'Dates'; el.style.color = ''; }
+      if (el) { el.textContent = I18N.t('dates'); el.style.color = ''; }
     });
     document.querySelectorAll('.text-total').forEach(el => { el.style.display = 'none'; });
 

@@ -101,7 +101,56 @@ window.CONFIG = CONFIG;
     nuitsMinSejour:       ['{n} nuits minimum de séjour', '{n}-night minimum stay'],
     selectionnerDate:     ['Sélectionner une date', 'Select a date'],
     vosDates:             ['Vos dates de séjour', 'Your dates'],
-    choisirDatesAvant:    ['Veuillez sélectionner des dates de séjour avant de réserver.', 'Please select your dates before booking.']
+    choisirDatesAvant:    ['Veuillez sélectionner des dates de séjour avant de réserver.', 'Please select your dates before booking.'],
+
+    // — Page liste : cartes de logements —
+    des:                  ['Dès', 'From'],
+    parNuit:              ['/ nuit', '/ night'],
+    auTotal:              ['au total', 'total'],
+    logement:             ['Logement', 'Property'],
+    dates:                ['Dates', 'Dates'],
+    valider:              ['Valider', 'Apply'],
+    precedent:            ['Précédent', 'Previous'],
+    suivant:              ['Suivant', 'Next'],
+    affichageResultats:   ['Affichage de {debut}-{fin} sur {total} logements', 'Showing {debut}-{fin} of {total} properties'],
+    aucunLogementRecherche: ['Aucun logement ne correspond à cette recherche', 'No properties match this search'],
+    aucunLogementZone:    ['Aucun logement dans cette zone', 'No properties in this area'],
+    aucunResultatListe:   ['Aucun logement ne correspond à vos critères de recherche.<br>Essayez de modifier vos filtres.', 'No properties match your search.<br>Try changing your filters.'],
+    erreurChargement:     ['Une erreur est survenue lors du chargement des logements.<br>Veuillez réessayer ultérieurement.', 'Something went wrong while loading the properties.<br>Please try again later.'],
+
+    // — Filtres —
+    equipements:          ['Équipements', 'Amenities'],
+    equipementN1:         ['{n} équipement', '{n} amenity'],
+    equipementsN:         ['{n} équipements', '{n} amenities'],
+    preferences:          ['Préférences', 'Preferences'],
+    preferenceN1:         ['{n} préférence', '{n} preference'],
+    preferencesN:         ['{n} préférences', '{n} preferences'],
+    prixMaxNuit:          ['{prix} / nuit maximum', '{prix} / night max'],
+    tarifParNuitee:       ['Tarif par nuitée', 'Price per night'],
+    voyageursFiltre:      ['Voyageurs', 'Guests'],
+
+    // — Recherche par lieu —
+    departementPays:      ['Département, {pays}', 'Department, {pays}'],
+    regionPays:           ['Région, {pays}', 'Region, {pays}'],
+    region:               ['Région', 'Region'],
+
+    // — Carte —
+    agrandirCarte:        ['Agrandir la carte', 'Expand map'],
+    reduireCarte:         ['Réduire la carte', 'Collapse map'],
+    rechercherZone:       ['Rechercher dans cette zone', 'Search this area'],
+    liste:                ['Liste', 'List'],
+    carte:                ['Carte', 'Map'],
+    revenirListe:         ['Revenir à la liste', 'Back to list'],
+    voirCarte:            ['Voir la carte', 'Show map'],
+    tagChambreHotes:      ["Chambre d'hôtes", 'B&B'],
+    hote:                 ['Hôte : {nom}', 'Host: {nom}'],
+    photoPrecedente:      ['Photo précédente', 'Previous photo'],
+    photoSuivante:        ['Photo suivante', 'Next photo'],
+    aucunGeolocalise:     ['Aucun logement géolocalisé pour le moment.', 'No properties on the map yet.'],
+    aucunLogementIci:     ['Aucun logement ici', 'No properties here'],
+    voirPlusProches:      ['Voir les plus proches', 'Show the nearest'],
+    logementZone1:        ['{n} logement dans cette zone', '{n} property in this area'],
+    logementsZoneN:       ['{n} logements dans cette zone', '{n} properties in this area']
     // ↑ Les lots suivants ajouteront leurs clés au-dessus de cette ligne.
   };
 
