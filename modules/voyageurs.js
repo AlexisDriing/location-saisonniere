@@ -126,9 +126,9 @@ class TravelersManager {
 
     // Mettre à jour le texte des voyageurs
     const totalTravelers = this.adults + this.children;
-    let travelersText = (totalTravelers === 1 ? "1 voyageur" : `${totalTravelers} voyageurs`);
+    let travelersText = I18N.pluriel(totalTravelers, 'voyageur', 'voyageurs');
     if (this.babies > 0) {
-      travelersText += `, ${this.babies}${this.babies === 1 ? " bébé" : " bébés"}`;
+      travelersText += `, ${I18N.pluriel(this.babies, 'bebe', 'bebes')}`;
     }
     
     this.updateElement("voyageurs-texte", travelersText);

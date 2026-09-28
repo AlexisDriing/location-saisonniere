@@ -61,14 +61,14 @@ class CalendarManager {
         locale: {
           format: 'DD/MM/YYYY',
           separator: ' - ',
-          applyLabel: 'Fermer',
-          cancelLabel: 'Effacer les dates',
-          fromLabel: 'Du',
-          toLabel: 'Au',
-          customRangeLabel: 'Personnalisé',
-          weekLabel: 'S',
-          daysOfWeek: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
-          monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+          applyLabel: I18N.t('fermer'),
+          cancelLabel: I18N.t('effacerDates'),
+          fromLabel: I18N.t('du'),
+          toLabel: I18N.t('au'),
+          customRangeLabel: I18N.t('personnalise'),
+          weekLabel: I18N.t('semaineCourt'),
+          daysOfWeek: I18N.t('joursCourts'),
+          monthNames: I18N.t('moisCalendrier'),
           firstDay: 1
         },
         minDate: moment().startOf('day'),
@@ -382,7 +382,7 @@ enhancePickerPositioning() {
         }
       }
       
-      minNightsText.text(minNights + (minNights > 1 ? ' nuits minimum de séjour' : ' nuit minimum de séjour'));
+      minNightsText.text(I18N.pluriel(minNights, 'nuitMinSejour', 'nuitsMinSejour'));
       nightsCount.hide();
       minNightsText.show();
       divider.hide();
@@ -396,7 +396,7 @@ enhancePickerPositioning() {
       const nights = this.picker.endDate.diff(this.picker.startDate, 'days');
       
       if (nights > 0) {
-        nightsCount.text(nights + (nights > 1 ? ' nuits' : ' nuit'));
+        nightsCount.text(I18N.pluriel(nights, 'nuit', 'nuits'));
         const startDateText = this.picker.startDate.format('ddd').toLowerCase() + ' ' + this.picker.startDate.format('DD/MM');
         const endDateText = this.picker.endDate.format('ddd').toLowerCase() + ' ' + this.picker.endDate.format('DD/MM');
         selectedDates.text(startDateText + ' - ' + endDateText);
@@ -503,7 +503,7 @@ enhancePickerPositioning() {
       });
     } else {
       datesTextElements.forEach(element => {
-        element.textContent = "Sélectionner une date";
+        element.textContent = I18N.t('selectionnerDate');
       });
     }
   }
