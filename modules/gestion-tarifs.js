@@ -10,13 +10,10 @@ class TariffsDisplayManager {
 
   formatDate(dateStr) {
     const parts = dateStr.split("-");
-    const months = [
-      "janvier", "février", "mars", "avril", "mai", "juin",
-      "juillet", "août", "septembre", "octobre", "novembre", "décembre"
-    ];
+    const months = I18N.t('moisTarifs');
     
     let day = parseInt(parts[0], 10).toString();
-    if (day === "1") {
+    if (day === "1" && I18N.LANG === 'fr') {
       day = "1er";
     }
     
@@ -24,7 +21,7 @@ class TariffsDisplayManager {
   }
 
   formatDateRange(start, end) {
-    return "du " + this.formatDate(start) + " au " + this.formatDate(end);
+    return I18N.t('periodeDuAu', { debut: this.formatDate(start), fin: this.formatDate(end) });
   }
 
   calculateWeekPrice(nightlyPrice, discounts) {

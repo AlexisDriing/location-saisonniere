@@ -69,7 +69,7 @@ class MobileEnhancementsManager {
               
               // Header mobile
               const header = $('<div class="mobile-calendar-header"></div>');
-              const title = $('<div class="mobile-calendar-title">Vos dates de séjour</div>');
+              const title = $('<div class="mobile-calendar-title"></div>').text(I18N.t('vosDates'));
               header.append(title);
               
               // Bouton de fermeture

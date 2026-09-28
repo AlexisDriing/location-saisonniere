@@ -139,8 +139,9 @@ class ReservationDataManager {
   handleReservationClick(e, propertyId, logementInfo, currentPageUrl) {
     // Vérifier que des dates sont sélectionnées
     const datesTexte = Utils.getElementByIdWithFallback("dates-texte")?.textContent || "";
-    if (datesTexte === "Sélectionner une date") {
-      alert("Veuillez sélectionner des dates de séjour avant de réserver.");
+    // On teste les dates réellement choisies, pas le texte affiché : il dépend de la langue
+    if (!window.priceCalculator?.startDate || !window.priceCalculator?.endDate) {
+      alert(I18N.t('choisirDatesAvant'));
       e.preventDefault();
       return;
     }
@@ -254,7 +255,7 @@ class ReservationDataManager {
         voyageurs: (() => {
           const match = (selectedRoom.taille_chambre || '').match(/^(\d+)/);
           const v = match ? parseInt(match[1]) : 0;
-          return `${v} voyageur${v > 1 ? 's' : ''}`;
+          return I18N.pluriel(v, 'voyageur', 'voyageurs');
         })(),
         taille: (() => {
           const match = (selectedRoom.taille_chambre || '').match(/(\d+)\s*m²/);
@@ -329,7 +330,7 @@ class ReservationDataManager {
         
         // Mettre à jour le texte des voyageurs
         const totalTravelers = searchData.adultes + searchData.enfants;
-        const travelersText = totalTravelers === 1 ? "1 voyageur" : `${totalTravelers} voyageurs`;
+        const travelersText = I18N.pluriel(totalTravelers, 'voyageur', 'voyageurs');
         const travelersElements = [
           document.getElementById("voyageurs-texte"),
           document.getElementById("voyageurs-texte-mobile")
