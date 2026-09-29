@@ -1207,7 +1207,7 @@ if (hostImageElement) {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        filters.amenities.push(label.textContent.trim());
+        filters.amenities.push(I18N.valeurFiltre(label.textContent));
       }
     });
     
@@ -1218,7 +1218,7 @@ if (hostImageElement) {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        filters.options.push(label.textContent.trim());
+        filters.options.push(I18N.valeurFiltre(label.textContent));
       }
     });
     
@@ -1229,7 +1229,7 @@ if (hostImageElement) {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        filters.types.push(label.textContent.trim());
+        filters.types.push(I18N.valeurFiltre(label.textContent));
       }
     });
     
