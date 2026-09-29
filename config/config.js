@@ -218,7 +218,7 @@ window.CONFIG = CONFIG;
     'oven': 'Four',
     'dryer': 'Sèche-linge', 'tumble dryer': 'Sèche-linge',
     'dishwasher': 'Lave vaisselle',
-    'ev charging station': 'Borne électrique', 'ev charger': 'Borne électrique',
+    'ev charging station': 'Borne électrique', 'ev charging point': 'Borne électrique', 'ev charger': 'Borne électrique',
     'entire home': 'Logement entier', 'entire place': 'Logement entier',
     'bed and breakfast': "Chambre d'hôtes", 'bed & breakfast': "Chambre d'hôtes", 'b&b': "Chambre d'hôtes",
     'pets allowed': 'Animaux autorisés',
