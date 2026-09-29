@@ -203,8 +203,37 @@ window.CONFIG = CONFIG;
     return url === '/' ? '/en' : `/en${url}`;
   }
 
+  // Filtres de la page liste : le serveur ne connaît que les noms français
+  // (« Piscine », « Logement entier »…). Sur la page anglaise, on retrouve le nom
+  // français à partir du libellé traduit dans Webflow (toutes les variantes utilisées).
+  const FILTRES_EN_VERS_FR = {
+    'pool': 'Piscine', 'swimming pool': 'Piscine',
+    'hot tub': 'Jacuzzi', 'jacuzzi': 'Jacuzzi',
+    'barbecue': 'Barbecue', 'bbq': 'Barbecue',
+    'air conditioning': 'Climatisation',
+    'baby equipment': 'Équipement bébé',
+    'free parking': 'Parking gratuit',
+    'wi-fi': 'Wifi', 'wifi': 'Wifi',
+    'washing machine': 'Machine à laver',
+    'oven': 'Four',
+    'dryer': 'Sèche-linge', 'tumble dryer': 'Sèche-linge',
+    'dishwasher': 'Lave vaisselle',
+    'ev charging station': 'Borne électrique', 'ev charging point': 'Borne électrique', 'ev charger': 'Borne électrique',
+    'entire home': 'Logement entier', 'entire place': 'Logement entier',
+    'bed and breakfast': "Chambre d'hôtes", 'bed & breakfast': "Chambre d'hôtes", 'b&b': "Chambre d'hôtes",
+    'pets allowed': 'Animaux autorisés',
+    'wheelchair accessible': 'Accès PMR',
+    'smoking allowed': 'Fumeurs autorisés'
+  };
+  function valeurFiltre(libelle) {
+    const texte = String(libelle || '').trim();
+    if (LANG !== 'en') return texte;
+    return FILTRES_EN_VERS_FR[texte.toLowerCase().replace(/\s+/g, ' ')] || texte;
+  }
+
   window.I18N = {
     LANG: LANG,
+    valeurFiltre: valeurFiltre,
     locale: LANG === 'en' ? 'en-GB' : 'fr-FR',
     momentLocale: LANG === 'en' ? 'en' : 'fr',
     t: t,

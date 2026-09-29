@@ -332,7 +332,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        const equipementName = label.textContent.trim();
+        const equipementName = I18N.valeurFiltre(label.textContent);
         equipementsSet.add(equipementName);
       }
     });
@@ -354,7 +354,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        const optionName = label.textContent.trim();
+        const optionName = I18N.valeurFiltre(label.textContent);
         optionsSet.add(optionName);
       }
     });
@@ -369,7 +369,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        const modeName = label.textContent.trim();
+        const modeName = I18N.valeurFiltre(label.textContent);
         modesSet.add(modeName);
       }
     });
@@ -423,7 +423,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.tempState.equipements.includes(label.textContent.trim());
+        const isChecked = this.tempState.equipements.includes(I18N.valeurFiltre(label.textContent));
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -445,7 +445,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.tempState.optionsAccueil.includes(label.textContent.trim());
+        const isChecked = this.tempState.optionsAccueil.includes(I18N.valeurFiltre(label.textContent));
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -465,7 +465,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.tempState.modesLocation.includes(label.textContent.trim());
+        const isChecked = this.tempState.modesLocation.includes(I18N.valeurFiltre(label.textContent));
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
