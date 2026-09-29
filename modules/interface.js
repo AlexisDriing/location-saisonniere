@@ -507,7 +507,7 @@ if (blocEquipements) {
     if (!slug) return;
 
     try {
-      const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${slug}`);
+      const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${slug}?lang=${I18N.LANG}`);
       if (!response.ok) return;
       
       const data = await response.json();
