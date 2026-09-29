@@ -145,7 +145,7 @@ window.CONFIG = CONFIG;
     carte:                ['Carte', 'Map'],
     revenirListe:         ['Revenir à la liste', 'Back to list'],
     voirCarte:            ['Voir la carte', 'Show map'],
-    tagChambreHotes:      ["Chambre d'hôtes", 'B&B'],
+    tagChambreHotes:      ["Chambre d'hôtes", 'Bed & breakfast'],
     hote:                 ['Hôte : {nom}', 'Host: {nom}'],
     photoPrecedente:      ['Photo précédente', 'Previous photo'],
     photoSuivante:        ['Photo suivante', 'Next photo'],
