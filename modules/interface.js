@@ -434,9 +434,9 @@ if (blocEquipements) {
     setupOptionsAccueil() {
     // id = la chip (toujours affichée) ; textId = le texte à modifier ; negatif = texte si non coché
     const optionsMapping = {
-      'Animaux autorisés': { id: 'animaux', textId: 'animaux-text', negatif: 'Animaux non autorisés' },
-      'Accès PMR':         { id: 'pmr',     textId: 'pmr-text',     negatif: 'Accès PMR non disponible' },
-      'Fumeurs autorisés': { id: 'fumeurs', textId: 'fumeurs-text', negatif: 'Fumeurs non autorisés' }
+      'Animaux autorisés': { id: 'animaux', textId: 'animaux-text', negatif: I18N.t('animauxNon') },
+      'Accès PMR':         { id: 'pmr',     textId: 'pmr-text',     negatif: I18N.t('pmrNon') },
+      'Fumeurs autorisés': { id: 'fumeurs', textId: 'fumeurs-text', negatif: I18N.t('fumeursNon') }
     };
 
     // Options cochées (peut être vide ou absent)

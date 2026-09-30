@@ -105,6 +105,9 @@ window.CONFIG = CONFIG;
     selectionnerDate:     ['Sélectionner une date', 'Select a date'],
     vosDates:             ['Vos dates de séjour', 'Your dates'],
     choisirDatesAvant:    ['Veuillez sélectionner des dates de séjour avant de réserver.', 'Please select your dates before booking.'],
+    animauxNon:           ['Animaux non autorisés', 'No pets allowed'],
+    pmrNon:               ['Accès PMR non disponible', 'Not wheelchair accessible'],
+    fumeursNon:           ['Fumeurs non autorisés', 'No smoking'],
 
     // — Page liste : cartes de logements —
     des:                  ['Dès', 'From'],
