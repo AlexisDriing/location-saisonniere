@@ -369,6 +369,19 @@
   }
   
   
+  // Même cadrage pour toute recherche de lieu, d'où qu'elle vienne
+  // (page liste, page d'accueil, ou recherche faite avant d'ouvrir la carte sur mobile)
+  function cadrerSurLieu(lieu, zoneInfo, anime) {
+    const duree = anime ? 400 : 0; // court : la liste attend la fin du mouvement
+    const bbox = zoneInfo && zoneInfo.bbox
+      ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
+      : null;
+    if (bbox && bbox.length === 4 && bbox.every(isFinite)) {
+      map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: duree });
+    } else {
+      map.easeTo({ center: [lieu.lng, lieu.lat], zoom: 11, duration: duree });
+    }
+  }
   
   
   // 🔗 La recherche de lieu déplace la carte (on enrobe setSearchLocation sans modifier le module)
@@ -384,16 +397,8 @@
         setOrig(location, searchType, zoneInfo);
         if (moveDepuisCarte || !map || !location) return;
         rechercheEnCours = true; // la carte va bouger : c'est elle qui fera l'unique chargement
-        pm.showLoading(true);    // la liste va changer : on le montre sans attendre la carte
-        const bbox = zoneInfo && zoneInfo.bbox
-          ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
-          : null;
-        // Déplacement court : la liste attend la fin du mouvement, autant qu'il soit bref
-        if (bbox && bbox.length === 4 && bbox.every(isFinite)) {
-          map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: 400 });
-        } else {
-          map.easeTo({ center: [location.lng, location.lat], zoom: 11, duration: 400 });
-        }
+               pm.showLoading(true);    // la liste va changer : on le montre sans attendre la carte
+        cadrerSurLieu(location, zoneInfo, true);
         // Filet de sécurité si la carte ne bouge pas (déjà au bon endroit)
         clearTimeout(rechercheTimeout);
         rechercheTimeout = setTimeout(() => { if (rechercheEnCours) filtrerListeParCarte(); }, 900);
@@ -587,8 +592,17 @@
       synchroniser();
       majCompteur(compteurEl);
 
-      // Des résultats filtrés sont arrivés avant que la carte soit prête ?
+           // Des résultats filtrés sont arrivés avant que la carte soit prête ?
       if (pointsEnAttente) { majPointsCarte(pointsEnAttente); pointsEnAttente = null; }
+
+      // Un lieu a été cherché avant que la carte soit prête (depuis l'accueil, ou en
+      // mode liste sur mobile) : même cadrage qu'une recherche faite ici, puis la
+      // liste se cale sur la zone visible.
+      const pm = window.propertyManager;
+      if (pm && pm.searchLocation) {
+        cadrerSurLieu(pm.searchLocation, pm.zoneInfo, false);
+        filtrerListeParCarte();
+      }
     });
 
     brancherRecherche();
