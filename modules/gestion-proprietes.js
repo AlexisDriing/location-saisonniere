@@ -1,10 +1,10 @@
-// Gestionnaire principal des propriétés pour la page liste - LOG production V2.27
+// Gestionnaire principal des propriétés pour la page liste - LOG production V2.28
 
 // 🔒 FONCTIONS DE SÉCURITÉ POUR L'AFFICHAGE DES PRIX
 function setPriceDisplay(element, price, unit = '') {
   element.textContent = ''; // Nettoyer
   const strong = document.createElement('strong');
-  strong.textContent = `${price}€`;
+  strong.textContent = I18N.prix(price);
   element.appendChild(strong);
   if (unit) {
     element.appendChild(document.createTextNode(` ${unit}`));
@@ -20,13 +20,13 @@ function setPriceWithStrike(element, oldPrice, newPrice, prefix = '', suffix = '
   
   if (oldPrice) {
     const del = document.createElement('del');
-    del.textContent = `${oldPrice}€`;
+    del.textContent = I18N.prix(oldPrice);
     element.appendChild(del);
     element.appendChild(document.createTextNode(' '));
   }
   
   const strong = document.createElement('strong');
-  strong.textContent = `${newPrice}€`;
+  strong.textContent = I18N.prix(newPrice);
   element.appendChild(strong);
   
   if (suffix) {
@@ -202,55 +202,66 @@ class PropertyManager {
   // GESTION DES PRIX
   // ================================
 
-  async updatePricesForDates(startDate, endDate) {
+    async updatePricesForDates(startDate, endDate) {
     try {
-      
-      // Récupérer les propriétés visibles
       const visiblePropertyIds = [];
       const visibleElements = document.querySelectorAll('.housing-item:not([style*="display: none"]) .lien-logement[data-property-id]');
-      
       visibleElements.forEach(element => {
         const propertyId = element.getAttribute('data-property-id');
         if (propertyId) visiblePropertyIds.push(propertyId);
       });
-      
       if (visiblePropertyIds.length === 0) return;
-      
-            // Récupérer le nombre d'adultes et d'enfants (avant la cacheKey, pour qu'elle inclue les deux)
+
       const adultsElement = document.getElementById('chiffres-adultes');
       const adultsCount = adultsElement ? parseInt(adultsElement.textContent, 10) : 1;
       const childrenElement = document.getElementById('chiffres-enfants');
       const childrenCount = childrenElement ? parseInt(childrenElement.textContent, 10) : 0;
       const totalGuests = adultsCount + childrenCount;
-      
-      // Vérifier le cache d'abord (clé inclut childrenCount pour invalider quand le filtre voyageurs change)
-      const cacheKey = `prices_${startDate}_${endDate}_${adultsCount}_${childrenCount}_${visiblePropertyIds.join(',')}`;
-      const cachedPrices = this.getFromCache(cacheKey);
-      
-      if (cachedPrices) {
-        this.updatePriceDisplays(cachedPrices.prices, cachedPrices.nights);
+
+      // Cache par logement : on ne demande au serveur que ceux qu'on n'a pas encore
+      const prefixe = `prices_${startDate}_${endDate}_${adultsCount}_${childrenCount}_`;
+      const dejaConnus = {};
+      const manquants = [];
+      let nightsConnues = null;
+      for (const id of visiblePropertyIds) {
+        const c = this.getFromCache(prefixe + id);
+        if (c) { dejaConnus[id] = c.price; nightsConnues = c.nights; }
+        else manquants.push(id);
+      }
+      if (Object.keys(dejaConnus).length > 0) {
+        this.updatePriceDisplays(dejaConnus, nightsConnues);
+      }
+      if (manquants.length === 0) return; // tout était en cache : aucun appel
+
+      let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}&total_guests=${totalGuests}`;
+      manquants.forEach(id => { url += `&property_ids=${encodeURIComponent(id)}`; });
+
+      const response = await this.queueRequest(url);
+
+      if (response.status === 429) {
+        // Un seul nouvel essai après la fenêtre du limiteur, jamais en chaîne
+        if (!this._prixRetente) {
+          this._prixRetente = true;
+          setTimeout(async () => {
+            if (this.startDate && this.endDate) await this.updatePricesForDates(this.startDate, this.endDate);
+            this._prixRetente = false;
+          }, 6000);
+        }
         return;
       }
-      
-      // Construire l'URL pour la requête
-      let url = `${window.CONFIG.API_URL}/calculate-prices?start_date=${startDate}&end_date=${endDate}&adults=${adultsCount}&total_guests=${totalGuests}`;
-      visiblePropertyIds.forEach(id => {
-        url += `&property_ids=${encodeURIComponent(id)}`;
-      });
-      
-      // Utiliser la queue de requêtes
-      const response = await this.queueRequest(url);
+      if (!response.ok) return;
+
       const data = await response.json();
-      
       if (!data.prices) {
         console.error('Format de réponse inattendu:', data);
         return;
       }
-      
-      // Mettre en cache
-      this.setInCache(cacheKey, { prices: data.prices, nights: data.nights });
+
+      Object.entries(data.prices).forEach(([id, price]) => {
+        this.setInCache(prefixe + id, { price, nights: data.nights });
+      });
       this.updatePriceDisplays(data.prices, data.nights);
-      
+
     } catch (error) {
       console.error('❌ Erreur mise à jour prix:', error);
     }
@@ -276,7 +287,7 @@ class PropertyManager {
     
     if (nights > 1) {
       if (textePrix) {
-        setPriceDisplay(textePrix, priceInfo.price_per_night, '/ nuit');  // ✅ SÉCURISÉ
+        setPriceDisplay(textePrix, priceInfo.price_per_night, I18N.t('parNuit'));  // ✅ SÉCURISÉ
       }
       
       if (texteTotal) {
@@ -285,22 +296,22 @@ class PropertyManager {
         
         // ✅ SÉCURISÉ : Utilisation des helpers
         if (totalPlatformPrice > totalPrice) {
-          setPriceWithStrike(texteTotal, totalPlatformPrice, totalPrice, '', 'au total');
+          setPriceWithStrike(texteTotal, totalPlatformPrice, totalPrice, '', I18N.t('auTotal'));
         } else {
-          setPriceDisplay(texteTotal, totalPrice, 'au total');
+          setPriceDisplay(texteTotal, totalPrice, I18N.t('auTotal'));
         }
         texteTotal.style.display = 'block';
       }
     } else {
     if (textePrix) {
       if (priceInfo.platform_price_per_night > priceInfo.price_per_night) {
-        setPriceWithStrike(textePrix, priceInfo.platform_price_per_night, priceInfo.price_per_night, 'Dès', '/ nuit');  // ✅ SÉCURISÉ
+        setPriceWithStrike(textePrix, priceInfo.platform_price_per_night, priceInfo.price_per_night, I18N.t('des'), I18N.t('parNuit'));  // ✅ SÉCURISÉ
       } else {
         // Créer manuellement pour le cas sans réduction
         textePrix.textContent = '';
-        textePrix.appendChild(document.createTextNode('Dès '));
+        textePrix.appendChild(document.createTextNode(I18N.t('des') + ' '));
         const strong = document.createElement('strong');
-        strong.textContent = `${priceInfo.price_per_night}€ / nuit`;
+        strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(priceInfo.price_per_night) });
         textePrix.appendChild(strong);
       }
     }
@@ -347,6 +358,7 @@ class PropertyManager {
       filters.price_max || 'no-price',
       filters.latitude || 'no-lat',
       filters.longitude || 'no-lng',
+      filters.bbox || 'no-bbox', // un zoom garde le centre mais change le cadre
       (filters.amenities || []).sort().join(',') || 'no-amenities',
       (filters.options || []).sort().join(',') || 'no-options',
       (filters.types || []).sort().join(',') || 'no-types',
@@ -542,12 +554,17 @@ class PropertyManager {
       const cachedData = this.getFromCache(cacheKey);
       
       if (cachedData) {
+        this.plusProches = cachedData.plus_proches || null;
+        this.videRaison = cachedData.vide_raison || null;
         this.displayFilteredProperties(cachedData.properties);
         this.totalResults = cachedData.total || 0;
         this.totalPages = cachedData.total_pages || 1;
         this.currentPage = cachedData.page || 1;
         this.renderPagination();
-        
+
+        // 🗺️ Prévenir la carte des logements filtrés (même jeu de filtres)
+                window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: cachedData.map_points || [], plus_proches: this.plusProches } }));
+
         // Mettre à jour les prix si des dates sont sélectionnées
         if (filters.start && filters.end) {
           this.updatePricesForDates(filters.start, filters.end);
@@ -614,12 +631,28 @@ class PropertyManager {
       
       // Utiliser la queue de requêtes
       const response = await this.queueRequest(url);
+
+      // Réponse en erreur : ne pas la lire comme du JSON, ne rien mettre en cache,
+      // garder les logements déjà à l'écran.
+      if (!response.ok) {
+        if (response.status === 429) {
+          console.warn('⏳ Trop de recherches, résultats précédents conservés');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const data = await response.json();
     
       
       // Mettre en cache la réponse
       this.setInCache(cacheKey, data);
-      
+
+      // 🗺️ Prévenir la carte des logements filtrés (même jeu de filtres)
+      this.plusProches = data.plus_proches || null;
+      this.videRaison = data.vide_raison || null;
+      window.dispatchEvent(new CustomEvent('driing:resultats-filtres', { detail: { map_points: data.map_points || [], plus_proches: this.plusProches } }));
+
       // Mettre à jour les informations de pagination
       this.totalResults = data.total || 0;
       this.totalPages = data.total_pages || 1;
@@ -687,9 +720,9 @@ class PropertyManager {
     if (!propData.pricing_data) {
       if (propData.price) {
         priceElement.textContent = '';
-        priceElement.appendChild(document.createTextNode('Dès '));
+        priceElement.appendChild(document.createTextNode(I18N.t('des') + ' '));
         const strong = document.createElement('strong');
-        strong.textContent = `${propData.price}€ / nuit`;
+        strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(propData.price) });
         priceElement.appendChild(strong);
         if (pourcentageElement) pourcentageElement.style.display = 'none';
       }
@@ -765,7 +798,7 @@ class PropertyManager {
 
     // Affichage
     if (hasDiscount && platformPrice > basePrice) {
-      setPriceWithStrike(priceElement, platformPrice, basePrice, 'Dès', '/ nuit');
+      setPriceWithStrike(priceElement, platformPrice, basePrice, I18N.t('des'), I18N.t('parNuit'));
       if (pourcentageElement) {
         const discount = Math.round(((platformPrice - basePrice) / platformPrice) * 100);
         pourcentageElement.textContent = `-${discount}%`;
@@ -773,9 +806,9 @@ class PropertyManager {
       }
     } else {
       priceElement.textContent = '';
-      priceElement.appendChild(document.createTextNode('Dès '));
+      priceElement.appendChild(document.createTextNode(I18N.t('des') + ' '));
       const strong = document.createElement('strong');
-      strong.textContent = `${basePrice}€ / nuit`;
+      strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(basePrice) });
       priceElement.appendChild(strong);
       if (pourcentageElement) pourcentageElement.style.display = 'none';
     }
@@ -792,14 +825,14 @@ class PropertyManager {
     // Lien principal
     const linkElement = newCard.querySelector('.lien-logement');
     if (linkElement) {
-      linkElement.href = `/locations-saisonnieres/${propData.id}`;
+      linkElement.href = I18N.lien(`/locations-saisonnieres/${propData.id}`);
       linkElement.setAttribute('data-property-id', propData.id);
     }
     
     // Nom du logement - CORRECTION du sélecteur
     const nameElement = newCard.querySelector('.text-nom-logement-card');
     if (nameElement) {
-      nameElement.textContent = propData.name || 'Logement';
+      nameElement.textContent = propData.name || I18N.t('logement');
     }
 
     // Nom de l'hôte
@@ -826,8 +859,7 @@ class PropertyManager {
     const capacityElement = newCard.querySelector('[data-voyageurs]');
     if (capacityElement && propData.capacity) {
       capacityElement.setAttribute('data-voyageurs', propData.capacity);
-      const capacityText = propData.capacity > 1 ? 
-        `${propData.capacity} voyageurs` : '1 voyageur';
+      const capacityText = I18N.pluriel(propData.capacity > 1 ? propData.capacity : 1, 'voyageur', 'voyageurs');
       capacityElement.textContent = capacityText;
     }
     
@@ -879,6 +911,9 @@ if (imageElement) {
     imageElement.style.backgroundImage = `url(${firstImageUrl})`;
     imageElement.classList.remove('w-dyn-bind-empty');
   }
+
+  // 🎠 Carrousel : les photos suivantes ne sont chargées qu'au survol / au clic
+  this.setupCarrouselCard(imageElement, propData.images_gallery);
 }
 
 // Image de l'hôte
@@ -943,6 +978,167 @@ if (hostImageElement) {
     }
   }
 
+  // Carrousel photo sur une card de liste.
+  // Rien n'est préchargé tant que le visiteur ne survole pas la card.
+  setupCarrouselCard(imageElement, gallery) {
+    // Mobile : une seule photo par card, pas de carrousel
+    if (window.innerWidth < 768) return;
+    const photos = (Array.isArray(gallery) ? gallery : [])
+      .map(p => (p && typeof p === 'object' ? p.url : p))
+      .filter(u => typeof u === 'string' && u.startsWith('http'));
+    if (photos.length < 2) return;
+
+    const media = imageElement.parentElement;
+    if (!media || media.querySelector('.cl-dots-liste')) return; // déjà en place
+    media.classList.add('cl-media-liste');
+
+    // Image jumelle qui sert au glissement (clonée pour hériter du même style)
+    const anim = imageElement.cloneNode(false);
+    anim.className = imageElement.className + ' cl-anim-liste';
+    anim.removeAttribute('src');
+    anim.removeAttribute('srcset');
+    anim.style.backgroundImage = '';
+
+    // Cadre dédié qui n'entoure QUE les photos (la photo de l'hôte reste en dehors)
+    const cadre = document.createElement('div');
+    cadre.className = 'cl-cadre-liste';
+    media.insertBefore(cadre, imageElement);
+    cadre.appendChild(imageElement);
+    cadre.appendChild(anim);
+
+    // Flèches
+    const prev = document.createElement('span');
+    prev.className = 'cl-nav-liste cl-prev-liste';
+    prev.textContent = '‹';
+    const next = document.createElement('span');
+    next.className = 'cl-nav-liste cl-next-liste';
+    next.textContent = '›';
+
+    // Points (fenêtre de 5 + piste qui glisse)
+    const TAILLE_DOT = 6, ESPACE_DOT = 5, PAS = TAILLE_DOT + ESPACE_DOT;
+    const nbDots = Math.min(5, photos.length);
+    const dots = document.createElement('div');
+    dots.className = 'cl-dots-liste';
+    dots.style.width = (nbDots * TAILLE_DOT + (nbDots - 1) * ESPACE_DOT) + 'px';
+    const piste = document.createElement('div');
+    piste.className = 'cl-piste-liste';
+    photos.forEach(() => {
+      const d = document.createElement('span');
+      d.className = 'cl-dot-liste';
+      piste.appendChild(d);
+    });
+    dots.appendChild(piste);
+
+    cadre.appendChild(prev);
+    cadre.appendChild(next);
+    cadre.appendChild(dots);
+
+    let index = 0, enCours = false, prechargeFaite = false;
+
+    const debutFenetre = () => photos.length <= nbDots ? 0
+      : Math.max(0, Math.min(index - Math.floor(nbDots / 2), photos.length - nbDots));
+
+    const majDots = () => {
+      const debut = debutFenetre();
+      piste.style.transform = `translateX(${-debut * PAS}px)`;
+      Array.from(piste.children).forEach((d, k) => {
+        const pos = k - debut;
+        const visible = pos >= 0 && pos < nbDots;
+        const petit = visible && ((pos === 0 && debut > 0)
+          || (pos === nbDots - 1 && debut + nbDots < photos.length));
+        d.className = 'cl-dot-liste' + (k === index ? ' actif' : '') + (petit ? ' petit' : '');
+      });
+    };
+
+    const poser = (el, url) => {
+      el.src = url;
+      el.style.backgroundImage = `url(${url})`;
+    };
+
+    const precharger = (i) => {
+      const im = new Image();
+      im.src = photos[(i + photos.length) % photos.length];
+    };
+
+    const attendreImage = (url) => new Promise(res => {
+      const im = new Image();
+      let fini = false;
+      const ok = () => { if (!fini) { fini = true; res(); } };
+      im.onload = ok; im.onerror = ok;
+      im.src = url;
+      setTimeout(ok, 400); // filet : jamais plus de 400 ms d'attente
+    });
+
+    const glisser = async (sens) => {
+      if (enCours) return;
+      enCours = true;
+      const suivant = (index + sens + photos.length) % photos.length;
+      await attendreImage(photos[suivant]);
+
+      // Verrouille l'apparence du clone sur celle de l'image affichée
+      anim.style.setProperty('width', imageElement.offsetWidth + 'px', 'important');
+      anim.style.setProperty('height', imageElement.offsetHeight + 'px', 'important');
+      anim.style.setProperty('object-fit', 'cover', 'important');
+      poser(anim, photos[suivant]);
+      anim.style.transition = 'none';
+      anim.style.transform = `translateX(${sens * 100}%)`;
+      anim.style.visibility = 'visible';
+      void anim.offsetWidth;
+
+      imageElement.style.transition = 'transform .35s ease';
+      anim.style.transition = 'transform .35s ease';
+      imageElement.style.transform = `translateX(${-sens * 100}%)`;
+      anim.style.transform = 'translateX(0)';
+
+      index = suivant;
+      majDots();
+
+      setTimeout(() => {
+        imageElement.style.transition = 'none';
+        poser(imageElement, photos[index]);
+        imageElement.style.transform = 'translateX(0)';
+        anim.style.visibility = 'hidden';
+        anim.style.transition = 'none';
+        enCours = false;
+        precharger(index + 1);
+      }, 360);
+    };
+
+    const allerA = (i) => {
+      if (enCours) return;
+      index = (i + photos.length) % photos.length;
+      poser(imageElement, photos[index]);
+      majDots();
+      precharger(index + 1);
+    };
+
+    const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+    prev.addEventListener('click', (e) => { stop(e); glisser(-1); });
+    next.addEventListener('click', (e) => { stop(e); glisser(1); });
+    Array.from(piste.children).forEach((d, k) =>
+      d.addEventListener('click', (e) => { stop(e); allerA(k); }));
+
+    // ⚡ Préchargement UNIQUEMENT au survol
+    media.addEventListener('mouseenter', () => {
+      if (prechargeFaite) return;
+      prechargeFaite = true;
+      precharger(index + 1);
+    });
+
+    // 🔲 Les coins arrondis passent sur le CADRE, les images n'en ont plus.
+    // Sinon chaque image emmène ses propres coins pendant le glissement
+    // et on voit des arrondis au milieu du cadre.
+    requestAnimationFrame(() => {
+      const rayon = getComputedStyle(imageElement).borderRadius;
+      cadre.style.setProperty('border-radius', rayon, 'important');
+      imageElement.style.setProperty('border-radius', '0', 'important');
+      anim.style.setProperty('border-radius', '0', 'important');
+    });
+
+    majDots();
+  }
+
+  
   getFilterValues() {
     const filters = {
       start: this.startDate,
@@ -1011,7 +1207,7 @@ if (hostImageElement) {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        filters.amenities.push(label.textContent.trim());
+        filters.amenities.push(I18N.valeurFiltre(label.textContent));
       }
     });
     
@@ -1022,7 +1218,7 @@ if (hostImageElement) {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        filters.options.push(label.textContent.trim());
+        filters.options.push(I18N.valeurFiltre(label.textContent));
       }
     });
     
@@ -1033,7 +1229,7 @@ if (hostImageElement) {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        filters.types.push(label.textContent.trim());
+        filters.types.push(I18N.valeurFiltre(label.textContent));
       }
     });
     
@@ -1087,14 +1283,14 @@ if (hostImageElement) {
     const arrowRight = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
     
     // Bouton "Précédent" - flèche sur mobile, texte sur desktop
-    const prevText = isMobile ? arrowLeft : 'Précédent';
+    const prevText = isMobile ? arrowLeft : I18N.t('precedent');
     const prevButton = this.createPaginationButton(prevText, 'prev', this.currentPage <= 1);
     paginationList.appendChild(prevButton);
     
     this.addPageNumbers(paginationList);
     
     // Bouton "Suivant" - flèche sur mobile, texte sur desktop
-    const nextText = isMobile ? arrowRight : 'Suivant';
+    const nextText = isMobile ? arrowRight : I18N.t('suivant');
     const nextButton = this.createPaginationButton(nextText, 'next', this.currentPage >= this.totalPages);
     paginationList.appendChild(nextButton);
     
@@ -1102,7 +1298,7 @@ if (hostImageElement) {
     resultsText.className = 'pagination-results-text';
     const start = (this.currentPage - 1) * this.pageSize + 1;
     const end = Math.min(start + this.pageSize - 1, this.totalResults);
-    resultsText.textContent = `Affichage de ${start}-${end} sur ${this.totalResults} logements`;
+    resultsText.textContent = I18N.t('affichageResultats', { debut: start, fin: end, total: this.totalResults });
     
     paginationContainer.appendChild(resultsText);
     paginationContainer.appendChild(paginationList);
@@ -1214,7 +1410,7 @@ if (hostImageElement) {
       
       jQuery(this.dateButton).on('cancel.daterangepicker', function(e, picker) {
         if (self.textDatesSearch) {
-          self.textDatesSearch.textContent = 'Dates';
+          self.textDatesSearch.textContent = I18N.t('dates');
           self.textDatesSearch.style.color = '';
         }
         
@@ -1358,6 +1554,8 @@ if (hostImageElement) {
   formatDateRange(startDate, endDate) {
     const startDay = startDate.format('D');
     const endDay = endDate.format('D');
+    // Page anglaise : « 12-15 Feb » (moment.js est déjà en anglais)
+    if (I18N.LANG === 'en') return `${startDay}-${endDay} ${endDate.format('MMM')}`;
     let month = endDate.format('MMM').toLowerCase();
     
     const monthAbbr = {
@@ -1441,11 +1639,81 @@ if (hostImageElement) {
     }
   }
 
-  showNoResults(show) {
+    showNoResults(show) {
     const noResultsMessage = document.querySelector('.no-results-message');
-    if (noResultsMessage) {
-      noResultsMessage.style.display = show ? 'block' : 'none';
+    if (!noResultsMessage) return;
+    noResultsMessage.style.display = show ? 'block' : 'none';
+    if (show) this.configurerBlocVide(noResultsMessage);
+  }
+
+  // Titre et boutons : la cause vient du serveur, on se contente d'afficher
+  configurerBlocVide(bloc) {
+    const parFiltres = this.videRaison === 'filtres';
+
+    const titre = bloc.querySelector('.titre-aucun-logement');
+    if (titre) {
+      titre.textContent = parFiltres
+        ? I18N.t('aucunLogementRecherche')
+        : I18N.t('aucunLogementZone');
     }
+
+    const btnEffacer = bloc.querySelector('.btn-effacer-filtres');
+    if (btnEffacer) {
+      btnEffacer.style.display = parFiltres ? '' : 'none';
+      if (!btnEffacer.dataset.branche) {
+        btnEffacer.dataset.branche = '1';
+        btnEffacer.addEventListener('click', (e) => { e.preventDefault(); this.effacerTout(); });
+      }
+    }
+
+    const btnProches = bloc.querySelector('.btn-plus-proches');
+    if (btnProches) {
+      btnProches.style.display = this.plusProches && this.plusProches.bbox ? '' : 'none';
+      if (!btnProches.dataset.branche) {
+        btnProches.dataset.branche = '1';
+        btnProches.addEventListener('click', (e) => { e.preventDefault(); this.allerAuxPlusProches(); });
+      }
+    }
+  }
+
+    effacerTout() {
+    if (window.filtersManager) window.filtersManager.clearAllFilters();
+
+    this.startDate = null;
+    this.endDate = null;
+    localStorage.removeItem('selected_search_data');
+    ['text-dates-search', 'text-dates-search-mobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = I18N.t('dates'); el.style.color = ''; }
+    });
+    document.querySelectorAll('.text-total').forEach(el => { el.style.display = 'none'; });
+
+    // Les calendriers gardent leur sélection en interne : on la vide aussi
+    if (typeof jQuery !== 'undefined' && typeof moment !== 'undefined') {
+      jQuery('.dates-button-search, #input-calendar-mobile').each(function () {
+        const p = jQuery(this).data('daterangepicker');
+        if (p) { p.setStartDate(moment()); p.setEndDate(moment()); }
+      });
+    }
+
+    this.applyFilters(true);
+  }
+
+  allerAuxPlusProches() {
+    const cible = this.plusProches;
+    if (!cible || !cible.bbox) return;
+    const b = cible.bbox;
+
+    // La carte se recadre, son déplacement rechargera la liste
+    if (window.driingCarte && window.driingCarte.allerVers(b)) return;
+
+    // Carte absente ou masquée : on déplace la zone nous-mêmes
+    this.setSearchLocation(
+      { lat: (b[1] + b[3]) / 2, lng: (b[0] + b[2]) / 2 },
+      'region',
+      { polygon_source: 'bbox', bbox: b, geo_feature_name: null, geo_feature_code: null }
+    );
+    this.applyFilters(true);
   }
 
   showError(show) {

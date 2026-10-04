@@ -110,18 +110,51 @@ class ReservationDataManager {
       }
     }
     
-    return imageUrl;
+        return imageUrl;
+  }
+
+  // 🆕 Récupère les dates sélectionnées sous forme d'objets moment
+  // (contient l'ANNÉE, contrairement au texte "ven. 12/07")
+  getSelectedDates() {
+    // 1. Source la plus fiable : le calculateur de prix
+    if (window.priceCalculator?.startDate && window.priceCalculator?.endDate) {
+      return {
+        start: window.priceCalculator.startDate,
+        end: window.priceCalculator.endDate
+      };
+    }
+
+    // 2. Filet de secours : lire le daterangepicker (desktop puis mobile)
+    if (window.jQuery) {
+      const picker = jQuery("#input-calendar").data("daterangepicker")
+                  || jQuery("#input-calendar-mobile").data("daterangepicker");
+      if (picker?.startDate && picker?.endDate) {
+        return { start: picker.startDate, end: picker.endDate };
+      }
+    }
+
+    return { start: null, end: null };
   }
 
   handleReservationClick(e, propertyId, logementInfo, currentPageUrl) {
     // Vérifier que des dates sont sélectionnées
     const datesTexte = Utils.getElementByIdWithFallback("dates-texte")?.textContent || "";
-    if (datesTexte === "Sélectionner une date") {
-      alert("Veuillez sélectionner des dates de séjour avant de réserver.");
+    // On teste les dates réellement choisies, pas le texte affiché : il dépend de la langue
+    if (!window.priceCalculator?.startDate || !window.priceCalculator?.endDate) {
+      alert(I18N.t('choisirDatesAvant'));
       e.preventDefault();
       return;
     }
     
+    // 🆕 Récupérer les dates réelles (avec l'année) à transmettre à la page
+    // de réservation, puis à Zapier / aux emails.
+    const { start: startMoment, end: endMoment } = this.getSelectedDates();
+    const dateDebut = startMoment ? startMoment.format("YYYY-MM-DD") : "";
+    const dateFin = endMoment ? endMoment.format("YYYY-MM-DD") : "";
+    const datesTexteAvecAnnee = (startMoment && endMoment)
+      ? `${Utils.formatDateCustom(startMoment)}/${startMoment.format("YYYY")} - ${Utils.formatDateCustom(endMoment)}/${endMoment.format("YYYY")}`
+      : datesTexte;
+
     // Récupérer les informations des voyageurs
     const voyageursTexte = Utils.getElementByIdWithFallback("voyageurs-texte")?.textContent || "";
     const countAdultes = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
@@ -166,8 +199,8 @@ class ReservationDataManager {
       prixTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("prix-taxe")?.textContent || "") : "",
       calculTaxe: taxeVisible ? (Utils.getElementByIdWithFallback("calcul-taxe")?.textContent || "") : "",
       totalPrix: Utils.getElementByIdWithFallback("total-prix")?.innerHTML || "",
-      dateDebut: window.priceCalculator.startDate?.format("YYYY-MM-DD") || "",
-      dateFin: window.priceCalculator.endDate?.format("YYYY-MM-DD") || "",
+      dateDebut,
+      dateFin,
       hasReduction: Utils.getElementByIdWithFallback("prix-reduction")?.textContent !== ""
     };
   }
@@ -194,6 +227,9 @@ class ReservationDataManager {
       logementUrl: currentPageUrl,
       siteInternet: siteInternet,
       datesTexte,
+      datesTexteAvecAnnee, // 🆕 "ven. 12/07/2027 - dim. 20/07/2027"
+      dateDebut,           // 🆕 "2027-07-12"
+      dateFin,             // 🆕 "2027-07-20"
       voyageursTexte,
       voyageurs: {
         adultes: countAdultes,
@@ -219,7 +255,7 @@ class ReservationDataManager {
         voyageurs: (() => {
           const match = (selectedRoom.taille_chambre || '').match(/^(\d+)/);
           const v = match ? parseInt(match[1]) : 0;
-          return `${v} voyageur${v > 1 ? 's' : ''}`;
+          return I18N.pluriel(v, 'voyageur', 'voyageurs');
         })(),
         taille: (() => {
           const match = (selectedRoom.taille_chambre || '').match(/(\d+)\s*m²/);
@@ -294,7 +330,7 @@ class ReservationDataManager {
         
         // Mettre à jour le texte des voyageurs
         const totalTravelers = searchData.adultes + searchData.enfants;
-        const travelersText = totalTravelers === 1 ? "1 voyageur" : `${totalTravelers} voyageurs`;
+        const travelersText = I18N.pluriel(totalTravelers, 'voyageur', 'voyageurs');
         const travelersElements = [
           document.getElementById("voyageurs-texte"),
           document.getElementById("voyageurs-texte-mobile")

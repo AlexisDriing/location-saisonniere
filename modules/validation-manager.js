@@ -1,4 +1,4 @@
-// LOG production V1.59
+// LOG production V1.60
 // Gestionnaire de validation pour la page modification de logement
 class ValidationManager {
   constructor(propertyEditor) {
@@ -1334,7 +1334,9 @@ validateRoomFields() {
     input.style.borderColor = '#E53131';
     
     // Chercher la div error existante (créée dans Webflow)
-    let errorDiv = input.nextElementSibling;
+    // 🆕 Partir du wrapper si le sélecteur d'unité est greffé sur ce champ
+    const anchor = input.closest('.unit-toggle-wrap') || input;
+    let errorDiv = anchor.nextElementSibling;
     
     // Si c'est dans un flex-error, chercher différemment
     if (!errorDiv?.classList.contains('error')) {
@@ -1356,7 +1358,9 @@ validateRoomFields() {
     input.style.borderColor = '';
     
     // Chercher la div error existante
-    let errorDiv = input.nextElementSibling;
+    // 🆕 Partir du wrapper si le sélecteur d'unité est greffé sur ce champ
+    const anchor = input.closest('.unit-toggle-wrap') || input;
+    let errorDiv = anchor.nextElementSibling;
     
     // Si c'est dans un flex-error, chercher différemment
     if (!errorDiv?.classList.contains('error')) {

@@ -26,6 +26,8 @@ class AccueilPage {
       await this.loadScript('https://cdn.jsdelivr.net/momentjs/latest/moment.min.js');
       await this.loadScript('https://cdn.jsdelivr.net/momentjs/latest/locale/fr.js');
     }
+    // Page anglaise : dates en anglais (l'anglais est intégré à moment.js)
+    if (typeof moment !== 'undefined' && I18N.LANG === 'en') moment.locale('en');
     
     // Charger DateRangePicker
     if (typeof jQuery !== 'undefined' && !jQuery.fn.daterangepicker) {

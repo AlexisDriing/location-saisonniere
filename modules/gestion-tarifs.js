@@ -1,4 +1,4 @@
-// Gestion de l'affichage des tarifs par saison - LOG production V1.22
+// Gestion de l'affichage des tarifs par saison - LOG production V1.24
 class TariffsDisplayManager {
   constructor() {
     this.init();
@@ -10,13 +10,10 @@ class TariffsDisplayManager {
 
   formatDate(dateStr) {
     const parts = dateStr.split("-");
-    const months = [
-      "janvier", "février", "mars", "avril", "mai", "juin",
-      "juillet", "août", "septembre", "octobre", "novembre", "décembre"
-    ];
+    const months = I18N.t('moisTarifs');
     
     let day = parseInt(parts[0], 10).toString();
-    if (day === "1") {
+    if (day === "1" && I18N.LANG === 'fr') {
       day = "1er";
     }
     
@@ -24,7 +21,7 @@ class TariffsDisplayManager {
   }
 
   formatDateRange(start, end) {
-    return "du " + this.formatDate(start) + " au " + this.formatDate(end);
+    return I18N.t('periodeDuAu', { debut: this.formatDate(start), fin: this.formatDate(end) });
   }
 
   calculateWeekPrice(nightlyPrice, discounts) {
@@ -40,7 +37,10 @@ class TariffsDisplayManager {
         
         // Prendre la première (qui sera la plus élevée après le tri)
         const weekDiscount = applicableDiscounts[0];
-        weekPrice = weekPrice * (1 - weekDiscount.percentage / 100);
+        // 🆕 Montant en € ou pourcentage
+        weekPrice -= (weekDiscount.type === 'amount')
+          ? Math.min(weekDiscount.amount || 0, weekPrice)
+          : weekPrice * (weekDiscount.percentage || 0) / 100;
       }
     }
     

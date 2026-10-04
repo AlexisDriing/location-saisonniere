@@ -86,9 +86,9 @@ class HomeSearch {
         let texte = '';
         
         if (totalVoyageurs === 1) {
-          texte = '1 voyageur';
+          texte = I18N.t('voyageur', { n: 1 });
         } else {
-          texte = `${totalVoyageurs} voyageurs`;
+          texte = I18N.t('voyageurs', { n: totalVoyageurs });
         }
         
         textFiltreVoyageurs.textContent = texte;
@@ -162,9 +162,9 @@ class HomeSearch {
       let texte = '';
       
       if (totalVoyageurs === 1) {
-        texte = '1 voyageur';
+        texte = I18N.t('voyageur', { n: 1 });
       } else {
-        texte = `${totalVoyageurs} voyageurs`;
+        texte = I18N.t('voyageurs', { n: totalVoyageurs });
       }
       
       textFiltreVoyageurs.textContent = texte;
@@ -232,7 +232,7 @@ class HomeSearch {
               // Ajouter le header mobile si nécessaire
               if (!$(this.container).find('.mobile-calendar-header').length) {
                 const header = $('<div class="mobile-calendar-header"></div>');
-                const title = $('<div class="mobile-calendar-title">Vos dates de séjour</div>');
+                const title = $('<div class="mobile-calendar-title"></div>').text(I18N.t('vosDates'));
                 const closeBtn = $('<div class="mobile-calendar-close">×</div>');
                 
                 closeBtn.css({
@@ -332,8 +332,8 @@ class HomeSearch {
     // Sauvegarder dans localStorage
     localStorage.setItem('home_search_data', JSON.stringify(searchData));
 
-    // Rediriger vers la page liste
-    window.location.href = '/locations-vacances-sans-commission';
+    // Rediriger vers la page liste (adresse directe, avec /en sur la page anglaise)
+    window.location.href = I18N.lien('/location-vacances-sans-commission');
   }
 }
 

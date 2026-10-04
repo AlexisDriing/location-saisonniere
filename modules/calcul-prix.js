@@ -1,4 +1,4 @@
-// Calculateur de prix principal - LOG production V1.132
+// Calculateur de prix principal - LOG production V1.133
 class PriceCalculator {
   constructor() {
     this.elements = {
@@ -244,7 +244,7 @@ class PriceCalculator {
             element.textContent = '';
             
             // Ajouter "À partir de"
-            element.appendChild(document.createTextNode('À partir de'));
+            element.appendChild(document.createTextNode(I18N.t('aPartirDe')));
             
             // Ajouter le saut de ligne
             element.appendChild(document.createElement('br'));
@@ -254,7 +254,7 @@ class PriceCalculator {
             strong.style.fontWeight = 'bold';
             strong.style.fontFamily = 'Inter';
             strong.style.fontSize = '24px';
-            strong.textContent = `${Math.round(minPrice)}€ / nuit`;
+            strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(Math.round(minPrice)) });
             
             element.appendChild(strong);
           });
@@ -426,11 +426,21 @@ class PriceCalculator {
         
         for (const discount of sortedDiscounts) {
           if (details.nights >= discount.nights) {
-            const discountPercentage = discount.percentage;
             // 🆕 La réduction s'applique sur originalNightsPrice + supplément voyageurs
+            // (corrige l'ancien calcul qui ignorait le supplément, contrairement au serveur)
             const baseForDiscount = details.originalNightsPrice + details.extraGuestsFee;
-            const nightsDiscount = details.originalNightsPrice * discountPercentage / 100;
-            const platformDiscount = details.platformPrice * discountPercentage / 100;
+            
+            // 🆕 Deux unités possibles : montant en € ou pourcentage
+            // Pas de clé "type" → pourcentage, comme avant
+            let nightsDiscount, platformDiscount;
+            if (discount.type === 'amount') {
+              nightsDiscount   = Math.min(discount.amount || 0, baseForDiscount);
+              platformDiscount = Math.min(discount.amount || 0, details.platformPrice);
+            } else {
+              const pct = discount.percentage || 0;
+              nightsDiscount   = baseForDiscount * pct / 100;
+              platformDiscount = details.platformPrice * pct / 100;
+            }
             
             details.discountAmount = nightsDiscount;
             details.platformPrice -= platformDiscount;
@@ -449,10 +459,26 @@ class PriceCalculator {
       // Pour les chambres d'hôtes, la taxe vient du logement parent (_parentTouristTax)
       details.touristTaxAdults = 0;
       const touristTax = this.pricingData.touristTax || this._parentTouristTax;
-      if (touristTax && touristTax.enabled && touristTax.amount > 0) {
+      if (touristTax && touristTax.enabled) {
         const taxAdultsCount = parseInt(Utils.getElementByIdWithFallback("chiffres-adultes")?.textContent || "1");
-        details.touristTaxAdults = taxAdultsCount;
-        details.touristTax = touristTax.amount * taxAdultsCount * details.nights;
+        
+        // 🆕 Tarif par adulte et par nuit : montant fixe, ou % du prix de la nuitée par personne
+        let perAdultNight = 0;
+        if (touristTax.mode === 'percent_per_adult_night') {
+          const taxChildrenCount = parseInt(Utils.getElementByIdWithFallback("chiffres-enfants")?.textContent || "0");
+          const totalGuests = Math.max(1, taxAdultsCount + taxChildrenCount);
+          // Base = prix réellement payé pour l'hébergement (hors ménage), réduction déduite
+          const lodgingPrice = details.originalNightsPrice + details.extraGuestsFee - details.discountAmount;
+          const perGuestNight = lodgingPrice / details.nights / totalGuests;
+          perAdultNight = perGuestNight * (touristTax.rate || 0) / 100;
+        } else {
+          perAdultNight = touristTax.amount || 0;
+        }
+        
+        if (perAdultNight > 0) {
+          details.touristTaxAdults = taxAdultsCount;
+          details.touristTax = perAdultNight * taxAdultsCount * details.nights;
+        }
       }
       
       // Prix total - Le ménage "en option" n'est PAS ajouté au total
@@ -604,20 +630,22 @@ class PriceCalculator {
       button.style.cursor = "pointer";
     });
     
-    const formatPrice = (price) => Math.round(price).toLocaleString("fr-FR");
+    // « 1 250 » en français, « 1,250 » en anglais ; euro() place le symbole au bon endroit
+    const formatPrice = (price) => I18N.nombre(Math.round(price));
+    const euro = (price) => I18N.prix(formatPrice(price));
     
     // Calcul par nuit
     if (this.elements.calcNuit.length) {
       const avgPricePerNight = Math.round(details.originalNightsPrice / details.nights);
       this.elements.calcNuit.forEach(element => {
-        element.textContent = `${avgPricePerNight}€ x ${details.nights} nuits`;
+        element.textContent = I18N.pluriel(details.nights, 'calculNuit', 'calculNuits', { prix: I18N.prix(avgPricePerNight) });
       });
     }
     
     // Prix des nuits
     if (this.elements.prixNuit.length) {
       this.elements.prixNuit.forEach(element => {
-        element.textContent = `${formatPrice(details.originalNightsPrice)}€`;
+        element.textContent = euro(details.originalNightsPrice);
       });
     }
 
@@ -630,10 +658,10 @@ class PriceCalculator {
         if (details.extraGuestsFee > 0) {
           ligneSupplementEls.forEach(el => el.style.display = 'flex');
           calculSupplementEls.forEach(el => {
-            el.textContent = `Supplément voyageurs (${details.extraGuestsCount} pers.)`;
+            el.textContent = I18N.t('supplementVoyageurs', { n: details.extraGuestsCount });
           });
           prixSupplementEls.forEach(el => {
-            el.textContent = `${formatPrice(details.extraGuestsFee)}€`;
+            el.textContent = euro(details.extraGuestsFee);
           });
                 } else {
           ligneSupplementEls.forEach(el => el.style.display = 'none');
@@ -646,7 +674,7 @@ class PriceCalculator {
       // Formateur dédié : seule la ligne taxe peut afficher des centimes (ex : 0,88 €/adulte)
       const formatTaxe = (price) => {
         const rounded = Math.round(price * 100) / 100;
-        return rounded.toLocaleString("fr-FR", {
+        return I18N.nombre(rounded, {
           minimumFractionDigits: Number.isInteger(rounded) ? 0 : 2,
           maximumFractionDigits: 2
         });
@@ -660,10 +688,13 @@ class PriceCalculator {
           ligneTaxeEls.forEach(el => el.style.display = 'flex');
           calculTaxeEls.forEach(el => {
             const a = details.touristTaxAdults;
-            el.textContent = `Taxe de séjour (${a} adulte${a > 1 ? 's' : ''} × ${details.nights} nuit${details.nights > 1 ? 's' : ''})`;
+            el.textContent = I18N.t('taxeSejour', {
+              adultes: I18N.pluriel(a, 'adulte', 'adultes'),
+              nuits: I18N.pluriel(details.nights, 'nuit', 'nuits')
+            });
           });
           prixTaxeEls.forEach(el => {
-            el.textContent = `${formatTaxe(details.touristTax)}€`;
+            el.textContent = I18N.prix(formatTaxe(details.touristTax));
           });
         } else {
           ligneTaxeEls.forEach(el => el.style.display = 'none');
@@ -677,7 +708,7 @@ class PriceCalculator {
       // AFFICHER la réduction - Utils.getAllElementsById() gère déjà desktop + mobile
       this.elements.prixReduction.forEach(element => {
         if (element) {
-          element.textContent = `-${formatPrice(details.discountAmount)}€`;
+          element.textContent = `-${euro(details.discountAmount)}`;
           element.style.color = "#2AA551";
           element.style.display = "block";
         }
@@ -720,12 +751,12 @@ class PriceCalculator {
 
         if (details.cleaningFee > 0) {
           if (details.cleaningOptional) {
-            element.innerHTML = `${formatPrice(details.cleaningFee)}€ <span style="color:#778183">(en option)</span>`;
+            element.innerHTML = `${euro(details.cleaningFee)} <span style="color:#778183">${I18N.t('enOption')}</span>`;
           } else {
-            element.textContent = `${formatPrice(details.cleaningFee)}€`;
+            element.textContent = euro(details.cleaningFee);
           }
         } else {
-          element.textContent = "Inclus";
+          element.textContent = I18N.t('inclus');
         }
       });
     }
@@ -741,7 +772,7 @@ class PriceCalculator {
           // Créer le prix barré
           const strikeSpan = document.createElement('span');
           strikeSpan.style.cssText = 'text-decoration:line-through;font-weight:normal;font-family:Inter;font-size:16px;color:#778183';
-          strikeSpan.textContent = `${formatPrice(details.platformPrice)}€`;
+          strikeSpan.textContent = euro(details.platformPrice);
           
           // Créer l'espace
           const spaceSpan = document.createElement('span');
@@ -750,7 +781,7 @@ class PriceCalculator {
           // Créer le prix final
           const priceSpan = document.createElement('span');
           priceSpan.style.cssText = 'font-weight:600;font-family:Inter;font-size:16px;color:#272A2B';
-          priceSpan.textContent = `${formatPrice(details.totalPrice)}€`;
+          priceSpan.textContent = euro(details.totalPrice);
           
           // Ajouter tout
           element.appendChild(strikeSpan);
@@ -759,7 +790,7 @@ class PriceCalculator {
         } else {
           const priceSpan = document.createElement('span');
           priceSpan.style.cssText = 'font-weight:600;font-family:Inter;font-size:16px;color:#272A2B';
-          priceSpan.textContent = `${formatPrice(details.totalPrice)}€`;
+          priceSpan.textContent = euro(details.totalPrice);
           element.appendChild(priceSpan);
         }
       });
@@ -781,7 +812,7 @@ class PriceCalculator {
           element.textContent = '';
           
           // Ajouter "À partir de"
-          element.appendChild(document.createTextNode('À partir de'));
+          element.appendChild(document.createTextNode(I18N.t('aPartirDe')));
           
           // Ajouter le saut de ligne
           element.appendChild(document.createElement('br'));
@@ -791,7 +822,7 @@ class PriceCalculator {
           strong.style.fontWeight = 'bold';
           strong.style.fontFamily = 'Inter';
           strong.style.fontSize = '24px';
-          strong.textContent = `${avgPricePerNight}€ / nuit`;
+          strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(avgPricePerNight) });
           
           element.appendChild(strong);
         });
@@ -838,7 +869,7 @@ class PriceCalculator {
 
     const season = this.getSeason(this.startDate);
     const minNights = season && season.minNights ? season.minNights : 1;
-    const minNightsText = `${minNights} nuit${minNights > 1 ? 's' : ''} minimum`;
+    const minNightsText = I18N.pluriel(minNights, 'nuitMinimum', 'nuitsMinimum');
 
     // Déterminer si c'est une chambre
     const isChambre = window.detailLogementPage?.managers?.interface?._selectedRoomIndex;

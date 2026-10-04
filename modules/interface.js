@@ -1,4 +1,4 @@
-// LOG production V1.38.45
+// LOG production V1.38.46
 // Page google
 class InterfaceManager {
   constructor() {
@@ -130,7 +130,7 @@ class InterfaceManager {
     // 🆕 Fallback villégiature : si le texte ne la mentionne pas déjà
     // (anciennes annonces non ré-enregistrées) → on ajoute la phrase.
     // Rien dans le JSON = considéré comme "non".
-    if (!/villégiature/i.test(conditionsText)) {
+    if (!/villégiature|rental insurance/i.test(conditionsText)) {
       let villegiatureObligatoire = false;
       const jsonEl = document.querySelector('[data-json-tarifs-line], [data-json-tarifs]');
       if (jsonEl) {
@@ -142,8 +142,8 @@ class InterfaceManager {
         } catch (e) {}
       }
       const phraseVillegiature = villegiatureObligatoire
-        ? 'L’assurance villégiature est obligatoire pour réserver ce logement.'
-        : 'L’assurance villégiature n’est pas obligatoire pour réserver ce logement.';
+        ? I18N.t('villegiatureOblig')
+        : I18N.t('villegiatureNonOblig');
       conditionsText = conditionsText ? conditionsText + '\n' + phraseVillegiature : phraseVillegiature;
     }
     
@@ -314,10 +314,12 @@ setupConditionsAnnulation() {
         const textWithoutEmoji = extra.substring(emoji.length).trim();
 
         let title, price;
-        if (/\s*sur\s+demande\s*$/i.test(textWithoutEmoji)) {
+        // « Sur demande » en français, « On request » dans la version anglaise du CMS
+        const surDemande = /\s*(sur\s+demande|on\s+request)\s*$/i;
+        if (surDemande.test(textWithoutEmoji)) {
           // 🆕 Extra "sur demande" : pas de prix numérique
-          title = textWithoutEmoji.replace(/\s*sur\s+demande\s*$/i, '').trim();
-          price = 'Prix sur demande';
+          title = textWithoutEmoji.replace(surDemande, '').trim();
+          price = I18N.t('prixSurDemande');
         } else {
           const match = textWithoutEmoji.match(/(.+?)(\d+(?:[.,]\d+)?€)$/);
           if (!match) return;
@@ -325,9 +327,10 @@ setupConditionsAnnulation() {
           price = match[2].trim();
           const pm = price.match(/^(\d+)(?:[.,](\d+))?€$/);
           if (pm) {
+            const virgule = I18N.LANG === 'en' ? '.' : ',';
             price = pm[2] !== undefined
-              ? `${pm[1]},${(pm[2] + '0').slice(0, 2)}€`
-              : `${pm[1]}€`;
+              ? I18N.prix(`${pm[1]}${virgule}${(pm[2] + '0').slice(0, 2)}`)
+              : I18N.prix(pm[1]);
           }
         }
         if (!title) return;
@@ -431,9 +434,9 @@ if (blocEquipements) {
     setupOptionsAccueil() {
     // id = la chip (toujours affichée) ; textId = le texte à modifier ; negatif = texte si non coché
     const optionsMapping = {
-      'Animaux autorisés': { id: 'animaux', textId: 'animaux-text', negatif: 'Animaux non autorisés' },
-      'Accès PMR':         { id: 'pmr',     textId: 'pmr-text',     negatif: 'Accès PMR non disponible' },
-      'Fumeurs autorisés': { id: 'fumeurs', textId: 'fumeurs-text', negatif: 'Fumeurs non autorisés' }
+      'Animaux autorisés': { id: 'animaux', textId: 'animaux-text', negatif: I18N.t('animauxNon') },
+      'Accès PMR':         { id: 'pmr',     textId: 'pmr-text',     negatif: I18N.t('pmrNon') },
+      'Fumeurs autorisés': { id: 'fumeurs', textId: 'fumeurs-text', negatif: I18N.t('fumeursNon') }
     };
 
     // Options cochées (peut être vide ou absent)
@@ -489,7 +492,7 @@ if (blocEquipements) {
   // Le nombre de salles de bain n'est pas saisi pour les chambres d'hôtes,
   // on retire donc la portion " - X salle(s) de bain" du texte taille_maison.
   hideSallesBainFromTailleMaison() {
-    const regex = /\s*[-–]\s*\d+\s*salle[s]?\s*de\s*bain/i;
+    const regex = /\s*[-–]\s*\d+\s*(salle[s]?\s*de\s*bain|bathrooms?)/i;
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => regex.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
     });
@@ -504,7 +507,7 @@ if (blocEquipements) {
     if (!slug) return;
 
     try {
-      const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${slug}`);
+      const response = await fetch(`${window.CONFIG.API_URL}/property-rooms/${slug}?lang=${I18N.LANG}`);
       if (!response.ok) return;
       
       const data = await response.json();
@@ -582,13 +585,13 @@ if (blocEquipements) {
       if (voyageursEl) {
         const match = (room.taille_chambre || '').match(/^(\d+)/);
         const voyageurs = match ? parseInt(match[1]) : 0;
-        voyageursEl.textContent = `${voyageurs} voyageur${voyageurs > 1 ? 's' : ''}`;
+        voyageursEl.textContent = I18N.pluriel(voyageurs, 'voyageur', 'voyageurs');
       }
 
       // 3. Nom
       const nomEl = document.getElementById(`nom-chambre-${slotIndex}`);
       if (nomEl) {
-        nomEl.textContent = room.name || 'Chambre';
+        nomEl.textContent = room.name || I18N.t('chambre');
       }
 
       // 4. Taille m²
@@ -1051,13 +1054,13 @@ if (blocEquipements) {
 
     prixDirectEls.forEach(element => {
       element.textContent = '';
-      element.appendChild(document.createTextNode('À partir de'));
+      element.appendChild(document.createTextNode(I18N.t('aPartirDe')));
       element.appendChild(document.createElement('br'));
       const strong = document.createElement('strong');
       strong.style.fontWeight = 'bold';
       strong.style.fontFamily = 'Inter';
       strong.style.fontSize = '24px';
-      strong.textContent = `${Math.round(lowestPrice)}€ / nuit`;
+      strong.textContent = I18N.t('prixParNuit', { prix: I18N.prix(Math.round(lowestPrice)) });
       element.appendChild(strong);
     });
 
@@ -1268,12 +1271,13 @@ if (blocEquipements) {
       const groupMatch = group.match(/^(\d+)\s+(.+)$/);
       if (groupMatch) {
         const count = parseInt(groupMatch[1]);
-        const type = groupMatch[2].trim();
+        // En anglais, le code du lit devient son libellé ; en français, rien ne change
+        const type = I18N.t(groupMatch[2].trim());
         for (let i = 0; i < count; i++) {
           expandedTypes.push(type);
         }
       } else {
-        expandedTypes.push(group);
+        expandedTypes.push(I18N.t(group));
       }
     });
     return expandedTypes.join(', ');
@@ -1365,13 +1369,13 @@ if (blocEquipements) {
     prixEl.style.setProperty('gap', '4px', 'important');
 
     const strong = document.createElement('strong');
-    strong.textContent = `${Math.round(displayPrice)}€`;
+    strong.textContent = I18N.prix(Math.round(displayPrice));
     strong.style.setProperty('font-weight', '600', 'important');
     strong.style.setProperty('font-size', '16px', 'important');
     prixEl.appendChild(strong);
 
     const suffix = document.createElement('span');
-    suffix.textContent = '/ nuit';
+    suffix.textContent = I18N.t('parNuit');
     suffix.style.setProperty('font-weight', '400', 'important');
     suffix.style.setProperty('font-size', '16px', 'important');
     prixEl.appendChild(suffix);
@@ -1512,13 +1516,13 @@ if (blocEquipements) {
       prixEl.style.setProperty('gap', '4px', 'important');
 
       const strong = document.createElement('strong');
-      strong.textContent = `${avgPrice}€`;
+      strong.textContent = I18N.prix(avgPrice);
       strong.style.setProperty('font-weight', '600', 'important');
       strong.style.setProperty('font-size', '16px', 'important');
       prixEl.appendChild(strong);
 
       const suffix = document.createElement('span');
-      suffix.textContent = '/ nuit';
+      suffix.textContent = I18N.t('parNuit');
       suffix.style.setProperty('font-weight', '400', 'important');
       suffix.style.setProperty('font-size', '16px', 'important');
       prixEl.appendChild(suffix);
@@ -1583,7 +1587,7 @@ if (blocEquipements) {
         chambreBloc.style.opacity = '0.3';
         chambreBloc.style.pointerEvents = 'none';
         if (selectBtn) selectBtn.style.display = 'none';
-        if (prixEl) prixEl.textContent = 'Chambre indisponible';
+        if (prixEl) prixEl.textContent = I18N.t('chambreIndisponible');
         if (pourcentageEl) pourcentageEl.style.display = 'none';
         } else {
         chambreBloc.style.opacity = '';
@@ -1614,13 +1618,13 @@ if (blocEquipements) {
     if (voyageursEl) {
       const match = (room.taille_chambre || '').match(/^(\d+)/);
       const voyageurs = match ? parseInt(match[1]) : 0;
-      voyageursEl.textContent = `${voyageurs} voyageur${voyageurs > 1 ? 's' : ''}`;
+      voyageursEl.textContent = I18N.pluriel(voyageurs, 'voyageur', 'voyageurs');
     }
 
     // Nom
     const nomEl = document.getElementById('modal-chambre-nom');
     if (nomEl) {
-      nomEl.textContent = room.name || 'Chambre';
+      nomEl.textContent = room.name || I18N.t('chambre');
     }
 
     // Taille
@@ -1736,12 +1740,12 @@ if (blocEquipements) {
       return;
     }
     
+    // « 16h00 » en français, « 16:00 » en anglais
     const formatHeure = (heure) => {
-      if (/^\d{1,2}:\d{2}$/.test(heure)) return heure.replace(':', 'h');
-      if (/^\d+$/.test(heure)) return `${heure}h00`;
-      if (/^\d+h$/.test(heure)) return `${heure}00`;
-      if (/^\d+h\d+$/.test(heure)) return heure;
-      return heure;
+      const m = /^(\d{1,2})(?:[:h](\d{2})?)?$/.exec(heure);
+      if (!m) return heure;
+      const minutes = m[2] || '00';
+      return I18N.LANG === 'en' ? `${m[1]}:${minutes}` : `${m[1]}h${minutes}`;
     };
     
     const partieArrivee = horaires[0];
@@ -1753,10 +1757,10 @@ if (blocEquipements) {
     if (partieArrivee.includes('-')) {
       // Créneau : "14:00-18:00" → "Entre 14h00 et 18h00"
       const [debut, fin] = partieArrivee.split('-').map(h => formatHeure(h.trim()));
-      texteArrivee = `Arrivée entre ${debut} et ${fin}`;
+      texteArrivee = I18N.t('arriveeEntre', { debut, fin });
     } else {
       // Heure fixe : "16:00" → "Arrivée à partir de 16h00"
-      texteArrivee = `Arrivée à partir de ${formatHeure(partieArrivee)}`;
+      texteArrivee = I18N.t('arriveeAPartirDe', { heure: formatHeure(partieArrivee) });
     }
     
     const textHorairesElement = document.querySelector('.text-horaires');
@@ -1765,7 +1769,7 @@ if (blocEquipements) {
       return;
     }
     
-    textHorairesElement.textContent = `${texteArrivee} - Départ avant ${heureDepart}`;
+    textHorairesElement.textContent = I18N.t('horaires', { arrivee: texteArrivee, heure: heureDepart });
   }
 
   // Gestion des réductions
@@ -1809,13 +1813,20 @@ if (blocEquipements) {
   
   
   // Construire la phrase dynamique
+  // 🆕 Formate une réduction selon son unité : "10%" ou "120 €"
+  const formatRemise = (d) => (d.type === 'amount')
+    ? I18N.t('montantRemise', { m: d.amount })
+    : `${d.percentage}%`;
+  
   let phraseReduction = '';
   
   if (sortedDiscounts.length === 1) {
     // Une seule réduction
     const discount = sortedDiscounts[0];
-    const nuitText = discount.nights === 1 ? 'nuit' : 'nuits';
-    phraseReduction = `En réservant ${discount.nights} ${nuitText} ou plus, profitez de ${discount.percentage}% de remise.`;
+    phraseReduction = I18N.t('remiseUne', {
+      nuits: I18N.pluriel(discount.nights, 'nuit', 'nuits'),
+      remise: formatRemise(discount)
+    });
     
   } else {
     // Plusieurs réductions
@@ -1825,32 +1836,32 @@ if (blocEquipements) {
     
     if (nightsList.length === 2) {
       // 2 réductions : "7 ou 14"
-      nightsText = nightsList.join(' ou ');
+      nightsText = nightsList.join(` ${I18N.t('ou')} `);
     } else {
       // 3+ réductions : "7, 14 ou 30"
       const lastNight = nightsList.pop();
-      nightsText = nightsList.join(', ') + ' ou ' + lastNight;
+      nightsText = nightsList.join(', ') + ` ${I18N.t('ou')} ` + lastNight;
     }
     
-    // Construire la liste des pourcentages
-    const percentagesList = sortedDiscounts.map(d => d.percentage + '%');
+    // Construire la liste des remises (% ou €)
+    const percentagesList = sortedDiscounts.map(formatRemise);
     let percentagesText = '';
     
     if (percentagesList.length === 2) {
       // 2 réductions : "10% ou 15%"
-      percentagesText = percentagesList.join(' ou ');
+      percentagesText = percentagesList.join(` ${I18N.t('ou')} `);
     } else {
       // 3+ réductions : "10%, 15% ou 20%"
       const lastPercentage = percentagesList.pop();
-      percentagesText = percentagesList.join(', ') + ' ou ' + lastPercentage;
+      percentagesText = percentagesList.join(', ') + ` ${I18N.t('ou')} ` + lastPercentage;
     }
     
     // Déterminer le texte pour "nuit(s)"
     const allSingleNight = sortedDiscounts.every(d => d.nights === 1);
-    const nuitText = allSingleNight ? 'nuit' : 'nuits';
+    const nuitText = I18N.t(allSingleNight ? 'motNuit' : 'motNuits');
     
     // Construire la phrase complète
-    phraseReduction = `En réservant ${nightsText} ${nuitText} ou plus, profitez respectivement de ${percentagesText} de remise.`;
+    phraseReduction = I18N.t('remisePlusieurs', { nuits: nightsText, mot: nuitText, remises: percentagesText });
   }
   
   // Chercher l'élément texte à modifier
@@ -2051,7 +2062,7 @@ setupImmatriculation() {
         return;
       }
 
-      numeroHoteElement.textContent = contact.telephone || 'Non disponible';
+      numeroHoteElement.textContent = contact.telephone || I18N.t('nonDisponible');
     });
   }
 

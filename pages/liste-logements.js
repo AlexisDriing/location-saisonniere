@@ -34,6 +34,8 @@ class ListeLogementsPage {
         moment.locale('fr');
       }
     }
+    // Page anglaise : dates en anglais (l'anglais est intégré à moment.js)
+    if (typeof moment !== 'undefined' && I18N.LANG === 'en') moment.locale('en');
     
     // Charger DateRangePicker si pas disponible
     if (typeof jQuery === 'undefined' || typeof jQuery.fn.daterangepicker === 'undefined') {

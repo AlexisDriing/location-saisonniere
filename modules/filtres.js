@@ -332,7 +332,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        const equipementName = label.textContent.trim();
+        const equipementName = I18N.valeurFiltre(label.textContent);
         equipementsSet.add(equipementName);
       }
     });
@@ -354,7 +354,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        const optionName = label.textContent.trim();
+        const optionName = I18N.valeurFiltre(label.textContent);
         optionsSet.add(optionName);
       }
     });
@@ -369,7 +369,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label && checkbox.checked) {
-        const modeName = label.textContent.trim();
+        const modeName = I18N.valeurFiltre(label.textContent);
         modesSet.add(modeName);
       }
     });
@@ -423,7 +423,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.tempState.equipements.includes(label.textContent.trim());
+        const isChecked = this.tempState.equipements.includes(I18N.valeurFiltre(label.textContent));
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -445,7 +445,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.tempState.optionsAccueil.includes(label.textContent.trim());
+        const isChecked = this.tempState.optionsAccueil.includes(I18N.valeurFiltre(label.textContent));
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -465,7 +465,7 @@ class FiltersManager {
       const label = container.querySelector('.w-form-label');
       
       if (checkbox && label) {
-        const isChecked = this.tempState.modesLocation.includes(label.textContent.trim());
+        const isChecked = this.tempState.modesLocation.includes(I18N.valeurFiltre(label.textContent));
         checkbox.checked = isChecked;
         
         const webflowCheckbox = container.querySelector('.w-checkbox-input');
@@ -513,10 +513,10 @@ class FiltersManager {
   updateEquipementsButton(nombreCochees) {
     if (this.elements.texteFiltreEquipements) {
       if (nombreCochees === 0) {
-        this.elements.texteFiltreEquipements.textContent = "Équipements";
+        this.elements.texteFiltreEquipements.textContent = I18N.t('equipements');
         this.resetButtonStyle(this.elements.boutonFiltreEquipements);
       } else {
-        this.elements.texteFiltreEquipements.textContent = `${nombreCochees} équipement${nombreCochees > 1 ? 's' : ''}`;
+        this.elements.texteFiltreEquipements.textContent = I18N.pluriel(nombreCochees, 'equipementN1', 'equipementsN');
         this.setActiveButtonStyle(this.elements.boutonFiltreEquipements);
       }
     }
@@ -548,10 +548,10 @@ class FiltersManager {
   updatePreferencesButton(totalPreferences) {
     if (this.elements.texteFiltrePreferences) {
       if (totalPreferences === 0) {
-        this.elements.texteFiltrePreferences.textContent = "Préférences";
+        this.elements.texteFiltrePreferences.textContent = I18N.t('preferences');
         this.resetButtonStyle(this.elements.boutonFiltrePreferences);
       } else {
-        this.elements.texteFiltrePreferences.textContent = `${totalPreferences} préférence${totalPreferences > 1 ? 's' : ''}`;
+        this.elements.texteFiltrePreferences.textContent = I18N.pluriel(totalPreferences, 'preferenceN1', 'preferencesN');
         this.setActiveButtonStyle(this.elements.boutonFiltrePreferences);
       }
     }
@@ -598,7 +598,7 @@ class FiltersManager {
           this.updatePriceButton(prix);
           
           if (isMobile && this.elements.texteFiltrePrice_mobile) {
-            this.elements.texteFiltrePrice_mobile.textContent = `${prix}€ / nuit maximum`;
+            this.elements.texteFiltrePrice_mobile.textContent = I18N.t('prixMaxNuit', { prix: I18N.prix(prix) });
           }
           this.updateMobileFilterIndicator();
         }
@@ -610,7 +610,7 @@ class FiltersManager {
     if (prix !== undefined) {
       this.state.prixMax = prix;
       if (this.elements.texteFiltrePrice) {
-        this.elements.texteFiltrePrice.textContent = `${prix}€ / nuit maximum`;
+        this.elements.texteFiltrePrice.textContent = I18N.t('prixMaxNuit', { prix: I18N.prix(prix) });
         this.setActiveButtonStyle(this.elements.boutonFiltrePrice);
       }
     }
@@ -620,12 +620,12 @@ class FiltersManager {
     this.state.prixMax = null;
     
     if (this.elements.texteFiltrePrice) {
-      this.elements.texteFiltrePrice.textContent = "Tarif par nuitée";
+      this.elements.texteFiltrePrice.textContent = I18N.t('tarifParNuitee');
       this.resetButtonStyle(this.elements.boutonFiltrePrice);
     }
     
     if (this.elements.texteFiltrePrice_mobile) {
-      this.elements.texteFiltrePrice_mobile.textContent = "Tarif par nuitée";
+      this.elements.texteFiltrePrice_mobile.textContent = I18N.t('tarifParNuitee');
     }
     
     this.resetSliders();
@@ -725,9 +725,9 @@ class FiltersManager {
     
     if (this.elements.texteFiltreVoyageurs) {
       if (totalVoyageurs === 1) {
-        this.elements.texteFiltreVoyageurs.textContent = "1 voyageur";
+        this.elements.texteFiltreVoyageurs.textContent = I18N.pluriel(1, 'voyageur', 'voyageurs');
       } else {
-        this.elements.texteFiltreVoyageurs.textContent = `${totalVoyageurs} voyageurs`;
+        this.elements.texteFiltreVoyageurs.textContent = I18N.pluriel(totalVoyageurs, 'voyageur', 'voyageurs');
       }
       this.setActiveButtonStyle(this.elements.boutonFiltreVoyageurs);
     }
@@ -740,7 +740,7 @@ class FiltersManager {
     this.updateTravelersUI();
     
     if (this.elements.texteFiltreVoyageurs) {
-      this.elements.texteFiltreVoyageurs.textContent = "Voyageurs";
+      this.elements.texteFiltreVoyageurs.textContent = I18N.t('voyageursFiltre');
       this.resetButtonStyle(this.elements.boutonFiltreVoyageurs);
     }
     this.updateMobileFilterIndicator();

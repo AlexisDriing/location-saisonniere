@@ -302,7 +302,7 @@ class SearchMapManager {
 
   async fetchSuggestions(query) {
     try {
-      const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}`;
+      const url = `${window.CONFIG.API_URL}/suggestions?q=${encodeURIComponent(query)}&lang=${I18N.LANG}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -391,11 +391,11 @@ class SearchMapManager {
           const isDepartement = /^FR-\d{2,3}[AB]?$/i.test(shortCode);
           
           if (isDepartement) {
-            subtitle = `Département, ${country}`;
+            subtitle = I18N.t('departementPays', { pays: country });
           } else if (country && country !== name) {
-            subtitle = `Région, ${country}`;
+            subtitle = I18N.t('regionPays', { pays: country });
           } else {
-            subtitle = 'Région';
+            subtitle = I18N.t('region');
           }
         } else {
           // Villes, locality, neighborhood : département + pays
