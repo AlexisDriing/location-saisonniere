@@ -390,14 +390,14 @@
   // Même cadrage pour toute recherche de lieu, d'où qu'elle vienne
   // (page liste, page d'accueil, ou recherche faite avant d'ouvrir la carte sur mobile)
   function cadrerSurLieu(lieu, zoneInfo, anime) {
-    const duree = anime ? 400 : 0; // court : la liste attend la fin du mouvement
+     const opts = anime ? {} : { duration: 0 }; // vol fluide, ou placement direct
     const bbox = zoneInfo && zoneInfo.bbox
       ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
       : null;
     if (bbox && bbox.length === 4 && bbox.every(isFinite)) {
-      map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, duration: duree });
+      map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, ...opts });
     } else {
-      map.easeTo({ center: [lieu.lng, lieu.lat], zoom: 11, duration: duree });
+      map.flyTo({ center: [lieu.lng, lieu.lat], zoom: 11, ...opts });
     }
   }
   
@@ -419,7 +419,7 @@
         cadrerSurLieu(location, zoneInfo, true);
         // Filet de sécurité si la carte ne bouge pas (déjà au bon endroit)
         clearTimeout(rechercheTimeout);
-        rechercheTimeout = setTimeout(() => { if (rechercheEnCours) filtrerListeParCarte(); }, 900);
+        rechercheTimeout = setTimeout(() => { if (rechercheEnCours && !map.isMoving()) filtrerListeParCarte(); }, 900);
       };
 
       // 2) On neutralise le chargement "100 km" que la recherche déclenche elle-même :
