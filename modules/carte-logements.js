@@ -559,12 +559,15 @@
     compteurEl.textContent = '…';
     conteneur.appendChild(compteurEl);
 
-    map = new mapboxgl.Map({
+        map = new mapboxgl.Map({
       container: 'map-logements', style: STYLE, projection: 'mercator',
       center: [2.2, 46.6], zoom: 5,
-      pitchWithRotate: false,   // pas d'inclinaison
-      touchPitch: false         // pas d'inclinaison à deux doigts
+      pitchWithRotate: false,    // pas d'inclinaison
+      touchPitch: false,         // pas d'inclinaison à deux doigts
+      attributionControl: false  // remplacé juste en dessous par la version repliée
     });
+    // Crédits obligatoires (Mapbox, OpenStreetMap) repliés dans un petit « i »
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
     if (MOBILE) map.touchZoomRotate.disableRotation(); // le pincement zoome, sans faire tourner
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
