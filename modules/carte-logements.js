@@ -368,6 +368,24 @@
     ouvrirFiche(v.id, Number(v.el.dataset.prix), [v.pos.lng, v.pos.lat], v.el);
   }
   
+
+    // Un lieu cherché avant que la carte soit prête (depuis l'accueil, ou en mode
+  // liste sur mobile) doit être appliqué une fois. Il faut pour ça la carte chargée
+  // ET la liste démarrée. On ne sait pas laquelle des deux arrive en premier :
+  // chacune appelle cette fonction, et c'est la seconde qui déclenche.
+  let carteChargee = false;
+  let lieuRattrape = false;
+  function rattraperLieu() {
+    const pm = window.propertyManager;
+    if (lieuRattrape || !carteChargee || !pm) return;
+    lieuRattrape = true;
+    if (pm.searchLocation) {
+      cadrerSurLieu(pm.searchLocation, pm.zoneInfo, false);
+      filtrerListeParCarte();
+    }
+  }
+
+  
   
   // Même cadrage pour toute recherche de lieu, d'où qu'elle vienne
   // (page liste, page d'accueil, ou recherche faite avant d'ouvrir la carte sur mobile)
@@ -411,6 +429,9 @@
         if (rechercheEnCours && !moveDepuisCarte) return Promise.resolve();
         return applyOrig(reset);
       };
+
+      // La liste vient de démarrer : si la carte est déjà prête, on applique le lieu
+      rattraperLieu();
     }, 200);
   }
 
@@ -595,14 +616,9 @@
            // Des résultats filtrés sont arrivés avant que la carte soit prête ?
       if (pointsEnAttente) { majPointsCarte(pointsEnAttente); pointsEnAttente = null; }
 
-      // Un lieu a été cherché avant que la carte soit prête (depuis l'accueil, ou en
-      // mode liste sur mobile) : même cadrage qu'une recherche faite ici, puis la
-      // liste se cale sur la zone visible.
-      const pm = window.propertyManager;
-      if (pm && pm.searchLocation) {
-        cadrerSurLieu(pm.searchLocation, pm.zoneInfo, false);
-        filtrerListeParCarte();
-      }
+      // La carte est prête : si la liste l'est aussi, on applique le lieu déjà cherché
+      carteChargee = true;
+      rattraperLieu();
     });
 
     brancherRecherche();
