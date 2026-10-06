@@ -220,7 +220,7 @@ window.CONFIG = CONFIG;
     'washing machine': 'Machine à laver',
     'oven': 'Four',
     'dryer': 'Sèche-linge', 'tumble dryer': 'Sèche-linge',
-    'dishwasher': 'Lave vaisselle',
+    'dishwasher': 'Lave-vaisselle',
     'ev charging station': 'Borne électrique', 'ev charging point': 'Borne électrique', 'ev charger': 'Borne électrique',
     'entire home': 'Logement entier', 'entire place': 'Logement entier',
     'bed and breakfast': "Chambre d'hôtes", 'bed & breakfast': "Chambre d'hôtes", 'b&b': "Chambre d'hôtes",
