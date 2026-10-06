@@ -653,7 +653,6 @@
     const b = map.getBounds();
     const c = map.getCenter();
     const zone = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
-    ecrireLienCarte(zone);  // l'adresse suit la carte
     moveDepuisCarte = true; // ne pas re-déclencher un flyTo : c'est la carte qui parle
     window.propertyManager.setSearchLocation(
       { lat: c.lat, lng: c.lng },
@@ -666,6 +665,7 @@
       }
     );
     moveDepuisCarte = false;
+    ecrireLienCarte(zone);  // l'adresse suit la carte (après : setSearchLocation vient d'effacer l'ancienne)
     rechargeDepuisCarte = true;
     window.propertyManager.applyFilters(true);
   }
