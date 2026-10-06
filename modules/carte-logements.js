@@ -47,6 +47,14 @@
     };
   }
 
+  // La zone visible est écrite dans l'adresse : copier le lien = partager cette vue.
+  // replaceState : pas d'entrée d'historique, le bouton retour reste normal.
+  let hashCarte = window.location.hash;
+  function ecrireLienCarte(bbox) {
+    hashCarte = bbox ? '#carte=' + bbox.map(v => v.toFixed(4)).join(',') : '';
+    try { history.replaceState(history.state, '', window.location.pathname + window.location.search + hashCarte); } catch (e) {}
+  }
+
   // Reçoit les logements filtrés (mêmes filtres que la liste) et met à jour les pastilles
   function majPointsCarte(points) {
     tousLesPoints = points;
@@ -255,7 +263,11 @@
     );
 
     // Le bouton retour du navigateur ferme la carte au lieu de quitter la page
-    window.addEventListener('popstate', () => { if (carteOuverte) fermerCarteMobile(true); });
+    window.addEventListener('popstate', () => {
+      if (carteOuverte) fermerCarteMobile(true);
+      // Revenir en arrière remet l'ancienne adresse : on y réécrit la zone affichée
+      try { history.replaceState(history.state, '', window.location.pathname + window.location.search + hashCarte); } catch (e) {}
+    });
   }
 
   function majBoutonBascule() {
@@ -395,7 +407,7 @@
       ? (Array.isArray(zoneInfo.bbox) ? zoneInfo.bbox : String(zoneInfo.bbox).split(',').map(Number))
       : null;
     if (bbox && bbox.length === 4 && bbox.every(isFinite)) {
-      map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 40, ...opts });
+      map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: zoneInfo.lien ? 0 : 40, ...opts });
     } else {
       map.flyTo({ center: [lieu.lng, lieu.lat], zoom: 11, ...opts });
     }
@@ -412,8 +424,10 @@
       // 1) La recherche de lieu repositionne la carte
       const setOrig = pm.setSearchLocation.bind(pm);
       pm.setSearchLocation = function (location, searchType, zoneInfo) {
-        setOrig(location, searchType, zoneInfo);
-        if (moveDepuisCarte || !map || !location) return;
+      setOrig(location, searchType, zoneInfo);
+        if (moveDepuisCarte) return;   // c'est la carte qui parle
+        ecrireLienCarte(null);         // nouvelle recherche : l'ancienne zone n'est plus la bonne
+        if (!map || !location) return;
         rechercheEnCours = true; // la carte va bouger : c'est elle qui fera l'unique chargement
                pm.showLoading(true);    // la liste va changer : on le montre sans attendre la carte
         cadrerSurLieu(location, zoneInfo, true);
@@ -638,13 +652,15 @@
     clearTimeout(rechercheTimeout);
     const b = map.getBounds();
     const c = map.getCenter();
+    const zone = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+    ecrireLienCarte(zone);  // l'adresse suit la carte
     moveDepuisCarte = true; // ne pas re-déclencher un flyTo : c'est la carte qui parle
     window.propertyManager.setSearchLocation(
       { lat: c.lat, lng: c.lng },
       'region',
       {
         polygon_source: 'bbox',
-        bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+        bbox: zone,
         geo_feature_name: null,
         geo_feature_code: null
       }
