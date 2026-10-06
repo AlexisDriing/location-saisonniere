@@ -29,9 +29,19 @@ function setPriceWithStrike(element, oldPrice, newPrice, prefix = '', suffix = '
   strong.textContent = I18N.prix(newPrice);
   element.appendChild(strong);
   
-  if (suffix) {
+    if (suffix) {
     element.appendChild(document.createTextNode(' ' + suffix));
   }
+}
+
+// Zone de carte transmise dans l'adresse : #carte=ouest,sud,est,nord
+function lireLienCarte() {
+  const m = window.location.hash.match(/carte=([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+)/);
+  if (!m) return null;
+  const [o, s, e, n] = m.slice(1).map(Number);
+  const ok = [o, s, e, n].every(Number.isFinite)
+    && o >= -180 && e <= 180 && s >= -90 && n <= 90 && o < e && s < n;
+  return ok ? [o, s, e, n] : null;
 }
 
 class PropertyManager {
@@ -93,7 +103,19 @@ class PropertyManager {
     
     // Initialiser les écouteurs d'événements pour les filtres
     this.setupFilterListeners();
-    this.loadHomeSearchData();
+
+    // Lien partagé avec une zone de carte : la liste s'ouvre directement sur cette zone
+    const zoneLien = lireLienCarte();
+    if (zoneLien) {
+      const [o, s, e, n] = zoneLien;
+      this.setSearchLocation(
+        { lat: (s + n) / 2, lng: (o + e) / 2 },
+        'region',
+        { polygon_source: 'bbox', bbox: zoneLien, geo_feature_name: null, geo_feature_code: null, lien: true }
+      );
+    } else {
+      this.loadHomeSearchData();
+    }
 
     
     const initTime = Math.round(performance.now() - startTime);
