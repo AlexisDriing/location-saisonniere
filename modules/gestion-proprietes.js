@@ -1605,10 +1605,15 @@ if (hostImageElement) {
     return `${startDay}-${endDay} ${month}`;
   }
 
-  setSearchLocation(location, searchType, zoneInfo) {
+    setSearchLocation(location, searchType, zoneInfo) {
     this.searchLocation = location;
     this.searchType = searchType || 'place';
     this.zoneInfo = zoneInfo || null;
+    // Nouvelle recherche : la zone d'un lien partagé n'est plus la bonne.
+    // (Quand c'est la carte qui bouge, elle réécrit sa zone juste après.)
+    if (!(zoneInfo && zoneInfo.lien) && window.location.hash.includes('carte=')) {
+      try { history.replaceState(history.state, '', window.location.pathname + window.location.search); } catch (e) {}
+    }
   }
 
   // ================================
